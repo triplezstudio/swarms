@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
 
   // Create a Window
   SDL_Window* window = SDL_CreateWindow(
-    "SDL2 Windows 11 Test",
+    "swarms v0.0.1",
     SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
     640, 480,
     SDL_WINDOW_SHOWN
