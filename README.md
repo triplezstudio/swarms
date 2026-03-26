@@ -38,7 +38,8 @@ export DEBIAN_FRONTEND="interactive"
 apt-get install -y --no-install-recommends \
   libgtest-dev \
   libgmock-dev \
-  rsync
+  rsync \
+  libsdl2-dev
 ```
 
 **Note:** this project uses `-fprofile-update=atomic` as a profiling option to handle concurrency during profiling. This requires ccache [4.10.0](https://ccache.dev/releasenotes.html#_ccache_4_10) at least. In case your system comes with an older version it means that you won't benefit from having `ccache`.
