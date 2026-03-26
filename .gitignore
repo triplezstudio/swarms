@@ -1,4 +1,6 @@
 cmake-build
+cmake-build-debug
 ccache
 sandbox
 .vscode
+.idea
