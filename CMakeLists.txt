@@ -17,27 +17,40 @@ set (CMAKE_BUILD_RPATH_USE_ORIGIN true)
 
 add_library (swarms-interface-library INTERFACE)
 target_compile_options (swarms-interface-library INTERFACE
-	-Wall -Wextra -Werror
-	)
+		$<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
+		$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wall -Wextra -Werror>
+)
 
 add_library (swarms-interface-test-library INTERFACE)
+
 target_compile_options (swarms-interface-test-library INTERFACE
-	--coverage
-	-fprofile-update=atomic
-	-O0
-	-fsanitize=address
-	)
+		$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+		--coverage
+		-fprofile-update=atomic
+		-O0
+		-fsanitize=address
+		>
+
+		$<$<CXX_COMPILER_ID:MSVC>:
+		/fsanitize=address
+		/Od
+		>
+)
+
 target_link_options (swarms-interface-test-library INTERFACE
-	--coverage
-	-fsanitize=address
-	)
+		$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+		--coverage
+		-fsanitize=address
+		>
 
-add_subdirectory (
-	${CMAKE_CURRENT_SOURCE_DIR}/src
-	)
+		$<$<CXX_COMPILER_ID:MSVC>:
+		/fsanitize=address
+		>
 
-if (${ENABLE_TESTS})
-	add_subdirectory (
-		${CMAKE_CURRENT_SOURCE_DIR}/tests
-		)
+)
+
+add_subdirectory (src)
+
+if (ENABLE_TESTS)
+	add_subdirectory (tests)
 endif ()
