@@ -2,6 +2,7 @@
 #pragma once
 
 #include "TickData.hh"
+#include <memory>
 
 namespace swarms::core {
 
@@ -18,5 +19,7 @@ class IEnvironment
   /// call to this method
   virtual void simulate(const time::TickData &data) = 0;
 };
+
+using IEnvironmentPtr = std::unique_ptr<IEnvironment>;
 
 } // namespace swarms::core
