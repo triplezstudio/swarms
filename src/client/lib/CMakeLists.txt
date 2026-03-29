@@ -30,6 +30,7 @@ target_sources(swarms_client_lib
         PRIVATE
                 app.cpp
                 vulkan.cpp
+                vulkan_storage.cpp
                 app_sdl2.cpp
                 )
 

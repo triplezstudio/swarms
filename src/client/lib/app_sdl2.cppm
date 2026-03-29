@@ -12,18 +12,21 @@ import common;
 
 namespace sdl2 {
 
-class SWARMS_API SDL2App : public app_base::AppImpl, client_common::NativeHandleProvider
+class SWARMS_API SDL2App : public app_base::AppImpl
 {
   public:
-    void init() override;
-    void run() override;
-    client_common::NativeHandles getNativeHandles() override;
+  void init() override;
+  void run() override;
+
 
   private:
-      int decideRenderBackend();
+  int decideRenderBackend();
+  client_common::NativeHandles getNativeHandles();
+
+
 
   private:
-    SDL_Window* window = nullptr;
+  SDL_Window* window = nullptr;
 };
 
 }

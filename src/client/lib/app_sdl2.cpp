@@ -1,19 +1,32 @@
 module;
-#include <iostream>
-#include <vector>
+#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
+#define VULKAN_HPP_TYPESAFE_CONVERSION 1
+
+#include <vulkan/vulkan_raii.hpp>
+
 #include <SDL2/SDL.h>
 #include <SDL_syswm.h>
-#include <stdexcept>
 #include <SDL_vulkan.h>
 
+#include <iostream>
+#include <vector>
+
+#include <stdexcept>
+
+
+
 module app;
+
 
 import :sdl2;
 
 import render.vulkan;
 
 
+
 namespace sdl2 {
+
+vk::raii::SurfaceKHR createVulkanSurface(SDL_Window* window, vk::raii::Instance& instance);
 
 int SDL2App::decideRenderBackend() {
   // TODO: read configfile and or env var etc.
@@ -28,28 +41,16 @@ void SDL2App::init()
   {
     throw std::runtime_error("SDL could not initialize! SDL_Error: " + std::string(SDL_GetError()));
   }
-  // 1. Try to load it normally
-  HMODULE handle = LoadLibraryA("vulkan-1.dll");
-  if (!handle) {
-    DWORD err = GetLastError();
-    std::cout << "[FAILURE] LoadLibrary failed. Error code: " << err << std::endl;
 
-    if (err == ERROR_MOD_NOT_FOUND) {
-      std::cout << "-> Reason: Windows literally cannot find the file. It's not in System32 or your PATH." << std::endl;
-    } else if (err == ERROR_BAD_EXE_FORMAT) {
-      std::cout << "-> Reason: The DLL is 32-bit and your app is 64-bit (or vice versa)." << std::endl;
-    } else if (err == ERROR_DLL_INIT_FAILED) {
-      std::cout << "-> Reason: The DLL found its dependencies but failed to initialize (Driver issue)." << std::endl;
-    } else {
-      // Error 126 is common if a SUB-dependency of vulkan-1.dll is missing
-      std::cout << "-> Reason: Likely a missing dependency (e.g., your GPU driver is partially uninstalled)." << std::endl;
-    }
-  }
 
   auto vkLoad = SDL_Vulkan_LoadLibrary("vulkan-1.dll");
   if (vkLoad != 0) {
-    std::cerr << "sdl2 vulkan still not loading!" << SDL_GetError() << std::endl;
+    std::cerr << "sdl2 vulkan not loading!" << SDL_GetError() << std::endl;
   }
+
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(
+    reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr())
+  );
 
   auto renderBackendFlag = decideRenderBackend();
   auto windowFlags = SDL_WINDOW_SHOWN | renderBackendFlag;
@@ -73,11 +74,20 @@ void SDL2App::init()
     if (!SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, nullptr)) {
       throw std::runtime_error("SDL could not get Vulkan extensions: " + std::string(SDL_GetError()));
     }
-    std::vector<const char*> extensionNames(sdlExtensionCount);
-    SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, extensionNames.data());
+    std::vector<const char*> extensions(sdlExtensionCount);
+    SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, extensions.data());
 
-    auto vkRenderer = render::vulkan::VulkanRenderer(extensionNames);
-    vkRenderer.init(this);
+    render::VulkanInitData vulkanInitData;
+    vulkanInitData.nativeHandles = getNativeHandles();
+    vulkanInitData.extensions = extensions;
+    vulkanInitData.surfaceCreationFunc = [this](vk::raii::Instance& inst) -> vk::raii::SurfaceKHR {
+        return createVulkanSurface(this->window,inst);
+    };
+    vulkanInitData.displaySizeFunc = [this](int* width, int* height) {
+      SDL_Vulkan_GetDrawableSize(this->window, width, height);
+    };
+    auto vkRenderer = render::VulkanRenderer(vulkanInitData);
+    vkRenderer.init();
   }
   // TODO: implement branches for other render backends.
 
@@ -90,6 +100,18 @@ void SDL2App::init()
 }
 
 void SDL2App::run() {}
+
+
+vk::raii::SurfaceKHR createVulkanSurface(SDL_Window* window, vk::raii::Instance& instance)
+{
+    VkSurfaceKHR rawSurface;
+    if (!SDL_Vulkan_CreateSurface(window, static_cast<VkInstance> (*instance), &rawSurface))
+    {
+      throw std::runtime_error("Could not create surface!" + std::string(SDL_GetError()));
+    }
+
+    return vk::raii::SurfaceKHR(instance, rawSurface);
+}
 
 client_common::NativeHandles SDL2App::getNativeHandles()
 {
