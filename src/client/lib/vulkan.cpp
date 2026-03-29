@@ -17,6 +17,7 @@ module;
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <limits>
+#include <fstream>
 
 module render.vulkan;
 
@@ -299,6 +300,46 @@ void render::VulkanRenderer::createImageViews()
   .setFormat(surfaceFormat.format)
   .setSubresourceRange({vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
 
+  for (auto & image : swapChainImages)
+  {
+    ivcr.image = image;
+    swapChainImageViews.emplace_back(device, ivcr);
+  }
+}
+
+vk::raii::ShaderModule render::VulkanRenderer::createSlangShaderModule(const std::string& shaderBinaryPath)
+{
+  std::vector<char> buffer;
+  {
+    std::ifstream file(shaderBinaryPath, std::ios::ate | std::ios::binary);
+    if (!file.is_open())
+    {
+      throw std::runtime_error("failed to open file!");
+    }
+    buffer.resize(file.tellg());
+    file.seekg(0, std::ios::beg);
+    file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+    file.close();
+  }
+
+  vk::ShaderModuleCreateInfo ci;
+  ci.setCodeSize(buffer.size() * sizeof(char))
+    .setPCode(reinterpret_cast<const uint32_t*>(buffer.data()));
+
+  vk::raii::ShaderModule shaderModule(device, ci);
+  return shaderModule;
+}
+
+void render::VulkanRenderer::createGraphicsPipeline()
+{
+  auto shaderModule = createSlangShaderModule("shader_binaries/default_shader.slang.spv");
+
+  vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
+  vertShaderStageInfo.setStage(vk::ShaderStageFlagBits::eVertex).setModule(shaderModule).setPName("vertMain");
+  vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
+  fragShaderStageInfo.setStage(vk::ShaderStageFlagBits::eFragment).setModule(shaderModule).setPName("fragMain");
+  vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
 }
 
 void render::VulkanRenderer::init()
@@ -311,5 +352,6 @@ void render::VulkanRenderer::init()
   createLogicalDevice();
   createSwapChain();
   createImageViews();
+  createGraphicsPipeline();
 }
 

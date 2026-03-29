@@ -46,6 +46,7 @@ target_compile_definitions(swarms_client_lib PRIVATE EXPORT_SWARMS_LIB)
 # Shader compilation (GLSL -> SPIR-V)
 # --------------------------------------------------------------------------
 
+find_program(SLANGC slang HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin")
 find_program(GLSLC glslc HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin")
 
 if(NOT GLSLC)
@@ -53,17 +54,38 @@ if(NOT GLSLC)
     find_program(GLSLC glslc)
 endif()
 
-if(NOT GLSLC)
-    message(FATAL_ERROR "glslc not found. Install the Vulkan SDK or add glslc to PATH.")
+if(NOT SLANGC)
+    # Try the PATH as fallback
+    find_program(SLANGC slangc)
 endif()
 
-set(SHADER_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
-set(SHADER_BINARY_DIR ${CMAKE_BINARY_DIR}/shaders)
+if(NOT SLANGC)
+    message(FATAL_ERROR "slangc not found. Install the Vulkan SDK or add slangc to PATH.")
+else()
+    message(STATUS "slangc found!")
+endif()
 
-file(GLOB SHADER_SOURCES
+if(NOT GLSLC)
+    message(FATAL_ERROR "glslc not found. Install the Vulkan SDK or add glslc to PATH.")
+else()
+    message(STATUS "glslc found!")
+endif()
+
+set(SHADER_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src/client/lib/shader_src)
+set(SHADER_BINARY_DIR ${CMAKE_BINARY_DIR}/bin/shader_binaries)
+
+message(STATUS "--- Shader Debug Info ---")
+message(STATUS "Source Dir: ${SHADER_SOURCE_DIR}")
+message(STATUS "Binary Dir: ${SHADER_BINARY_DIR}")
+message(STATUS "Compiler GLSL:   ${GLSLC}")
+message(STATUS "Compiler SLANG:   ${SLANGC}")
+
+file(GLOB SHADER_SOURCES CONFIGURE_DEPENDS
         ${SHADER_SOURCE_DIR}/*.vert
         ${SHADER_SOURCE_DIR}/*.frag
         ${SHADER_SOURCE_DIR}/*.comp
+        ${SHADER_SOURCE_DIR}/*.slang
+
 )
 
 file(MAKE_DIRECTORY ${SHADER_BINARY_DIR})
@@ -74,7 +96,7 @@ foreach(SHADER ${SHADER_SOURCES})
 
     add_custom_command(
             OUTPUT ${SHADER_OUTPUT}
-            COMMAND ${GLSLC} ${SHADER} -o ${SHADER_OUTPUT}
+            COMMAND ${SLANGC} ${SHADER} -o ${SHADER_OUTPUT}
             DEPENDS ${SHADER}
             COMMENT "Compiling shader: ${SHADER_NAME}"
     )
@@ -83,3 +105,4 @@ foreach(SHADER ${SHADER_SOURCES})
 endforeach()
 
 add_custom_target(shaders ALL DEPENDS ${SHADER_OUTPUTS})
+add_dependencies(swarms_client shaders)

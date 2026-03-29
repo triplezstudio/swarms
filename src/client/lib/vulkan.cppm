@@ -38,6 +38,8 @@ class SWARMS_API VulkanRenderer : public render::Renderer
   void createLogicalDevice();
   void createSwapChain();
   void createImageViews();
+  void createGraphicsPipeline();
+  vk::raii::ShaderModule createSlangShaderModule(const std::string& shaderBinaryPath);
   bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice);
   vk::SurfaceFormatKHR selectSurfaceColorFormat(std::vector<vk::SurfaceFormatKHR> const& availableFormats);
   vk::PresentModeKHR selectSwapPresentMode(std::vector<vk::PresentModeKHR> const& modes);
