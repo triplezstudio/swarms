@@ -60,7 +60,7 @@ Tested to run on Windows11.
 ```powershell
 .\vcpkg install gtest:x64-windows
 
-.\vcpkg install sdl2:x64-windows
+.\vcpkg install sdl2[vulkan]:x64-windows
 
 
 ```

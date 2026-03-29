@@ -1,9 +1,8 @@
 add_executable (swarms_client)
 
-find_package(SDL2 CONFIG REQUIRED)
+add_subdirectory(lib)
 
 target_sources(swarms_client PRIVATE main.cc)
 
-target_link_libraries(swarms_client PRIVATE SDL2::SDL2 SDL2::SDL2main)
-
+target_link_libraries(swarms_client PRIVATE swarms_client_lib)
 
