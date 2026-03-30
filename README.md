@@ -36,6 +36,7 @@ apt install -y --no-install-recommends \
 export DEBIAN_FRONTEND="interactive"
 
 apt-get install -y --no-install-recommends \
+  libeigen3-dev \
   libgtest-dev \
   libgmock-dev \
   rsync \
@@ -47,9 +48,11 @@ apt-get install -y --no-install-recommends \
 **Note:** this project uses cpp20 and relies on features such as concepts. This should be supported by gcc10 (see [source](https://gcc.gnu.org/projects/cxx-status.html)). The development was made using gcc13. In case your version of gcc is older than this, refer to [this guide](https://www.dedicatedcore.com/blog/install-gcc-compiler-ubuntu/) to get an idea on how to install a more recent version.
 
 ## Windows
-Tested to run on Windows11. 
+
+Tested to run on Windows11.
 
 ## Prerequisites
+
 - [vcpkg](https://github.com/Microsoft/vcpkg.git) as a windows package manager (tested with version 2026-03-04-4b3e4c276b5b87a649e66341e11553e8c577459c)
 - [cmake](https://cmake.org/) as a build management system
 - [ccache](https://ccache.dev/) as a wrapper to speed up the building process
@@ -64,14 +67,15 @@ Tested to run on Windows11.
 
 
 ```
+
 CCache is best installed by downloading from https://ccache.dev/download.html
 and extracting to a local folder. Make sure this folder is on your system PATH.
-
 
 ## Build flags
 
 Set the path to vcpkg explicitely or add to your systemwide PATH. \
 Example for providing the path with the build command:
+
 ```powershell
 cmake -B build -S . `
   -DENABLE_TESTS=ON `
