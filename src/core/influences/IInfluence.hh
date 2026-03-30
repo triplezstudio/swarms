@@ -13,8 +13,6 @@ class IInfluence
   IInfluence()          = default;
   virtual ~IInfluence() = default;
 
-  bool valid() const noexcept;
-
   /// @brief - Returns the identifier of the source entity of this influence
   /// @return - the identifier of the source
   virtual auto getEmitter() const -> Uuid = 0;

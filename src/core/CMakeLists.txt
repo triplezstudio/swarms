@@ -12,6 +12,10 @@ add_subdirectory(
 	)
 
 add_subdirectory(
+	${CMAKE_CURRENT_SOURCE_DIR}/components
+	)
+
+add_subdirectory(
 	${CMAKE_CURRENT_SOURCE_DIR}/environment
 	)
 
