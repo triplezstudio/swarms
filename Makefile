@@ -66,6 +66,9 @@ runserver: copyRelease
 drunserver: copyDebug
 	cd sandbox && ./debug.sh swarms_server
 
+runclient: copyRelease
+	cd sandbox && ./run.sh swarms_client
+
 PHONY: .tests
 tests: debugWithTests copyDebug
 
