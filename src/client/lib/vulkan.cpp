@@ -340,6 +340,46 @@ void render::VulkanRenderer::createGraphicsPipeline()
   fragShaderStageInfo.setStage(vk::ShaderStageFlagBits::eFragment).setModule(shaderModule).setPName("fragMain");
   vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
+
+  std::vector<vk::DynamicState> dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+  vk::PipelineDynamicStateCreateInfo dsCreateInfo;
+  dsCreateInfo.setDynamicStates(dynamicStates);
+
+  // Leaving empty for now, as we are first only using hardcoded values.
+  vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
+  vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
+  inputAssembly.setTopology(vk::PrimitiveTopology::eTriangleList);
+  vk::PipelineViewportStateCreateInfo viewportStateCreateInfo;
+  viewportStateCreateInfo.setViewportCount(1).setScissorCount(1);
+
+  vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo;
+  rasterizationStateCreateInfo.setDepthClampEnable(vk::False)
+  .setRasterizerDiscardEnable(vk::False)
+  .setPolygonMode(vk::PolygonMode::eFill)
+  .setCullMode(vk::CullModeFlagBits::eBack)
+  .setFrontFace(vk::FrontFace::eClockwise)
+  .setDepthBiasEnable(vk::False)
+  .setLineWidth(1.0f);
+
+  vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo;
+  multisampleStateCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+  .setSampleShadingEnable(vk::False);
+
+  vk::PipelineColorBlendAttachmentState colorBlendAttachmentState;
+  colorBlendAttachmentState.setBlendEnable(vk::False)
+  .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB |
+                       vk::ColorComponentFlagBits::eA);
+
+  vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
+  colorBlendStateCreateInfo.setLogicOpEnable(vk::False)
+  .setLogicOp(vk::LogicOp::eCopy)
+  .setPAttachments(&colorBlendAttachmentState);
+
+  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
+  pipelineLayoutCreateInfo.setSetLayoutCount(0).setPushConstantRangeCount(0);
+  pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
+
+
 }
 
 void render::VulkanRenderer::init()

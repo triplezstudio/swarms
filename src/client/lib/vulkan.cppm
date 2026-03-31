@@ -61,6 +61,7 @@ class SWARMS_API VulkanRenderer : public render::Renderer
   vk::Extent2D swapExtent;
   vk::SurfaceFormatKHR surfaceFormat;
   vk::raii::SwapchainKHR swapChain = nullptr;
+  vk::raii::PipelineLayout pipelineLayout = nullptr;
   std::vector<vk::Image> swapChainImages;
   std::vector<vk::raii::ImageView> swapChainImageViews;
   std::vector<const char*> extensions;
