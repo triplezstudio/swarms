@@ -9,6 +9,8 @@ export module app:sdl2;
 import :base;
 import common;
 
+import render.base;
+
 
 namespace sdl2 {
 
@@ -16,7 +18,8 @@ class SWARMS_API SDL2App : public app_base::AppImpl
 {
   public:
   void init() override;
-  void run() override;
+  void doFrame() override;
+  render::Renderer* getRenderer() override;
 
 
   private:
@@ -27,10 +30,15 @@ class SWARMS_API SDL2App : public app_base::AppImpl
   void initVulkanApp();
   void initOpenGLApp();
 
+  void doGLFrame();
+  void doVulkanFrame();
+
 
 
   private:
   SDL_Window* window = nullptr;
+  int renderBackendFlag = 0;
+  render::Renderer* renderer;
 };
 
 }

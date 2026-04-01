@@ -2,6 +2,7 @@
 module;
 #include <SDL2/SDL.h>
 #include <iostream>
+#include <functional>
 
 module app;
 
@@ -15,15 +16,36 @@ app::App::App()
 
 }
 
+render::Renderer *app::App::getRenderer()
+{
+  return impl->getRenderer();
+}
+
 void app::App::init()
 {
-
   impl->init();
 }
 
 void app::App::run()
 {
-  impl->run();
+  while (true)
+  {
+    updateFrameListeners(16.66f);
+    impl->doFrame();
+  }
+
+}
+
+void app::App::addFrameListener(app::FrameListener frameListenerFunction)
+{
+  frameListeners.push_back(frameListenerFunction);
+}
+
+void app::App::updateFrameListeners(float frameTime)
+{
+  for (auto& frameListenerFunc : frameListeners) {
+    frameListenerFunc(frameTime);
+  }
 }
 
 

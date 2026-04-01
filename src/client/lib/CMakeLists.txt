@@ -25,21 +25,27 @@ target_sources(swarms_client_lib
                 common.cppm
                 render.cppm
                 vulkan.cppm
-
+                opengl.cppm
 
         PRIVATE
                 app.cpp
+                app_sdl2.cpp
+                app_sdl2_opengl.cpp
+                app_sdl2_vulkan.cpp
+                opengl.cpp
                 vulkan.cpp
                 vulkan_storage.cpp
-                app_sdl2.cpp
+
                 )
 
 target_include_directories(swarms_client_lib
         PUBLIC ${CMAKE_SOURCE_DIR}/src
 )
 
-target_link_libraries(swarms_client_lib PRIVATE SDL2::SDL2 SDL2::SDL2main Vulkan::Vulkan GLEW::GLEW
-                                        PUBLIC Eigen3::Eigen )
+target_link_libraries(swarms_client_lib PRIVATE
+                                            SDL2::SDL2 SDL2::SDL2main Vulkan::Vulkan GLEW::GLEW
+                                        PUBLIC
+                                            Eigen3::Eigen )
 
 target_compile_definitions(swarms_client_lib PRIVATE EXPORT_SWARMS_LIB)
 
