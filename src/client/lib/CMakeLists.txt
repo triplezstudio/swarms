@@ -1,6 +1,8 @@
 
 find_package(Vulkan REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(GLEW CONFIG REQUIRED)
 
 message(STATUS "vulkan found $ENV{VULKAN_SDK}")
 
@@ -11,8 +13,6 @@ if (MSVC)
     message(STATUS "windows msvc all exports on")
     set (CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
-
-
 
 
 target_sources(swarms_client_lib
@@ -38,7 +38,8 @@ target_include_directories(swarms_client_lib
         PUBLIC ${CMAKE_SOURCE_DIR}/src
 )
 
-target_link_libraries(swarms_client_lib PRIVATE SDL2::SDL2 SDL2::SDL2main Vulkan::Vulkan)
+target_link_libraries(swarms_client_lib PRIVATE SDL2::SDL2 SDL2::SDL2main Vulkan::Vulkan GLEW::GLEW
+                                        PUBLIC Eigen3::Eigen )
 
 target_compile_definitions(swarms_client_lib PRIVATE EXPORT_SWARMS_LIB)
 

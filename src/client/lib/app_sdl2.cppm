@@ -24,6 +24,10 @@ class SWARMS_API SDL2App : public app_base::AppImpl
   client_common::NativeHandles getNativeHandles();
 
 
+  void initVulkanApp();
+  void initOpenGLApp();
+
+
 
   private:
   SDL_Window* window = nullptr;

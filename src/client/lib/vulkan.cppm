@@ -28,7 +28,7 @@ class SWARMS_API VulkanRenderer : public render::Renderer
   public:
   VulkanRenderer(const VulkanInitData& vulkanInitData);
   void init() override;
-  void draw() override;
+
 
   private:
   void initSurface();

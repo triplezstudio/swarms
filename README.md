@@ -58,12 +58,17 @@ Tested to run on Windows11.
 - [ccache](https://ccache.dev/) as a wrapper to speed up the building process
 - [google test](https://github.com/google/googletest) as a testing library
 - [sdl2](https://wiki.libsdl.org/SDL2/Installation) for window and input management
+- [glew] only needed if OpenGL is used on Windows!
 - robocopy
 
 ```powershell
 .\vcpkg install gtest:x64-windows
 
 .\vcpkg install sdl2[vulkan]:x64-windows
+
+.\vcpkg install eigen3:x64-windows
+
+.\vcpkg install glew:x64-windows
 
 
 ```

@@ -31,10 +31,7 @@ render::VulkanRenderer::VulkanRenderer(const render::VulkanInitData& vulkanInitD
 }
 
 
-void render::VulkanRenderer::draw()
-{
 
-}
 
 void render::VulkanRenderer::initSurface()
 {
