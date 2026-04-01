@@ -11,10 +11,12 @@ Server::Server()
 
 void Server::run()
 {
+  debug("Starting server...");
   setup();
 
   activeRunLoop();
 
+  debug("Shutting down server...");
   shutdown();
 }
 

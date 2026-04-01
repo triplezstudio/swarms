@@ -2,16 +2,17 @@
 
 #pragma once
 
+#include "CoreObject.hh"
 #include <atomic>
 #include <condition_variable>
 #include <unordered_map>
 
 namespace swarms {
-class Server
+class Server : public runtime::CoreObject
 {
   public:
   Server();
-  ~Server() = default;
+  ~Server() override = default;
 
   void run();
   void requestStop();
