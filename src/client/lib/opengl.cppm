@@ -72,10 +72,12 @@ class VertexBuffer
     : sizeInBytes(size)
   {
     glCreateBuffers(1, &handle);
+    glBindBuffer(GL_ARRAY_BUFFER, handle);
     glNamedBufferStorage(handle,
                          size,
                          nullptr,
                          GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+
   }
 
   template<typename T>
@@ -198,6 +200,17 @@ class OpenGLShaderPipeline : public render::ShaderPipeline
 {
   public:
       void link(std::vector<ShaderModule*> modules) override;
+
+      void bind()
+      {
+        glUseProgram(programHandle);
+      }
+
+      void unbind()
+      {
+        glUseProgram(0);
+      }
+
       void* getHandle() override
       {
         return &programHandle;
@@ -252,12 +265,18 @@ class SWARMS_API OpenGLRenderer : public render::Renderer
   OpenGLInitData initData;
 
   VertexBuffer *immediatePerFrameBuffer = nullptr;
+  GLuint immediatePerFrameVAO = 0;
 
   // These are used to store the current immediate-stream-data positions.
   // So these are normally short-lived.
   // Normally when endDraw is called, these are copied into the
   // immediatePerFrameBuffer.
   std::vector<Eigen::Vector3f> positions;
+
+  // This is the shader pipeline which is used for
+  // all non-specific renderings, e.g for the interpretation of the
+  // immediate-style commands and the primitive-rendering commands (drawCube, drawSphere..)
+  OpenGLShaderPipeline* defaultShaderPipeline = nullptr;
 };
 
 } // namespace render

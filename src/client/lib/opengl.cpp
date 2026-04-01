@@ -23,7 +23,18 @@ render::OpenGLRenderer::OpenGLRenderer(const render::OpenGLInitData& initData)
   : initData(initData)
 {
 
+  immediatePerFrameVAO = createVertexArrayObject();
+  glBindVertexArray(immediatePerFrameVAO);
   immediatePerFrameBuffer = new VertexBuffer(1024 * 16);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(
+    0,
+    3,
+    GL_FLOAT,
+    GL_FALSE,
+    sizeof(float) * 3,
+    (void *) 0
+  );
   immediatePerFrameBuffer->map();
 
 }
@@ -42,6 +53,8 @@ void render::OpenGLRenderer::init()
 
   auto fsSource = R"(
     #version 460 core
+
+    out vec4 color;
     void main() {
       color = vec4(1, 1, 1, 1);
 
@@ -52,7 +65,7 @@ void render::OpenGLRenderer::init()
   defaultVertexShader->init(ShaderType::Vertex, vsSource);
   auto defaultFragmentShader =  new OpenGLShaderModule();
   defaultFragmentShader->init(ShaderType::Fragment, fsSource);
-  auto defaultShaderPipeline = new OpenGLShaderPipeline();
+  defaultShaderPipeline = new OpenGLShaderPipeline();
   defaultShaderPipeline->link({defaultVertexShader, defaultFragmentShader});
 
 }
@@ -86,7 +99,11 @@ void render::OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
 void render::OpenGLRenderer::endFrame()
 {
   // Render the contents of our current immediate buffer:
-  immediatePerFrameBuffer->bind();
+  glBindVertexArray(immediatePerFrameVAO);
+  //immediatePerFrameBuffer->bind();
+  defaultShaderPipeline->bind();
+
+
   glDrawArrays(GL_TRIANGLES, 0, immediatePerFrameBuffer->getNumberOfElements());
 
 

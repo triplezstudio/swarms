@@ -53,7 +53,7 @@ void SDL2App::initOpenGLApp()
     SDL_GL_GetDrawableSize(this->window, width, height);
   };
   renderer = new render::OpenGLRenderer(initData);
-
+  renderer->init();
 
 }
 
