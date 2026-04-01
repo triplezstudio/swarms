@@ -1,9 +1,8 @@
 module;
 
 #include <GL/glew.h>
-#include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
-#include <SDL_syswm.h>
+#include <Eigen/Dense>
 
 #include <iostream>
 #include <vector>
@@ -55,17 +54,15 @@ void SDL2App::initOpenGLApp()
   };
   renderer = new render::OpenGLRenderer(initData);
 
+
 }
 
 void SDL2App::doGLFrame()
 {
 
-  // We expect to have received all render commands at this stage.
-  // Our task is now to render as efficient as possible.
-  static float r = 0;
-  r+= 0.001;
-  glClearColor(sinf(r), 0, 0, 1);
-  glClear(GL_COLOR_BUFFER_BIT);
+  dynamic_cast<render::OpenGLRenderer*>(renderer)->endFrame();
   SDL_GL_SwapWindow(window);
+  dynamic_cast<render::OpenGLRenderer*>(renderer)->beginFrame();
+
 }
 }

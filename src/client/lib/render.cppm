@@ -1,9 +1,8 @@
-
+module;
 #include <Eigen/Dense>
 export module render.base;
 
 import common;
-
 
 /**
  * The render interface.
@@ -15,6 +14,31 @@ import common;
  *    multiple renderers behind this interface anyway.
  */
 export namespace render {
+
+enum class ShaderType {
+  Vertex,
+  Fragment,
+  Tessellation
+};
+
+/**
+ * A single shader - e.g. vertex shader, or fragment shader.
+ */
+class ShaderModule {
+  public:
+  virtual void init(ShaderType type, const std::string& source) = 0;
+  virtual void* getHandle() = 0;
+};
+
+/**
+ * Represents a combination of different shader modules (or stages).
+ * E.g. a vertex->fragmentShader pairing.
+ */
+class ShaderPipeline {
+  public:
+      virtual void link(std::vector<ShaderModule*> modules) = 0;
+      virtual void* getHandle() = 0;
+};
 
 enum class PrimitiveType {
   Triangles,

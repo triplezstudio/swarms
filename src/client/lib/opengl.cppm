@@ -60,25 +60,89 @@ struct VertexBufferUpdateInfo
 /**
  * Abstraction over an OpenGL VBO.
  */
-class VertexBuffer {
-
+class VertexBuffer
+{
   public:
-      VertexBuffer(std::vector<Eigen::Vector3f> data)
-      {
-        glCreateBuffers(1, &handle);
-        glBindBuffer(GL_ARRAY_BUFFER, handle);
-        auto size = data.size() * sizeof(float) * 3;
-        glBufferData(GL_ARRAY_BUFFER, size , data.data(), GL_STATIC_DRAW);
-      }
+  /**
+       * Create an initially empty vertex buffer.
+       * This can be useful to implement dynamic streaming
+       * and updating the buffer on the fly later.
+       */
+  VertexBuffer(uint64_t size)
+    : sizeInBytes(size)
+  {
+    glCreateBuffers(1, &handle);
+    glNamedBufferStorage(handle,
+                         size,
+                         nullptr,
+                         GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+  }
 
+  template<typename T>
+  VertexBuffer(std::vector<T> data)
+  {
+    glCreateBuffers(1, &handle);
+    glBindBuffer(GL_ARRAY_BUFFER, handle);
+    sizeInBytes = data.size() * sizeof(T);
+    glBufferData(GL_ARRAY_BUFFER, sizeInBytes, data.data(), GL_STATIC_DRAW);
+  }
 
-      GLuint getHandle()
-      {
-        return handle;
-      }
+  template<typename T>
+  void appendData(std::vector<T> data)
+  {
+    memcpy((uint8_t *) mappedPtr + currentAppendOffset, data.data(),
+           data.size() * sizeof(T));
+    currentAppendOffset += data.size() * sizeof(T);
+    elementCounter += data.size();
+  }
+
+  uint64_t getNumberOfElements()
+  {
+    return elementCounter;
+  }
+
+  void bind()
+  {
+    glBindBuffer(GL_ARRAY_BUFFER, handle);
+  }
+
+  void unbind()
+  {
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+  }
+
+  void clear()
+  {
+    currentAppendOffset = 0;
+    elementCounter = 0;
+  }
+
+  void map()
+  {
+    mappedPtr = glMapNamedBufferRange(handle,
+                                      0,
+                                      sizeInBytes,
+                                      GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT
+                                        | GL_MAP_COHERENT_BIT);
+  }
+
+  void unmap()
+  {
+    glUnmapNamedBuffer(handle);
+  }
+
+  GLuint getHandle()
+  {
+    return handle;
+  }
 
   private:
-      GLuint handle;
+  GLuint handle;
+  uint64_t sizeInBytes;
+  void *mappedPtr = nullptr;
+  uint64_t currentAppendOffset = 0;
+  uint32_t elementCounter = 0;
+
 
 };
 
@@ -89,46 +153,73 @@ class VertexBuffer {
 class VertexArrayObject
 {
   public:
-
-  GLuint getHandle() {
+  GLuint getHandle()
+  {
     return handle;
   }
 
   private:
-      GLuint handle = 0;
+  GLuint handle = 0;
 
   public:
-      class Builder
+  class Builder
+  {
+public:
+    Builder()
+    {
+      vertexArrayObject = new VertexArrayObject();
+    }
+
+    Builder *positions(std::vector<Eigen::Vector3f> pos)
+    {
+      this->_positions = pos;
+      return this;
+    }
+
+    // TODO add further attributes, e.g. normals, uvs, etc.
+
+    VertexArrayObject *build()
+    {
+      glGenVertexArrays(1, &vertexArrayObject->handle);
+      glBindVertexArray(vertexArrayObject->handle);
+
+      auto vbo = VertexBuffer(_positions);
+
+      return vertexArrayObject;
+    }
+
+private:
+    VertexArrayObject *vertexArrayObject = nullptr;
+    std::vector<Eigen::Vector3f> _positions;
+  };
+};
+
+class OpenGLShaderPipeline : public render::ShaderPipeline
+{
+  public:
+      void link(std::vector<ShaderModule*> modules) override;
+      void* getHandle() override
       {
-    public:
-        Builder()
-        {
-          vertexArrayObject = new VertexArrayObject();
-        }
+        return &programHandle;
+      }
 
-        Builder *positions(std::vector<Eigen::Vector3f> pos)
-        {
-          this->_positions = pos;
-          return this;
-        }
+  private:
+      GLuint programHandle;
+};
 
-        // TODO add further attributes, e.g. normals, uvs, etc.
+class OpenGLShaderModule : public render::ShaderModule
+{
 
-        VertexArrayObject *build()
-        {
+  public:
+      void init(render::ShaderType type, const std::string& source) override;
+      void* getHandle() override
+      {
+        return &handle;
+      }
 
-          glGenVertexArrays(1, &vertexArrayObject->handle);
-          glBindVertexArray(vertexArrayObject->handle);
+  private:
+      GLuint handle = 0;
 
-          auto vbo = VertexBuffer(_positions);
-
-          return vertexArrayObject;
-        }
-
-    private:
-        VertexArrayObject *vertexArrayObject = nullptr;
-        std::vector<Eigen::Vector3f> _positions;
-      };
 };
 
 /**
@@ -140,6 +231,12 @@ class SWARMS_API OpenGLRenderer : public render::Renderer
   public:
   OpenGLRenderer(const OpenGLInitData &initData);
   void init() override;
+
+  void beginFrame();
+  void endFrame();
+
+
+  // This implements the "immediate" command style API:
   void beginDraw(render::PrimitiveType primitiveType) override;
   void endDraw() override;
   void emitPosition(Eigen::Vector3f pos) override;
@@ -153,6 +250,14 @@ class SWARMS_API OpenGLRenderer : public render::Renderer
 
   private:
   OpenGLInitData initData;
+
+  VertexBuffer *immediatePerFrameBuffer = nullptr;
+
+  // These are used to store the current immediate-stream-data positions.
+  // So these are normally short-lived.
+  // Normally when endDraw is called, these are copied into the
+  // immediatePerFrameBuffer.
+  std::vector<Eigen::Vector3f> positions;
 };
 
 } // namespace render

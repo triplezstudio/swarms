@@ -30,8 +30,8 @@ void app::App::run()
 {
   while (true)
   {
-    updateFrameListeners(16.66f);
     impl->doFrame();
+    updateFrameListeners(16.66f);
   }
 
 }
