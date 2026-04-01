@@ -13,33 +13,35 @@ void NullLogger::setLevel(const Severity /*severity*/)
   // Intentionally empty
 }
 
-void NullLogger::verbose(const std::string_view /*message*/) const
+void NullLogger::verbose(const std::string_view /*module*/, const std::string_view /*message*/) const
 {
   // Intentionally empty
 }
 
-void NullLogger::debug(const std::string_view /*message*/) const
+void NullLogger::debug(const std::string_view /*module*/, const std::string_view /*message*/) const
 {
   // Intentionally empty
 }
 
-void NullLogger::info(const std::string_view /*message*/) const
+void NullLogger::info(const std::string_view /*module*/, const std::string_view /*message*/) const
 {
   // Intentionally empty
 }
 
-void NullLogger::notice(const std::string_view /*message*/) const
+void NullLogger::notice(const std::string_view /*module*/, const std::string_view /*message*/) const
 {
   // Intentionally empty
 }
 
-void NullLogger::warn(const std::string_view /*message*/,
+void NullLogger::warn(const std::string_view /*module*/,
+                      const std::string_view /*message*/,
                       const std::optional<std::string> & /*cause*/) const
 {
   // Intentionally empty
 }
 
-void NullLogger::error(const std::string_view /*message*/,
+void NullLogger::error(const std::string_view /*module*/,
+                       const std::string_view /*message*/,
                        const std::optional<std::string> & /*cause*/) const
 {
   // Intentionally empty

@@ -29,7 +29,7 @@ int main(int /*argc*/, char ** /*argv*/)
 
   auto gameFunc = [&server]() { server.run(); };
 
-  if (!swarms::runtime::launchProtected(gameFunc, "main"))
+  if (!swarms::runtime::launchProtected(gameFunc, "main", "run"))
   {
     return EXIT_FAILURE;
   }

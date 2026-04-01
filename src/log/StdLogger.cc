@@ -19,34 +19,38 @@ void StdLogger::setLevel(const Severity severity)
   m_severity = severity;
 }
 
-void StdLogger::verbose(const std::string_view message) const
+void StdLogger::verbose(const std::string_view module, const std::string_view message) const
 {
-  logTrace(Severity::VERBOSE, message, {});
+  logTrace(Severity::VERBOSE, module, message, {});
 }
 
-void StdLogger::debug(const std::string_view message) const
+void StdLogger::debug(const std::string_view module, const std::string_view message) const
 {
-  logTrace(Severity::DEBUG, message, {});
+  logTrace(Severity::DEBUG, module, message, {});
 }
 
-void StdLogger::info(const std::string_view message) const
+void StdLogger::info(const std::string_view module, const std::string_view message) const
 {
-  logTrace(Severity::INFO, message, {});
+  logTrace(Severity::INFO, module, message, {});
 }
 
-void StdLogger::notice(const std::string_view message) const
+void StdLogger::notice(const std::string_view module, const std::string_view message) const
 {
-  logTrace(Severity::NOTICE, message, {});
+  logTrace(Severity::NOTICE, module, message, {});
 }
 
-void StdLogger::warn(const std::string_view message, const std::optional<std::string> &cause) const
+void StdLogger::warn(const std::string_view module,
+                     const std::string_view message,
+                     const std::optional<std::string> &cause) const
 {
-  logTrace(Severity::WARNING, message, cause);
+  logTrace(Severity::WARNING, module, message, cause);
 }
 
-void StdLogger::error(const std::string_view message, const std::optional<std::string> &cause) const
+void StdLogger::error(const std::string_view module,
+                      const std::string_view message,
+                      const std::optional<std::string> &cause) const
 {
-  logTrace(Severity::ERROR, message, cause);
+  logTrace(Severity::ERROR, module, message, cause);
 }
 
 namespace {
@@ -68,6 +72,7 @@ auto getTimestampAsStr() -> std::string
 } // namespace
 
 void StdLogger::logTrace(const Severity severity,
+                         const std::string_view module,
                          const std::string_view message,
                          const std::optional<std::string> &cause) const
 {
@@ -83,7 +88,8 @@ void StdLogger::logTrace(const Severity severity,
   out << getTimestampAsStr() << " ";
 
   setStreamColorFromSeverity(out, severity);
-  out << "[" << str(severity) << "] ";
+  out << "[" << str(severity) << "]";
+  out << " " << module << " ";
   clearStreamFormat(out);
 
   out << message;

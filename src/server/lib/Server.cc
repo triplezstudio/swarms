@@ -5,6 +5,7 @@
 namespace swarms {
 
 Server::Server()
+  : runtime::CoreObject("server")
 {
   initialize();
 }

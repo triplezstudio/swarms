@@ -11,7 +11,13 @@ namespace swarms::runtime {
 class CoreObject
 {
   public:
-  CoreObject()          = default;
+  /// @brief - Creates a new core object with the specified module name. The
+  /// module represents a unit that further specify the purpose of the class.
+  /// Typical examples include "network", "client", "input", etc. This helps
+  /// triage the logs per source.
+  /// @param module - the module describing the broad category of the object.
+  CoreObject(const std::string &module);
+
   virtual ~CoreObject() = default;
 
   protected:
@@ -33,7 +39,7 @@ class CoreObject
   bool withSafetyNet(std::function<void(void)> func, const std::string &functionName) const;
 
   private:
-  std::string m_name{};
+  std::string m_module{};
 
   auto getLogger() const -> log::ILogger &;
 };

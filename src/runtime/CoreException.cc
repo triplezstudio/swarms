@@ -31,21 +31,24 @@ auto retrieveStackTrace() -> std::string
 }
 } // namespace
 
-CoreException::CoreException(const std::string &message,
+CoreException::CoreException(const std::string_view module,
+                             const std::string &message,
                              const std::optional<std::string> &cause) noexcept
   : std::exception()
   , m_message(message)
 {
-  log::Locator::getLogger().error(message, cause);
-  log::Locator::getLogger().error(retrieveStackTrace());
+  log::Locator::getLogger().error(module, message, cause);
+  log::Locator::getLogger().error(module, retrieveStackTrace());
 }
 
-CoreException::CoreException(const std::string &message, const CoreException &cause) noexcept
+CoreException::CoreException(const std::string_view module,
+                             const std::string &message,
+                             const CoreException &cause) noexcept
   : std::exception()
   , m_message(message)
 {
-  log::Locator::getLogger().error(message, cause.what());
-  log::Locator::getLogger().error(retrieveStackTrace());
+  log::Locator::getLogger().error(module, message, cause.what());
+  log::Locator::getLogger().error(module, retrieveStackTrace());
 }
 
 auto CoreException::what() const throw() -> const char *
