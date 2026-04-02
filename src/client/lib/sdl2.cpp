@@ -18,6 +18,23 @@ import common;
 
 namespace tz {
 
+SDL2WindowSystem::SDL2WindowSystem()
+{
+  init();
+}
+
+void SDL2WindowSystem::pollEvents()
+{
+  SDL_Event event;
+  while (SDL_PollEvent(&event))
+  {
+    if (event.type == SDL_QUIT)
+    {
+
+    }
+  }
+}
+
 void SDL2WindowSystem::init()
 {
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)

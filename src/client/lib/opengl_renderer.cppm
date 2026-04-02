@@ -236,7 +236,7 @@ class OpenGLShaderModule : public tz::ShaderModule
  * OpenGLRenderer is a custom renderer using the OpenGL 4.6 API.
  *
  */
-class OpenGLRenderer : public tz::Renderer
+class SWARMS_API OpenGLRenderer : public Renderer
 {
   public:
   void init(tz::Window* window) override;
@@ -245,9 +245,11 @@ class OpenGLRenderer : public tz::Renderer
   void beginFrame();
   void endFrame();
 
+  void clearScreen() override;
+
 
   // This implements the "immediate" command style API:
-  void beginDraw(tz::PrimitiveType primitiveType) override;
+  void beginDraw(PrimitiveType primitiveType) override;
   void endDraw() override;
   void emitPosition(Eigen::Vector3f pos) override;
   void emitColor(Eigen::Vector4f color) override;

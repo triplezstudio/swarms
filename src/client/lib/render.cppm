@@ -2,7 +2,6 @@ module;
 #include <Eigen/Dense>
 export module render.base;
 
-
 import windowing;
 import common;
 
@@ -54,6 +53,7 @@ class Renderer
   public:
   virtual void init(tz::Window* window) = 0;
   virtual WindowDesc getRequiredWindowDesc() = 0;
+  virtual void clearScreen() = 0;
   virtual void beginDraw(PrimitiveType primitiveType) = 0;
   virtual void endDraw() = 0;
   virtual void emitPosition(Eigen::Vector3f position) = 0;

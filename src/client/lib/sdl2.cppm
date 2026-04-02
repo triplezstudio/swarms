@@ -11,11 +11,13 @@ import common;
 
 export namespace tz {
 
-class SDL2WindowSystem : public WindowSystem
+class SWARMS_API SDL2WindowSystem : public WindowSystem
 {
   public:
+  SDL2WindowSystem();
   void init() override;
-  Window * createWindow(tz::WindowDesc desc) override;
+  void pollEvents() override;
+  Window * createWindow(WindowDesc desc) override;
 
   private:
   client_common::NativeHandles getNativeHandles();

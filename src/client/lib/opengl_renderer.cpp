@@ -1,26 +1,23 @@
 
 module;
-
 #include <iostream>
 #include <Eigen/Dense>
 #ifdef _WIN32
 #define NOMINMAX
 #endif
 
-
 #include <GL/glew.h>
-#include <SDL_syswm.h>
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <limits>
-#include <fstream>
 
 module render.opengl;
 
 import common;
+import windowing;
 
-
-
+namespace tz
+{
 void tz::OpenGLRenderer::init(tz::Window* window)
 {
 
@@ -79,7 +76,13 @@ void tz::OpenGLRenderer::init(tz::Window* window)
 
 }
 
-void tz::OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
+void OpenGLRenderer::clearScreen()
+{
+  //glClearColorf(1, 0, 0, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
 {
   programHandle = glCreateProgram();
   for (auto& m : modules) {
@@ -105,7 +108,7 @@ void tz::OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
 
 }
 
-tz::WindowDesc tz::OpenGLRenderer::getRequiredWindowDesc()
+WindowDesc OpenGLRenderer::getRequiredWindowDesc()
 {
   WindowDesc wd;
   wd.api = tz::WindowDesc::GraphicsAPI::OpenGL;
@@ -115,7 +118,7 @@ tz::WindowDesc tz::OpenGLRenderer::getRequiredWindowDesc()
   return wd;
 }
 
-void tz::OpenGLRenderer::endFrame()
+void OpenGLRenderer::endFrame()
 {
   // Render the contents of our current immediate buffer:
   glBindVertexArray(immediatePerFrameVAO);
@@ -128,7 +131,7 @@ void tz::OpenGLRenderer::endFrame()
 
 }
 
-void tz::OpenGLRenderer::beginFrame()
+void OpenGLRenderer::beginFrame()
 {
   // Prepare for the next frame
   immediatePerFrameBuffer->clear();
@@ -138,36 +141,36 @@ void tz::OpenGLRenderer::beginFrame()
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void tz::OpenGLRenderer::beginDraw(tz::PrimitiveType primitiveType)
+void OpenGLRenderer::beginDraw(tz::PrimitiveType primitiveType)
 {
   positions.clear();
 }
-void tz::OpenGLRenderer::endDraw()
+void OpenGLRenderer::endDraw()
 {
 
   // Append every immediate vertex data stream into our perFrameBuffer.
   immediatePerFrameBuffer->appendData(positions);
 }
 
-void tz::OpenGLRenderer::emitPosition(Eigen::Vector3f pos)
+void OpenGLRenderer::emitPosition(Eigen::Vector3f pos)
 {
   positions.push_back(pos);
 }
 
-void tz::OpenGLRenderer::emitColor(Eigen::Vector4f color)
+void OpenGLRenderer::emitColor(Eigen::Vector4f color)
 {
 
 }
-void tz::OpenGLRenderer::emitUV(Eigen::Vector2f uv)
+void OpenGLRenderer::emitUV(Eigen::Vector2f uv)
 {
 
 }
-void tz::OpenGLRenderer::emitNormal(Eigen::Vector3f normal)
+void OpenGLRenderer::emitNormal(Eigen::Vector3f normal)
 {
 
 }
 
-GLuint tz::OpenGLRenderer::createVertexBuffer(tz::VertexBufferCreateInfo vbCreateInfo) {
+GLuint OpenGLRenderer::createVertexBuffer(VertexBufferCreateInfo vbCreateInfo) {
   GLuint vbo;
   glCreateBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -177,16 +180,13 @@ GLuint tz::OpenGLRenderer::createVertexBuffer(tz::VertexBufferCreateInfo vbCreat
 }
 
 
-GLuint tz::OpenGLRenderer::createVertexArrayObject()
+GLuint OpenGLRenderer::createVertexArrayObject()
 {
-
   auto vao = (new VertexArrayObject::Builder())->positions({{0, 1, 2}})->build();
   return vao->getHandle();
-
-
 }
 
-void tz::OpenGLShaderModule::init(tz::ShaderType type, const std::string& source)
+void OpenGLShaderModule::init(ShaderType type, const std::string& source)
 {
 
   switch (type)
@@ -216,4 +216,7 @@ void tz::OpenGLShaderModule::init(tz::ShaderType type, const std::string& source
 
 
 }
+}
+
+
 

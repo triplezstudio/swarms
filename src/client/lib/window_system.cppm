@@ -43,6 +43,7 @@ struct WindowDesc {
   class WindowSystem {
   public:
   virtual void init() = 0;
+  virtual void pollEvents() = 0;
   virtual Window* createWindow(WindowDesc desc) = 0;
 
   };
