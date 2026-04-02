@@ -5,16 +5,19 @@
 namespace swarms {
 
 Server::Server()
+  : runtime::CoreObject("server")
 {
   initialize();
 }
 
 void Server::run()
 {
+  debug("Starting server...");
   setup();
 
   activeRunLoop();
 
+  debug("Shutting down server...");
   shutdown();
 }
 
