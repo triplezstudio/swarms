@@ -37,4 +37,30 @@ bool launchProtected(std::function<void(void)> func,
   return false;
 }
 
+bool launchProtected(std::function<void(void)> func,
+                     const std::string &functionName,
+                     const log::PrefixedLogger &logger)
+{
+  try
+  {
+    func();
+
+    return true;
+  }
+  catch (const CoreException &e)
+  {
+    logger.error("Caught exception while executing \"" + functionName + "\"", e.what());
+  }
+  catch (const std::exception &e)
+  {
+    logger.error("Caught unexpected exception while executing \"" + functionName + "\"", e.what());
+  }
+  catch (...)
+  {
+    logger.error("Unknown error while executing \"" + functionName + "\"");
+  }
+
+  return false;
+}
+
 } // namespace swarms::runtime

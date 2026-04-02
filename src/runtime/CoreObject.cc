@@ -46,7 +46,7 @@ void CoreObject::error(const std::string &message, const CoreException &cause) c
 
 bool CoreObject::withSafetyNet(std::function<void(void)> func, const std::string &functionName) const
 {
-  return launchProtected(func, m_logger.getModule(), functionName);
+  return launchProtected(func, functionName, m_logger);
 }
 
 void CoreObject::addModule(const std::string &module)
