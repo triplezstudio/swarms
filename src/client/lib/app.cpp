@@ -6,46 +6,44 @@ module;
 
 module app;
 
-import :sdl2;
+import windowing;
+import render.base;
 
-app::App::App()
+namespace tz
 {
-  // TODO: read from config which backend to use?
-  // Default is SDL2 for now
-  impl = new sdl2::SDL2App();
+App::App(tz::WindowSystem* windowSystem, tz::Renderer* renderer) : windowSystem(windowSystem),
+  renderer(renderer)
+{
 
 }
 
-render::Renderer *app::App::getRenderer()
-{
-  return impl->getRenderer();
-}
-
-void app::App::init()
-{
-  impl->init();
-}
-
-void app::App::run()
+void tz::App::run()
 {
   while (true)
   {
-    impl->doFrame();
+    //windowSystem->doFrame();
     updateFrameListeners(16.66f);
   }
 
 }
 
-void app::App::addFrameListener(app::FrameListener frameListenerFunction)
+void App::addFrameListener(tz::FrameListener frameListenerFunction)
 {
   frameListeners.push_back(frameListenerFunction);
 }
 
-void app::App::updateFrameListeners(float frameTime)
+void App::updateFrameListeners(float frameTime)
 {
   for (auto& frameListenerFunc : frameListeners) {
     frameListenerFunc(frameTime);
   }
 }
+
+}
+
+
+
+
+
 
 

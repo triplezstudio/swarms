@@ -19,30 +19,24 @@ module render.opengl;
 
 import common;
 
-render::OpenGLRenderer::OpenGLRenderer(const render::OpenGLInitData& initData)
-  : initData(initData)
+
+
+void tz::OpenGLRenderer::init(tz::Window* window)
 {
 
-  immediatePerFrameVAO = createVertexArrayObject();
-  glBindVertexArray(immediatePerFrameVAO);
-  immediatePerFrameBuffer = new VertexBuffer(1024 * 16);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(
-    0,
-    3,
-    GL_FLOAT,
-    GL_FALSE,
-    sizeof(float) * 3,
-    (void *) 0
-  );
-  immediatePerFrameBuffer->map();
+  this->window = window;
 
-}
+  // Initialize GLEW for function loading
+  // TODO only do this on windows?
+  GLenum err = glewInit();
+  if (GLEW_OK != err)
+  {
+    // GLEW initialization failed
+    fprintf(stderr, "Error initializing GLEW: %s\n", glewGetErrorString(err));
+    exit(1);
+  }
 
-void render::OpenGLRenderer::init()
-{
-
-  // Create some basic default shaders:
+  // Create default shaders:
   auto vsSource = R"(
     #version 460 core
     layout(location = 0) in vec3 pos;
@@ -68,9 +62,24 @@ void render::OpenGLRenderer::init()
   defaultShaderPipeline = new OpenGLShaderPipeline();
   defaultShaderPipeline->link({defaultVertexShader, defaultFragmentShader});
 
+  // Prepare per-frame buffer to store the immediate-command data into:
+  immediatePerFrameVAO = createVertexArrayObject();
+  glBindVertexArray(immediatePerFrameVAO);
+  immediatePerFrameBuffer = new VertexBuffer(1024 * 16);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(
+    0,
+    3,
+    GL_FLOAT,
+    GL_FALSE,
+    sizeof(float) * 3,
+    (void *) 0
+  );
+  immediatePerFrameBuffer->map();
+
 }
 
-void render::OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
+void tz::OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
 {
   programHandle = glCreateProgram();
   for (auto& m : modules) {
@@ -96,7 +105,17 @@ void render::OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
 
 }
 
-void render::OpenGLRenderer::endFrame()
+tz::WindowDesc tz::OpenGLRenderer::getRequiredWindowDesc()
+{
+  WindowDesc wd;
+  wd.api = tz::WindowDesc::GraphicsAPI::OpenGL;
+  wd.width = 640;
+  wd.height = 480;
+
+  return wd;
+}
+
+void tz::OpenGLRenderer::endFrame()
 {
   // Render the contents of our current immediate buffer:
   glBindVertexArray(immediatePerFrameVAO);
@@ -109,7 +128,7 @@ void render::OpenGLRenderer::endFrame()
 
 }
 
-void render::OpenGLRenderer::beginFrame()
+void tz::OpenGLRenderer::beginFrame()
 {
   // Prepare for the next frame
   immediatePerFrameBuffer->clear();
@@ -119,36 +138,36 @@ void render::OpenGLRenderer::beginFrame()
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void render::OpenGLRenderer::beginDraw(render::PrimitiveType primitiveType)
+void tz::OpenGLRenderer::beginDraw(tz::PrimitiveType primitiveType)
 {
   positions.clear();
 }
-void render::OpenGLRenderer::endDraw()
+void tz::OpenGLRenderer::endDraw()
 {
 
   // Append every immediate vertex data stream into our perFrameBuffer.
   immediatePerFrameBuffer->appendData(positions);
 }
 
-void render::OpenGLRenderer::emitPosition(Eigen::Vector3f pos)
+void tz::OpenGLRenderer::emitPosition(Eigen::Vector3f pos)
 {
   positions.push_back(pos);
 }
 
-void render::OpenGLRenderer::emitColor(Eigen::Vector4f color)
+void tz::OpenGLRenderer::emitColor(Eigen::Vector4f color)
 {
 
 }
-void render::OpenGLRenderer::emitUV(Eigen::Vector2f uv)
+void tz::OpenGLRenderer::emitUV(Eigen::Vector2f uv)
 {
 
 }
-void render::OpenGLRenderer::emitNormal(Eigen::Vector3f normal)
+void tz::OpenGLRenderer::emitNormal(Eigen::Vector3f normal)
 {
 
 }
 
-GLuint render::OpenGLRenderer::createVertexBuffer(render::VertexBufferCreateInfo vbCreateInfo) {
+GLuint tz::OpenGLRenderer::createVertexBuffer(tz::VertexBufferCreateInfo vbCreateInfo) {
   GLuint vbo;
   glCreateBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -158,7 +177,7 @@ GLuint render::OpenGLRenderer::createVertexBuffer(render::VertexBufferCreateInfo
 }
 
 
-GLuint render::OpenGLRenderer::createVertexArrayObject()
+GLuint tz::OpenGLRenderer::createVertexArrayObject()
 {
 
   auto vao = (new VertexArrayObject::Builder())->positions({{0, 1, 2}})->build();
@@ -167,7 +186,7 @@ GLuint render::OpenGLRenderer::createVertexArrayObject()
 
 }
 
-void render::OpenGLShaderModule::init(render::ShaderType type, const std::string& source)
+void tz::OpenGLShaderModule::init(tz::ShaderType type, const std::string& source)
 {
 
   switch (type)

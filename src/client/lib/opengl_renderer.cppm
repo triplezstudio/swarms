@@ -5,17 +5,14 @@ module;
 #include <functional>
 export module render.opengl;
 
+import app;
+import windowing;
 import render.base;
 
 import common;
 
-export namespace render {
+export namespace tz {
 
-struct OpenGLInitData
-{
-  client_common::NativeHandles nativeHandles;
-  std::function<void(int *width, int *height)> displaySizeFunc;
-};
 
 struct ShaderHandle
 {
@@ -196,7 +193,7 @@ private:
   };
 };
 
-class OpenGLShaderPipeline : public render::ShaderPipeline
+class OpenGLShaderPipeline : public tz::ShaderPipeline
 {
   public:
       void link(std::vector<ShaderModule*> modules) override;
@@ -220,11 +217,11 @@ class OpenGLShaderPipeline : public render::ShaderPipeline
       GLuint programHandle;
 };
 
-class OpenGLShaderModule : public render::ShaderModule
+class OpenGLShaderModule : public tz::ShaderModule
 {
 
   public:
-      void init(render::ShaderType type, const std::string& source) override;
+      void init(ShaderType type, const std::string& source) override;
       void* getHandle() override
       {
         return &handle;
@@ -239,18 +236,18 @@ class OpenGLShaderModule : public render::ShaderModule
  * OpenGLRenderer is a custom renderer using the OpenGL 4.6 API.
  *
  */
-class SWARMS_API OpenGLRenderer : public render::Renderer
+class OpenGLRenderer : public tz::Renderer
 {
   public:
-  OpenGLRenderer(const OpenGLInitData &initData);
-  void init() override;
+  void init(tz::Window* window) override;
+  WindowDesc getRequiredWindowDesc() override;
 
   void beginFrame();
   void endFrame();
 
 
   // This implements the "immediate" command style API:
-  void beginDraw(render::PrimitiveType primitiveType) override;
+  void beginDraw(tz::PrimitiveType primitiveType) override;
   void endDraw() override;
   void emitPosition(Eigen::Vector3f pos) override;
   void emitColor(Eigen::Vector4f color) override;
@@ -259,10 +256,10 @@ class SWARMS_API OpenGLRenderer : public render::Renderer
 
   private:
   GLuint createVertexArrayObject();
-  GLuint createVertexBuffer(render::VertexBufferCreateInfo vbCreateInfo);
+  GLuint createVertexBuffer(VertexBufferCreateInfo vbCreateInfo);
 
   private:
-  OpenGLInitData initData;
+  tz::Window* window = nullptr;
 
   VertexBuffer *immediatePerFrameBuffer = nullptr;
   GLuint immediatePerFrameVAO = 0;

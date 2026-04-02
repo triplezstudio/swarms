@@ -2,6 +2,8 @@ module;
 #include <Eigen/Dense>
 export module render.base;
 
+
+import windowing;
 import common;
 
 /**
@@ -13,7 +15,7 @@ import common;
  * b) be able to provide platform optimal render backends so we need to be able to support
  *    multiple renderers behind this interface anyway.
  */
-export namespace render {
+export namespace tz {
 
 enum class ShaderType {
   Vertex,
@@ -50,7 +52,8 @@ enum class PrimitiveType {
 class Renderer
 {
   public:
-  virtual void init() = 0;
+  virtual void init(tz::Window* window) = 0;
+  virtual WindowDesc getRequiredWindowDesc() = 0;
   virtual void beginDraw(PrimitiveType primitiveType) = 0;
   virtual void endDraw() = 0;
   virtual void emitPosition(Eigen::Vector3f position) = 0;

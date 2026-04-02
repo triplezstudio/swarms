@@ -3,24 +3,24 @@ module;
 #include <functional>
 export module app;
 
-import :base;
+import windowing;
 import render.base;
 
-export namespace app {
+export namespace tz {
 
   using FrameListener = std::function< void(float frameTime)>;
 
   class SWARMS_API App
   {
     public:
-      App();
-      virtual void init();
+      App(tz::WindowSystem* windowSystem, tz::Renderer* renderer);
       virtual void run();
       virtual void addFrameListener(FrameListener frameListener);
-      render::Renderer* getRenderer();
 
   private:
-      app_base::AppImpl* impl = nullptr;
+      tz::WindowSystem* windowSystem = nullptr;
+      tz::Renderer* renderer = nullptr;
+
       std::vector<FrameListener> frameListeners;
 
       void updateFrameListeners(float frameTime);
