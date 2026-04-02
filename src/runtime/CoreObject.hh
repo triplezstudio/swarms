@@ -3,6 +3,7 @@
 
 #include "CoreException.hh"
 #include "ILogger.hh"
+#include "PrefixedLogger.hh"
 #include <functional>
 #include <string>
 
@@ -38,10 +39,16 @@ class CoreObject
   /// @return - true if the function ran successfully, false otherwise
   bool withSafetyNet(std::function<void(void)> func, const std::string &functionName) const;
 
-  private:
-  std::string m_module{};
+  /// @brief - Add a new module to the logger attached to this object. Proxies
+  /// the call to `PrefixedLogger::addModule`.
+  /// @param module - the new module to register.
+  void addModule(const std::string &module);
 
-  auto getLogger() const -> log::ILogger &;
+  private:
+  /// @brief - The logger attached to this object. Provides a thin wrapper
+  /// around the global logging device to allow prefixing logs with a module
+  /// specific to the object.
+  log::PrefixedLogger m_logger;
 };
 
 } // namespace swarms::runtime
