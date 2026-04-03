@@ -16,6 +16,88 @@ import common;
  */
 export namespace tz {
 
+struct VertexBuffer
+{
+  void* handle;
+
+};
+
+enum class VertexInputRate
+{
+  PerVertex,
+  PerInstance
+};
+
+enum class AttributeDataFormat
+{
+  R32G32B32A32_FLOAT,
+};
+
+struct VertexBinding
+{
+  uint32_t bufferSlot;
+  uint32_t stride;
+  VertexInputRate vertexInputRate;
+
+};
+
+struct VertexAttribute
+{
+  uint32_t shaderLocation;
+  uint32_t bufferSlot;
+  AttributeDataFormat dataFormat;
+  uint32_t offset;
+
+
+};
+
+struct VertexLayout
+{
+  std::vector<VertexBinding> bindings;
+  std::vector<VertexAttribute> attributes;
+};
+
+enum class CullMode
+{
+  None,
+  Front,
+  Back
+};
+
+enum class FillMode
+{
+  Solid,
+  Line
+};
+
+enum class FrontFace
+{
+  Clockwise,
+  CounterClockwise
+};
+
+enum class PrimitiveType {
+  Triangles,
+  Lines,
+  Quads
+
+};
+
+struct RenderState
+{
+  CullMode cullMode;
+  FillMode fillMode;
+  FrontFace frontFace;
+  bool depthTesting;
+  bool stencilTesting;
+  bool blending;
+  PrimitiveType primitiveType;
+};
+
+
+
+
+
 enum class ShaderType {
   Vertex,
   Fragment,
@@ -41,11 +123,22 @@ class ShaderPipeline {
       virtual void* getHandle() = 0;
 };
 
-enum class PrimitiveType {
-  Triangles,
-  Lines,
-  Quads
+struct PipelineStateObject
+{
+  RenderState renderState;
+  ShaderPipeline* shaderPipeline = nullptr;
+  VertexLayout vertexLayout;
+};
 
+
+
+
+struct Mesh
+{
+  std::vector<Eigen::Vector3f> positions;
+  std::vector<Eigen::Vector2f> uvs;
+  std::vector<Eigen::Vector3f> normals;
+  std::vector<uint32_t> indices;
 };
 
 class Renderer
@@ -60,6 +153,9 @@ class Renderer
   virtual void emitColor(Eigen::Vector4f color) = 0;
   virtual void emitUV(Eigen::Vector2f uv) = 0;
   virtual void emitNormal(Eigen::Vector3f normal) = 0;
+
+
+
 };
 
 }

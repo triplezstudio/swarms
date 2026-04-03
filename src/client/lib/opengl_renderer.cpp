@@ -62,7 +62,7 @@ void tz::OpenGLRenderer::init(tz::Window* window)
   // Prepare per-frame buffer to store the immediate-command data into:
   immediatePerFrameVAO = createVertexArrayObject();
   glBindVertexArray(immediatePerFrameVAO);
-  immediatePerFrameBuffer = new VertexBuffer(1024 * 16);
+  immediatePerFrameBuffer = new OpenGLVertexBuffer(1024 * 16);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(
     0,
@@ -81,6 +81,14 @@ void OpenGLRenderer::clearScreen()
   //glClearColorf(1, 0, 0, 1);
   glClear(GL_COLOR_BUFFER_BIT);
 }
+
+
+void OpenGLRenderer::createPipelineStateObject(tz::RenderState rs, tz::ShaderPipeline *shaderPipeline, tz::VertexLayout vl)
+{
+  // TODO probably we do only need the lower-level and render-specific object factory functions here.
+}
+
+
 
 void OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
 {
@@ -182,7 +190,7 @@ GLuint OpenGLRenderer::createVertexBuffer(VertexBufferCreateInfo vbCreateInfo) {
 
 GLuint OpenGLRenderer::createVertexArrayObject()
 {
-  auto vao = (new VertexArrayObject::Builder())->positions({{0, 1, 2}})->build();
+  auto vao = (new OpenGLVertexArrayObject::Builder())->positions({{0, 1, 2}})->build();
   return vao->getHandle();
 }
 

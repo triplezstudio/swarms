@@ -13,51 +13,21 @@ import common;
 
 export namespace tz {
 
-
-struct ShaderHandle
-{
-  uint32_t id;
-};
-
-struct ProgramHandle
-{
-  uint32_t id;
-};
-
-struct TextureHandle
-{
-  uint32_t id;
-};
-
-struct VertexBufferHandle
-{
-  uint32_t id;
-};
-
-struct IndexBufferHandle
-{
-  uint32_t id;
-};
-
 struct VertexBufferCreateInfo
 {
   std::vector<float> data;
-  size_t element_size = 0;
-  size_t stride       = 0;
+
 };
 
 struct VertexBufferUpdateInfo
 {
   std::vector<float> data;
-  size_t element_size = 0;
-  size_t stride       = 0;
-  VertexBufferHandle oldVBO;
 };
 
 /**
  * Abstraction over an OpenGL VBO.
  */
-class VertexBuffer
+class OpenGLVertexBuffer
 {
   public:
   /**
@@ -65,7 +35,7 @@ class VertexBuffer
        * This can be useful to implement dynamic streaming
        * and updating the buffer on the fly later.
        */
-  VertexBuffer(uint64_t size)
+      OpenGLVertexBuffer(uint64_t size)
     : sizeInBytes(size)
   {
     glCreateBuffers(1, &handle);
@@ -78,7 +48,7 @@ class VertexBuffer
   }
 
   template<typename T>
-  VertexBuffer(std::vector<T> data)
+  OpenGLVertexBuffer(std::vector<T> data)
   {
     glCreateBuffers(1, &handle);
     glBindBuffer(GL_ARRAY_BUFFER, handle);
@@ -149,7 +119,7 @@ class VertexBuffer
  * Abstraction over an OpenGL VAO.
  * With builder pattern, makes it easier to construct.
  */
-class VertexArrayObject
+class OpenGLVertexArrayObject
 {
   public:
   GLuint getHandle()
@@ -166,7 +136,7 @@ class VertexArrayObject
 public:
     Builder()
     {
-      vertexArrayObject = new VertexArrayObject();
+      vertexArrayObject = new OpenGLVertexArrayObject();
     }
 
     Builder *positions(std::vector<Eigen::Vector3f> pos)
@@ -177,18 +147,18 @@ public:
 
     // TODO add further attributes, e.g. normals, uvs, etc.
 
-    VertexArrayObject *build()
+    OpenGLVertexArrayObject *build()
     {
       glGenVertexArrays(1, &vertexArrayObject->handle);
       glBindVertexArray(vertexArrayObject->handle);
 
-      auto vbo = VertexBuffer(_positions);
+      auto vbo = OpenGLVertexBuffer(_positions);
 
       return vertexArrayObject;
     }
 
 private:
-    VertexArrayObject *vertexArrayObject = nullptr;
+    OpenGLVertexArrayObject *vertexArrayObject = nullptr;
     std::vector<Eigen::Vector3f> _positions;
   };
 };
@@ -256,6 +226,7 @@ class SWARMS_API OpenGLRenderer : public Renderer
   void emitUV(Eigen::Vector2f uv) override;
   void emitNormal(Eigen::Vector3f normal) override;
 
+
   private:
   GLuint createVertexArrayObject();
   GLuint createVertexBuffer(VertexBufferCreateInfo vbCreateInfo);
@@ -263,7 +234,7 @@ class SWARMS_API OpenGLRenderer : public Renderer
   private:
   tz::Window* window = nullptr;
 
-  VertexBuffer *immediatePerFrameBuffer = nullptr;
+  OpenGLVertexBuffer *immediatePerFrameBuffer = nullptr;
   GLuint immediatePerFrameVAO = 0;
 
   // These are used to store the current immediate-stream-data positions.
