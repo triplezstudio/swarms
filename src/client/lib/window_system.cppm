@@ -45,6 +45,7 @@ struct WindowDesc {
   virtual void init() = 0;
   virtual void pollEvents() = 0;
   virtual Window* createWindow(WindowDesc desc) = 0;
+  virtual void present() = 0;
 
   };
 }

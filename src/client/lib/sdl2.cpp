@@ -35,6 +35,15 @@ void SDL2WindowSystem::pollEvents()
   }
 }
 
+void SDL2WindowSystem::present()
+{
+  if (windowDesc.api == WindowDesc::GraphicsAPI::OpenGL)
+  {
+    SDL_GL_SwapWindow(window);
+  }
+
+}
+
 void SDL2WindowSystem::init()
 {
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
@@ -51,22 +60,9 @@ void SDL2WindowSystem::init()
 
 }
 
-//void SDL2WindowSystem::doFrame() {
-//
-//  SDL_Event event;
-//  while (SDL_PollEvent(&event))
-//  {
-//    if (event.type == SDL_QUIT)
-//    {
-//
-//    }
-//  }
-//
-//
-//}
-
 tz::Window* tz::SDL2WindowSystem::createWindow(tz::WindowDesc desc)
 {
+  this->windowDesc = desc;
   int windowFlags = SDL_WINDOW_SHOWN;
   if (desc.api == tz::WindowDesc::GraphicsAPI::OpenGL)
   {

@@ -17,6 +17,7 @@ class SWARMS_API SDL2WindowSystem : public WindowSystem
   SDL2WindowSystem();
   void init() override;
   void pollEvents() override;
+  void present() override;
   Window * createWindow(WindowDesc desc) override;
 
   private:
@@ -26,6 +27,7 @@ class SWARMS_API SDL2WindowSystem : public WindowSystem
 
   private:
   SDL_Window* window = nullptr;
+  WindowDesc windowDesc;
 };
 
 }

@@ -4,11 +4,8 @@ import app;
 import render.opengl;
 import windowing.sdl2;
 
-/**
- * This function demonstrates different "usecases"
- * and options on how to use the clientside apis!
- */
-void runDemo()
+
+void runActiveLoopDemo()
 {
 
   auto renderer = new tz::OpenGLRenderer();
@@ -20,7 +17,18 @@ void runDemo()
   while (true)
   {
     ws->pollEvents();
+    renderer->beginFrame();
     renderer->clearScreen();
+    renderer->beginDraw(tz::PrimitiveType::Triangles);
+    renderer->emitPosition({-0.5, 0.5, 0});
+    renderer->emitPosition({-0.5, -0.5, 0});
+    renderer->emitPosition({0.2, -0.5, 0});
+
+    renderer->emitPosition({-0.4, 0.5, 0});
+    renderer->emitPosition({0.3, -0.5, 0});
+    renderer->emitPosition({0.3, 0.5, 0});
+    renderer->endDraw();
+    renderer->endFrame();
     ws->present();
   }
 
@@ -30,7 +38,10 @@ void runDemo()
 int main(int argc, char* argv[])
 {
 
-  runDemo();
+  runActiveLoopDemo();
+
+  // runFrameCallbackDemo();
+  // ...
 
 
 
