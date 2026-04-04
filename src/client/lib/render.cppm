@@ -119,7 +119,7 @@ class ShaderModule {
  */
 class ShaderPipeline {
   public:
-      virtual void link(std::vector<ShaderModule*> modules) = 0;
+      virtual void link(const std::vector<ShaderModule*>& modules) = 0;
       virtual void* getHandle() = 0;
 };
 
@@ -128,8 +128,69 @@ struct PipelineStateObject
   RenderState renderState;
   ShaderPipeline* shaderPipeline = nullptr;
   VertexLayout vertexLayout;
+
 };
 
+
+class Command
+{
+  public:
+      virtual ~Command() = default;
+};
+
+class CmdBindPipeline : public Command
+{
+  public:
+  CmdBindPipeline(PipelineStateObject* pso) : pso(pso) {}
+
+  public:
+      PipelineStateObject* pso = nullptr;
+};
+
+class CmdBindVertexBuffers : public Command
+{
+  public:
+      CmdBindVertexBuffers(std::vector<VertexBuffer*> vbs) : vertexBuffers(vbs) {}
+
+
+  std::vector<VertexBuffer*> vertexBuffers;
+};
+
+class CmdDraw : public Command
+{
+  public:
+      CmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) :
+        vertexCount(vertexCount), instanceCount(instanceCount), firstVertex(firstVertex), firstInstance(firstInstance)
+      {}
+
+  uint32_t vertexCount;
+  uint32_t instanceCount;
+  uint32_t firstVertex;
+  uint32_t firstInstance;
+};
+
+
+class CommandBuffer
+{
+  public:
+      void recordCommand(Command* cmd)
+      {
+        commands.push_back(cmd);
+      }
+
+      using iterator = std::vector<Command*>::iterator;
+      using const_iterator = std::vector<Command*>::const_iterator;
+
+      iterator begin() { return commands.begin(); }
+      iterator end()   { return commands.end(); }
+
+      const_iterator begin() const { return commands.begin(); }
+      const_iterator end()   const { return commands.end(); }
+
+  private:
+  std::vector<Command*> commands;
+
+};
 
 
 
@@ -153,6 +214,10 @@ class Renderer
   virtual void emitColor(Eigen::Vector4f color) = 0;
   virtual void emitUV(Eigen::Vector2f uv) = 0;
   virtual void emitNormal(Eigen::Vector3f normal) = 0;
+
+  virtual void bindPipelineStateObject(const PipelineStateObject* pso) = 0;
+
+  virtual void executeCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
 
 

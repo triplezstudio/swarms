@@ -3,6 +3,7 @@ module;
 #include <Eigen/Dense>
 #include <GL/glew.h>
 #include <functional>
+#include <iostream>
 export module render.opengl;
 
 import app;
@@ -163,10 +164,10 @@ private:
   };
 };
 
-class OpenGLShaderPipeline : public tz::ShaderPipeline
+class SWARMS_API OpenGLShaderPipeline : public ShaderPipeline
 {
   public:
-      void link(std::vector<ShaderModule*> modules) override;
+      void link(const std::vector<ShaderModule*>& modules) override;
 
       void bind()
       {
@@ -187,7 +188,7 @@ class OpenGLShaderPipeline : public tz::ShaderPipeline
       GLuint programHandle;
 };
 
-class OpenGLShaderModule : public tz::ShaderModule
+class SWARMS_API OpenGLShaderModule : public ShaderModule
 {
 
   public:
@@ -201,6 +202,7 @@ class OpenGLShaderModule : public tz::ShaderModule
       GLuint handle = 0;
 
 };
+
 
 /**
  * OpenGLRenderer is a custom renderer using the OpenGL 4.6 API.
@@ -226,10 +228,16 @@ class SWARMS_API OpenGLRenderer : public Renderer
   void emitUV(Eigen::Vector2f uv) override;
   void emitNormal(Eigen::Vector3f normal) override;
 
+  void bindPipelineStateObject(const tz::PipelineStateObject* pso) override;
+
+  void executeCommandBuffer(tz::CommandBuffer *commandBuffer) override;
+
 
   private:
   GLuint createVertexArrayObject();
   GLuint createVertexBuffer(VertexBufferCreateInfo vbCreateInfo);
+  void executeImmediateCommands();
+  void executeDeferredCommands();
 
   private:
   tz::Window* window = nullptr;
@@ -247,6 +255,8 @@ class SWARMS_API OpenGLRenderer : public Renderer
   // all non-specific renderings, e.g for the interpretation of the
   // immediate-style commands and the primitive-rendering commands (drawCube, drawSphere..)
   OpenGLShaderPipeline* defaultShaderPipeline = nullptr;
+
+  const PipelineStateObject* currentPSO = nullptr;
 };
 
 } // namespace render

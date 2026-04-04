@@ -16,9 +16,11 @@ module render.opengl;
 import common;
 import windowing;
 
+
 namespace tz
 {
-void tz::OpenGLRenderer::init(tz::Window* window)
+
+void OpenGLRenderer::init(Window* window)
 {
 
   this->window = window;
@@ -82,15 +84,12 @@ void OpenGLRenderer::clearScreen()
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-
-void OpenGLRenderer::createPipelineStateObject(tz::RenderState rs, tz::ShaderPipeline *shaderPipeline, tz::VertexLayout vl)
+void OpenGLRenderer::bindPipelineStateObject(const tz::PipelineStateObject* pso)
 {
-  // TODO probably we do only need the lower-level and render-specific object factory functions here.
+  currentPSO = pso;
 }
 
-
-
-void OpenGLShaderPipeline::link(std::vector<ShaderModule*> modules)
+void OpenGLShaderPipeline::link(const std::vector<ShaderModule*>& modules)
 {
   programHandle = glCreateProgram();
   for (auto& m : modules) {
@@ -126,16 +125,36 @@ WindowDesc OpenGLRenderer::getRequiredWindowDesc()
   return wd;
 }
 
-void OpenGLRenderer::endFrame()
+void OpenGLRenderer::executeCommandBuffer(tz::CommandBuffer *commandBuffer)
+{
+  for (auto cmd : *commandBuffer) {
+    if (auto c = dynamic_cast<CmdBindPipeline*>(cmd))
+    {
+
+    }
+  }
+}
+
+
+void OpenGLRenderer::executeImmediateCommands()
 {
   // Render the contents of our current immediate buffer:
   glBindVertexArray(immediatePerFrameVAO);
   //immediatePerFrameBuffer->bind();
   defaultShaderPipeline->bind();
-
-
   glDrawArrays(GL_TRIANGLES, 0, immediatePerFrameBuffer->getNumberOfElements());
 
+}
+
+void OpenGLRenderer::executeDeferredCommands()
+{
+
+}
+
+void OpenGLRenderer::endFrame()
+{
+  executeImmediateCommands();
+  executeDeferredCommands();
 
 }
 
@@ -193,6 +212,7 @@ GLuint OpenGLRenderer::createVertexArrayObject()
   auto vao = (new OpenGLVertexArrayObject::Builder())->positions({{0, 1, 2}})->build();
   return vao->getHandle();
 }
+
 
 void OpenGLShaderModule::init(ShaderType type, const std::string& source)
 {

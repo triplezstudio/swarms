@@ -6,10 +6,6 @@ find_package(GLEW CONFIG REQUIRED)
 add_library(swarms_client_lib SHARED)
 
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
-if (MSVC)
-    message(STATUS "windows msvc all exports on")
-    set (CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
 
 target_sources(swarms_client_lib
         PUBLIC
@@ -21,6 +17,7 @@ target_sources(swarms_client_lib
                 render.cppm
                 opengl_renderer.cppm
                 window_system.cppm
+
 
         PRIVATE
                 app.cpp
