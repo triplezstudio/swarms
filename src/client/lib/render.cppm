@@ -120,7 +120,6 @@ class ShaderModule {
 class ShaderPipeline {
   public:
       virtual void link(const std::vector<ShaderModule*>& modules) = 0;
-      virtual void* getHandle() = 0;
 };
 
 struct PipelineStateObject
@@ -215,9 +214,7 @@ class Renderer
   virtual void emitUV(Eigen::Vector2f uv) = 0;
   virtual void emitNormal(Eigen::Vector3f normal) = 0;
 
-  virtual void bindPipelineStateObject(const PipelineStateObject* pso) = 0;
-
-  virtual void executeCommandBuffer(CommandBuffer* commandBuffer) = 0;
+  virtual void submitCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
 
 

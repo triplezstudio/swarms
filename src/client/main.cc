@@ -135,10 +135,24 @@ void runActiveLoopDemo()
     renderer->emitPosition({0.3, 0.5, 0});
     renderer->endDraw();
 
-    // Draw with more modern command-buffer approach:
-    renderer->executeCommandBuffer(gameGraphicsData.commandBuffer);
+    // Use modern command buffer approach.
+    // Every drawing/pipeline execution is materialised through
+    // specific commands which are recorded into a (reusable)
+    // commandBuffer, which gets submitted.
+    // Any number of command buffers may be submitted per frame.
+    // Submission it not immediate execution, but collection of the buffer.
+    renderer->submitCommandBuffer(gameGraphicsData.commandBuffer);
 
+    // Ending the frame is where all the drawing & computation work is actually being
+    // done on the GPU.
+    // For legacy frameworks as OpenGL this means all the actual draw calls are done.
+    // For modern APIs such as Vulkan and DX12, it means the actual submission
+    // of their internal command buffers, fence waiting etc.
     renderer->endFrame();
+
+
+    // Final step for a frame to present the contents of the backbuffer
+    // to the actual display.
     ws->present();
   }
 

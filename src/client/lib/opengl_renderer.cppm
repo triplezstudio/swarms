@@ -179,9 +179,9 @@ class SWARMS_API OpenGLShaderPipeline : public ShaderPipeline
         glUseProgram(0);
       }
 
-      void* getHandle() override
+      GLuint getHandle()
       {
-        return &programHandle;
+        return programHandle;
       }
 
   private:
@@ -228,16 +228,17 @@ class SWARMS_API OpenGLRenderer : public Renderer
   void emitUV(Eigen::Vector2f uv) override;
   void emitNormal(Eigen::Vector3f normal) override;
 
-  void bindPipelineStateObject(const tz::PipelineStateObject* pso) override;
-
-  void executeCommandBuffer(tz::CommandBuffer *commandBuffer) override;
+  void submitCommandBuffer(tz::CommandBuffer *commandBuffer) override;
 
 
   private:
   GLuint createVertexArrayObject();
   GLuint createVertexBuffer(VertexBufferCreateInfo vbCreateInfo);
   void executeImmediateCommands();
-  void executeDeferredCommands();
+  void executeCommandBuffers();
+  void executeCommandBuffer(CommandBuffer* commandBuffer);
+
+  void execCmdBindPipeline(CmdBindPipeline *cmd);
 
   private:
   tz::Window* window = nullptr;
@@ -256,7 +257,8 @@ class SWARMS_API OpenGLRenderer : public Renderer
   // immediate-style commands and the primitive-rendering commands (drawCube, drawSphere..)
   OpenGLShaderPipeline* defaultShaderPipeline = nullptr;
 
-  const PipelineStateObject* currentPSO = nullptr;
+  // By submitting commandbuffers, they are collected here.
+  std::vector<CommandBuffer*> frameCommandBuffers;
 };
 
 } // namespace render

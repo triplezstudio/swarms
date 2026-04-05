@@ -84,11 +84,6 @@ void OpenGLRenderer::clearScreen()
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void OpenGLRenderer::bindPipelineStateObject(const tz::PipelineStateObject* pso)
-{
-  currentPSO = pso;
-}
-
 void OpenGLShaderPipeline::link(const std::vector<ShaderModule*>& modules)
 {
   programHandle = glCreateProgram();
@@ -125,14 +120,30 @@ WindowDesc OpenGLRenderer::getRequiredWindowDesc()
   return wd;
 }
 
+
+void OpenGLRenderer::execCmdBindPipeline(CmdBindPipeline* cmd)
+{
+  auto prog =reinterpret_cast<OpenGLShaderPipeline*>(cmd->pso->shaderPipeline)->getHandle();
+  glUseProgram(prog);
+}
+
 void OpenGLRenderer::executeCommandBuffer(tz::CommandBuffer *commandBuffer)
 {
   for (auto cmd : *commandBuffer) {
     if (auto c = dynamic_cast<CmdBindPipeline*>(cmd))
     {
+      execCmdBindPipeline(c);
 
     }
+
+
   }
+}
+
+void OpenGLRenderer::submitCommandBuffer(tz::CommandBuffer *commandBuffer)
+{
+  frameCommandBuffers.push_back(commandBuffer);
+
 }
 
 
@@ -146,15 +157,18 @@ void OpenGLRenderer::executeImmediateCommands()
 
 }
 
-void OpenGLRenderer::executeDeferredCommands()
+void OpenGLRenderer::executeCommandBuffers()
 {
+  for (auto& cb: frameCommandBuffers)
+  {
 
+  }
 }
 
 void OpenGLRenderer::endFrame()
 {
   executeImmediateCommands();
-  executeDeferredCommands();
+  executeCommandBuffers();
 
 }
 
