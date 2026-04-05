@@ -120,11 +120,130 @@ WindowDesc OpenGLRenderer::getRequiredWindowDesc()
   return wd;
 }
 
+GLenum OpenGLRenderer::primitiveTypeToEnum(PrimitiveType pt)
+{
+  switch (pt)
+  {
+    case PrimitiveType::Triangles: return GL_TRIANGLES;
+    case PrimitiveType::Lines: return GL_LINES;
+    case PrimitiveType::Quads: return GL_TRIANGLES;
+    default: return GL_TRIANGLES;
+  }
+}
+
+void OpenGLRenderer::execCmdDraw(CmdDraw* cmd)
+{
+  auto vao = vaoCache[currentPSO->vertexLayout.toHash()];
+  glBindVertexArray(vao);
+
+  glDrawArrays(primitiveTypeToEnum(currentPSO->renderState.primitiveType), cmd->firstVertex, cmd->vertexCount);
+}
+
+void OpenGLRenderer::execCmdBindVertexBuffers(CmdBindVertexBuffers* cmd)
+{
+
+  auto vao = vaoCache[currentPSO->vertexLayout.toHash()];
+  for (auto& b : currentPSO->vertexLayout.bindings)
+  {
+    auto vb = cmd->vertexBuffers[b.bufferSlot];
+    glVertexArrayVertexBuffer(vao,
+                              b.bufferSlot,
+                              *reinterpret_cast<GLuint*>(vb->getHandle()),
+                              0,
+                              b.stride);
+  }
+
+}
+
+VertexBuffer *OpenGLRenderer::createVertexBuffer(const std::vector<Eigen::Vector3f> &data)
+{
+  auto vb = new OpenGLVertexBuffer(data);
+  return vb;
+}
 
 void OpenGLRenderer::execCmdBindPipeline(CmdBindPipeline* cmd)
 {
-  auto prog =reinterpret_cast<OpenGLShaderPipeline*>(cmd->pso->shaderPipeline)->getHandle();
+  // Bind the current shader program:
+  auto prog =*reinterpret_cast<GLuint*>(cmd->pso->shaderPipeline->getHandle());
   glUseProgram(prog);
+
+  // Apply all attributes of the current render state:
+  // TODO: cache/make more efficient.
+  //       We do not want to set states which are already active on GL.
+  cmd->pso->renderState.stencilTesting ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
+  cmd->pso->renderState.depthTesting ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
+
+  switch (cmd->pso->renderState.cullMode)
+  {
+    case CullMode::Back:
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_BACK); break;
+    case CullMode::Front:
+      glEnable(GL_CULL_FACE);
+      glCullFace(GL_FRONT); break;
+    case CullMode::None:
+      glDisable(GL_CULL_FACE); break;
+
+  }
+
+
+  switch (cmd->pso->renderState.frontFace)
+  {
+    case FrontFace::Clockwise:
+      glFrontFace(GL_CW); break;
+    case FrontFace::CounterClockwise:
+      glFrontFace(GL_CCW); break;
+  }
+
+  switch (cmd->pso->renderState.fillMode)
+  {
+    case FillMode::Solid:
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); break;
+    case FillMode::Line:
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); break;
+  }
+
+  if (cmd->pso->renderState.blending)
+  {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
+  } else {
+    glDisable(GL_BLEND);
+  }
+
+  // These must be bound to a VAO.
+  // VAOs are cached by the incoming vertex layout.
+  if (vaoCache.find(cmd->pso->vertexLayout.toHash()) == vaoCache.end()) {
+    GLuint newVAO;
+    glCreateVertexArrays(1, &newVAO);
+    vaoCache[cmd->pso->vertexLayout.toHash()] = newVAO;
+  }
+  auto vao = vaoCache[cmd->pso->vertexLayout.toHash()];
+
+  for (auto & attr : cmd->pso->vertexLayout.attributes) {
+    glEnableVertexArrayAttrib(vao, attr.shaderLocation);
+    glVertexArrayAttribFormat(vao, attr.shaderLocation,
+                              attr.componentCount,
+                              GL_FLOAT, GL_FALSE, attr.offset);
+    glVertexArrayAttribBinding(vao, attr.shaderLocation, attr.bufferSlot);
+  }
+
+  for (auto& binding : cmd->pso->vertexLayout.bindings)
+  {
+      if (binding.vertexInputRate == VertexInputRate::PerInstance)
+      {
+        glVertexBindingDivisor(binding.bufferSlot, 1);
+      }
+
+  }
+
+  // Due to the nature of GL we can not pre-set
+  // the glVertexAttribPointer which would
+  // come from the PSO's vertex layout, so we must
+  // store the current PSO to be used during later commands (e.g. draw).
+  currentPSO = cmd->pso;
+
 }
 
 void OpenGLRenderer::executeCommandBuffer(tz::CommandBuffer *commandBuffer)
@@ -135,6 +254,14 @@ void OpenGLRenderer::executeCommandBuffer(tz::CommandBuffer *commandBuffer)
       execCmdBindPipeline(c);
 
     }
+    else if (auto c = dynamic_cast<CmdBindVertexBuffers*>(cmd))
+    {
+      execCmdBindVertexBuffers(c);
+    }
+    else if (auto c = dynamic_cast<CmdDraw*>(cmd))
+    {
+      execCmdDraw(c);
+    }
 
 
   }
@@ -143,7 +270,6 @@ void OpenGLRenderer::executeCommandBuffer(tz::CommandBuffer *commandBuffer)
 void OpenGLRenderer::submitCommandBuffer(tz::CommandBuffer *commandBuffer)
 {
   frameCommandBuffers.push_back(commandBuffer);
-
 }
 
 
@@ -161,7 +287,7 @@ void OpenGLRenderer::executeCommandBuffers()
 {
   for (auto& cb: frameCommandBuffers)
   {
-
+    executeCommandBuffer(cb);
   }
 }
 
@@ -177,9 +303,11 @@ void OpenGLRenderer::beginFrame()
   // Prepare for the next frame
   immediatePerFrameBuffer->clear();
 
+  frameCommandBuffers.clear();
+
   // TODO make clear color part of render API
   glClearColor(sinf(0.4), 0, 0, 1);
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void OpenGLRenderer::beginDraw(tz::PrimitiveType primitiveType)

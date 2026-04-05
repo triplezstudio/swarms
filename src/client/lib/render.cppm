@@ -18,7 +18,7 @@ export namespace tz {
 
 struct VertexBuffer
 {
-  void* handle;
+  virtual void* getHandle() = 0;
 
 };
 
@@ -46,6 +46,7 @@ struct VertexAttribute
   uint32_t shaderLocation;
   uint32_t bufferSlot;
   AttributeDataFormat dataFormat;
+  int32_t componentCount;
   uint32_t offset;
 
 
@@ -55,6 +56,27 @@ struct VertexLayout
 {
   std::vector<VertexBinding> bindings;
   std::vector<VertexAttribute> attributes;
+
+  std::string toHash()
+  {
+    std::string hash = "";
+    for (auto& b : bindings)
+    {
+      hash += std::to_string(b.bufferSlot);
+      hash += std::to_string(b.stride);
+      hash += std::to_string(static_cast<int>(b.vertexInputRate));
+    }
+    for (auto& a : attributes)
+    {
+      hash += std::to_string(a.bufferSlot);
+      hash += std::to_string(a.shaderLocation);
+      hash += std::to_string(a.offset);
+      hash += std::to_string(a.componentCount);
+      hash += std::to_string(static_cast<int>(a.dataFormat));
+    }
+
+    return hash;
+  }
 };
 
 enum class CullMode
@@ -120,6 +142,7 @@ class ShaderModule {
 class ShaderPipeline {
   public:
       virtual void link(const std::vector<ShaderModule*>& modules) = 0;
+      virtual void* getHandle() = 0;
 };
 
 struct PipelineStateObject
@@ -214,9 +237,11 @@ class Renderer
   virtual void emitUV(Eigen::Vector2f uv) = 0;
   virtual void emitNormal(Eigen::Vector3f normal) = 0;
 
+  virtual void beginFrame() = 0;
+  virtual void endFrame() = 0;
   virtual void submitCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
-
+  virtual VertexBuffer* createVertexBuffer(const std::vector<Eigen::Vector3f>& data) = 0;
 
 };
 

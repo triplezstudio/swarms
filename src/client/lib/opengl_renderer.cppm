@@ -4,6 +4,7 @@ module;
 #include <GL/glew.h>
 #include <functional>
 #include <iostream>
+#include <map>
 export module render.opengl;
 
 import app;
@@ -28,16 +29,15 @@ struct VertexBufferUpdateInfo
 /**
  * Abstraction over an OpenGL VBO.
  */
-class OpenGLVertexBuffer
+class OpenGLVertexBuffer : public VertexBuffer
 {
   public:
   /**
-       * Create an initially empty vertex buffer.
-       * This can be useful to implement dynamic streaming
-       * and updating the buffer on the fly later.
-       */
-      OpenGLVertexBuffer(uint64_t size)
-    : sizeInBytes(size)
+  * Create an initially empty vertex buffer.
+  * This can be useful to implement dynamic streaming
+  * and updating the buffer on the fly later.
+  */
+  OpenGLVertexBuffer(uint64_t size): sizeInBytes(size)
   {
     glCreateBuffers(1, &handle);
     glBindBuffer(GL_ARRAY_BUFFER, handle);
@@ -101,9 +101,9 @@ class OpenGLVertexBuffer
     glUnmapNamedBuffer(handle);
   }
 
-  GLuint getHandle()
+  void* getHandle()
   {
-    return handle;
+    return &handle;
   }
 
   private:
@@ -179,9 +179,9 @@ class SWARMS_API OpenGLShaderPipeline : public ShaderPipeline
         glUseProgram(0);
       }
 
-      GLuint getHandle()
+      void* getHandle() override
       {
-        return programHandle;
+        return &programHandle;
       }
 
   private:
@@ -214,8 +214,8 @@ class SWARMS_API OpenGLRenderer : public Renderer
   void init(tz::Window* window) override;
   WindowDesc getRequiredWindowDesc() override;
 
-  void beginFrame();
-  void endFrame();
+  void beginFrame() override;
+  void endFrame() override;
 
   void clearScreen() override;
 
@@ -230,6 +230,7 @@ class SWARMS_API OpenGLRenderer : public Renderer
 
   void submitCommandBuffer(tz::CommandBuffer *commandBuffer) override;
 
+  VertexBuffer* createVertexBuffer(const std::vector<Eigen::Vector3f>& data) override;
 
   private:
   GLuint createVertexArrayObject();
@@ -239,6 +240,10 @@ class SWARMS_API OpenGLRenderer : public Renderer
   void executeCommandBuffer(CommandBuffer* commandBuffer);
 
   void execCmdBindPipeline(CmdBindPipeline *cmd);
+  void execCmdBindVertexBuffers(CmdBindVertexBuffers* cmd);
+  void execCmdDraw(CmdDraw* cmd);
+
+  GLenum primitiveTypeToEnum(PrimitiveType pt);
 
   private:
   tz::Window* window = nullptr;
@@ -257,8 +262,12 @@ class SWARMS_API OpenGLRenderer : public Renderer
   // immediate-style commands and the primitive-rendering commands (drawCube, drawSphere..)
   OpenGLShaderPipeline* defaultShaderPipeline = nullptr;
 
+  PipelineStateObject* currentPSO = nullptr;
+
   // By submitting commandbuffers, they are collected here.
   std::vector<CommandBuffer*> frameCommandBuffers;
+
+  std::map<std::string, GLuint> vaoCache;
 };
 
 } // namespace render

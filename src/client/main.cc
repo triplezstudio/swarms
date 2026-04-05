@@ -15,14 +15,14 @@ import windowing.sdl2;
  */
 struct GameGraphicsData
 {
-  GameGraphicsData()
+  GameGraphicsData(tz::Renderer* renderer)
   {
 
-    auto vs = new tz::OpenGLShaderModule();
+    tz::ShaderModule* vs = reinterpret_cast<tz::ShaderModule *>(new tz::OpenGLShaderModule());
     vs->init(tz::ShaderType::Vertex, vertexShaderSource);
-    auto fs = new tz::OpenGLShaderModule();
+    tz::ShaderModule* fs = reinterpret_cast<tz::ShaderModule *>(new tz::OpenGLShaderModule());
     fs->init(tz::ShaderType::Fragment, fragmentShaderSource);
-    defaultShaderPipeline = new tz::OpenGLShaderPipeline();
+    defaultShaderPipeline = reinterpret_cast<tz::ShaderPipeline *>(new tz::OpenGLShaderPipeline());
     defaultShaderPipeline->link({vs, fs});
 
     defaultPSO = new tz::PipelineStateObject {};
@@ -49,8 +49,11 @@ struct GameGraphicsData
           .offset = 0
         }
       };
-
-    auto vertexBuffer = new tz::VertexBuffer();
+      std::vector<Eigen::Vector3f> positions =
+        {{-0.9, 0.3, 0},
+        {-0.9, -0.3, 0},
+        {-0.3, -0.3, 0}};
+    auto vertexBuffer = renderer->createVertexBuffer(positions);
 
     commandBuffer = new tz::CommandBuffer();
     commandBuffer->begin();
@@ -85,30 +88,18 @@ struct GameGraphicsData
 
 
 
-GameGraphicsData initializeGameGraphicsData()
-{
-  GameGraphicsData graphicsData;
-
-
-  return graphicsData;
-}
-
-
 void runActiveLoopDemo()
 {
 
-  auto renderer = new tz::OpenGLRenderer();
+  tz::Renderer* renderer = reinterpret_cast<tz::Renderer *>(new tz::OpenGLRenderer());
   auto ws = new tz::SDL2WindowSystem();
   auto winDesc = renderer->getRequiredWindowDesc();
   auto window = ws->createWindow(winDesc);
   renderer->init(window);
 
-  auto gameGraphicsData = initializeGameGraphicsData();
+  auto gameGraphicsData = GameGraphicsData(renderer);
 
-//  auto mesh = renderer->createMesh(
-//    {{-0.5, 0.5, 0},
-//    {-0.5, -0.5, 0},
-//    {0.2, -0.5, 0}});
+
 
 
 
@@ -126,9 +117,9 @@ void runActiveLoopDemo()
     // commands efficiently, but immediate-mode will normally not be as performant
     // as custom built buffers, pipeline states and shaders.
     renderer->beginDraw(tz::PrimitiveType::Triangles);
-    renderer->emitPosition({-0.5, 0.5, 0});
-    renderer->emitPosition({-0.5, -0.5, 0});
-    renderer->emitPosition({0.2, -0.5, 0});
+    renderer->emitPosition({-0.5, 0.5, -0.1});
+    renderer->emitPosition({-0.5, -0.5, -0.1});
+    renderer->emitPosition({0.2, -0.5, -0.1});
 
     renderer->emitPosition({-0.4, 0.5, 0});
     renderer->emitPosition({0.3, -0.5, 0});
