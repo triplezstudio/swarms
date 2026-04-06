@@ -18,6 +18,7 @@ export namespace tz {
 
 struct Buffer
 {
+  virtual void updateData(uint64_t sizeInBytes, void* data)= 0;
   virtual void* getHandle() = 0;
 };
 

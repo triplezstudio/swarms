@@ -31,9 +31,19 @@ class OpenGLBuffer : public Buffer
   public:
       OpenGLBuffer(uint64_t sizeInBytes, void* data)
       {
-        GLuint handle;
+
         glCreateBuffers(1, &handle);
         glNamedBufferStorage(handle, sizeInBytes, data, GL_DYNAMIC_STORAGE_BIT);
+      }
+
+      void updateData(uint64_t sizeInBytes, void* data) override
+      {
+        glNamedBufferSubData(
+          handle,
+          0,
+          sizeInBytes,
+          data
+          );
       }
 
       void* getHandle()
@@ -263,9 +273,11 @@ class SWARMS_API OpenGLRenderer : public Renderer
   void execCmdBindPipeline(CmdBindPipeline *cmd);
   void execCmdBindVertexBuffers(CmdBindVertexBuffers* cmd);
   void execCmdDraw(CmdDraw* cmd);
+  void execCmdBindDescriptors(CmdBindDescriptors* cmd);
 
   GLenum primitiveTypeToEnum(PrimitiveType pt);
   GLenum dataTypeToEnum(DataType dt);
+  GLenum resourceTypeToEnum(ResourceType rt);
 
   private:
   tz::Window* window = nullptr;

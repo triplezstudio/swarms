@@ -71,15 +71,15 @@ struct GameGraphicsData
 
       auto transform = Eigen::Affine3f::Identity();
       transform.translate(Eigen::Vector3f(-0.2, 0.5, 0));
-      auto transformBuffer = renderer->createBuffer(sizeof(Eigen::Matrix4f), transform.matrix().data());
+      transformBuffer = renderer->createBuffer(sizeof(Eigen::Matrix4f), transform.matrix().data());
       auto transformDescriptor = tz::Descriptor();
       transformDescriptor.buffer = transformBuffer;
       transformDescriptor.binding = transformBinding;
 
       std::vector<Eigen::Vector3f> positions =
-        {{-0.9, 0.3, 0},
-        {-0.9, -0.3, 0},
-        {-0.3, -0.3, 0}};
+        {{-0.2, 0.2, 0},
+        {-0.2, -0.2, 0},
+        {0.2, -0.2, 0}};
     auto vertexBuffer = renderer->createVertexBuffer(positions);
 
 
@@ -104,6 +104,7 @@ struct GameGraphicsData
   tz::ShaderPipeline* defaultShaderPipeline;
   tz::PipelineStateObject* defaultPSO;
   tz::CommandBuffer* commandBuffer = nullptr;
+  tz::Buffer* transformBuffer = nullptr;
 
 
   std::string vertexShaderSource = R"(
@@ -123,7 +124,7 @@ struct GameGraphicsData
 
     void main() {
         //gl_Position = camera.proj * camera.view * transform.world * vec4(pos, 1);
-        gl_Position = vec4(pos, 1);
+        gl_Position = transform.world * vec4(pos, 1);
     }
     )";
 
@@ -168,13 +169,13 @@ void runActiveLoopDemo()
     // commands efficiently, but immediate-mode will normally not be as performant
     // as custom built buffers, pipeline states and shaders.
     renderer->beginDraw(tz::PrimitiveType::Triangles);
-    renderer->emitPosition({-0.5, 0.5, -0.1});
-    renderer->emitPosition({-0.5, -0.5, -0.1});
-    renderer->emitPosition({0.2, -0.5, -0.1});
+    renderer->emitPosition({-0.1, 0.1, -0.1});
+    renderer->emitPosition({-0.1, -0.1, -0.1});
+    renderer->emitPosition({0.1, -0.1, -0.1});
 
-    renderer->emitPosition({-0.4, 0.5, 0});
-    renderer->emitPosition({0.3, -0.5, 0});
-    renderer->emitPosition({0.3, 0.5, 0});
+    renderer->emitPosition({-0.09, 0.1, 0});
+    renderer->emitPosition({0.11, -0.1, 0});
+    renderer->emitPosition({0.11, 0.1, 0});
     renderer->endDraw();
 
     // Use modern command buffer approach.
@@ -183,6 +184,17 @@ void runActiveLoopDemo()
     // commandBuffer, which gets submitted.
     // Any number of command buffers may be submitted per frame.
     // Submission it not immediate execution, but collection of the buffer.
+    // Update our transform buffer, making the object move:
+    {
+      static Eigen::Vector3f posOffset = {0, 0,0};
+      posOffset += Eigen::Vector3f {0.000, -0.000, 0};
+      auto transform = Eigen::Affine3f::Identity();
+      transform.translate(posOffset);
+      static float angle = 0.0f;
+      angle += 0.0001f;
+      transform.rotate(Eigen::AngleAxis(angle, Eigen::Vector3f::UnitZ()));
+      gameGraphicsData.transformBuffer->updateData(sizeof(Eigen::Matrix4f), transform.matrix().data());
+    }
     renderer->submitCommandBuffer(gameGraphicsData.commandBuffer);
 
     // Ending the frame is where all the drawing & computation work is actually being

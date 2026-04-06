@@ -153,6 +153,24 @@ void OpenGLRenderer::execCmdDraw(CmdDraw* cmd)
   glDrawArrays(primitiveTypeToEnum(currentPSO->renderState.primitiveType), cmd->firstVertex, cmd->vertexCount);
 }
 
+GLenum OpenGLRenderer::resourceTypeToEnum(ResourceType rt)
+{
+  switch(rt)
+  {
+    case ResourceType::Ubo: return GL_UNIFORM_BUFFER;
+    case ResourceType::Ssbo: return GL_SHADER_STORAGE_BUFFER;
+    case ResourceType::Sampler: return GL_SAMPLER_BUFFER;
+  }
+}
+
+void OpenGLRenderer::execCmdBindDescriptors(tz::CmdBindDescriptors *cmd)
+{
+  for (auto& d : cmd->descriptors)
+  {
+    glBindBufferBase(resourceTypeToEnum(d.binding.type), d.binding.binding, *reinterpret_cast<GLuint*>(d.buffer->getHandle()));
+  }
+}
+
 void OpenGLRenderer::execCmdBindVertexBuffers(CmdBindVertexBuffers* cmd)
 {
 
@@ -282,7 +300,10 @@ void OpenGLRenderer::executeCommandBuffer(tz::CommandBuffer *commandBuffer)
     {
       execCmdDraw(c);
     }
-
+    else if (auto c = dynamic_cast<CmdBindDescriptors*>(cmd))
+    {
+      execCmdBindDescriptors(c);
+    }
 
   }
 }

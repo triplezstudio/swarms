@@ -80,6 +80,7 @@ tz::Window* tz::SDL2WindowSystem::createWindow(tz::WindowDesc desc)
                               windowFlags);
 
     SDL_GL_CreateContext(window);
+    SDL_GL_SetSwapInterval(0);
 
   }
 
