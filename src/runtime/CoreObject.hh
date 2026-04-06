@@ -40,7 +40,8 @@ class CoreObject
   bool withSafetyNet(std::function<void(void)> func, const std::string &functionName) const;
 
   /// @brief - Add a new module to the logger attached to this object. Proxies
-  /// the call to `PrefixedLogger::addModule`.
+  /// the call to `PrefixedLogger::addModule`. The module will be added after
+  /// all already existing modules.
   /// @param module - the new module to register.
   void addModule(const std::string &module);
 

@@ -20,6 +20,6 @@ class IEnvironment
   virtual void simulate(const time::TickData &data) = 0;
 };
 
-using IEnvironmentPtr = std::unique_ptr<IEnvironment>;
+using IEnvironmentShPtr = std::shared_ptr<IEnvironment>;
 
 } // namespace swarms::core
