@@ -31,6 +31,10 @@ add_subdirectory(
 	${CMAKE_CURRENT_SOURCE_DIR}/physics
 	)
 
+add_subdirectory(
+	${CMAKE_CURRENT_SOURCE_DIR}/random
+	)
+
 target_sources (core_lib PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/Uuid.cc
 	)
