@@ -15,9 +15,15 @@ import windowing.sdl2;
  */
 struct GameGraphicsData
 {
+
+  // We collect information related to
+  // the rendering of our client data
+  // in a custom struct which holds our
+  // shaders, PSO, uniforms matrices, textures etc.
   GameGraphicsData(tz::Renderer* renderer)
   {
 
+    // Shaders form the programmable part of our graphics pipeline:
     tz::ShaderModule* vs = reinterpret_cast<tz::ShaderModule *>(new tz::OpenGLShaderModule());
     vs->init(tz::ShaderType::Vertex, vertexShaderSource);
     tz::ShaderModule* fs = reinterpret_cast<tz::ShaderModule *>(new tz::OpenGLShaderModule());
@@ -25,6 +31,10 @@ struct GameGraphicsData
     defaultShaderPipeline = reinterpret_cast<tz::ShaderPipeline *>(new tz::OpenGLShaderPipeline());
     defaultShaderPipeline->link({vs, fs});
 
+    // The PipelineStateObject holds all the state
+    // we need for a pipeline execution, i.e. a draw call.
+    // Think of renderstate handling and description
+    // of vertex attributes and uniform buffers etc.
     defaultPSO = new tz::PipelineStateObject {};
     defaultPSO->renderState.primitiveType = tz::PrimitiveType::Triangles;
     defaultPSO->renderState.cullMode = tz::CullMode::Back;
@@ -45,23 +55,51 @@ struct GameGraphicsData
         tz::VertexAttribute {
           .shaderLocation = 0,
           .bufferSlot = 0,
-          .dataFormat = tz::AttributeDataFormat::R32G32B32A32_FLOAT,
+          .dataType = tz::DataType::Float,
+          .componentCount = 3,
           .offset = 0
         }
       };
+
+      tz::DescriptorBinding transformBinding;
+      transformBinding.set = 0;
+      transformBinding.binding = 1;
+      transformBinding.type = tz::ResourceType::Ubo;
+      defaultPSO->descriptorBindings = {
+        transformBinding
+      };
+
+      auto transform = Eigen::Affine3f::Identity();
+      transform.translate(Eigen::Vector3f(-0.2, 0.5, 0));
+      auto transformBuffer = renderer->createBuffer(sizeof(Eigen::Matrix4f), transform.matrix().data());
+      auto transformDescriptor = tz::Descriptor();
+      transformDescriptor.buffer = transformBuffer;
+      transformDescriptor.binding = transformBinding;
+
       std::vector<Eigen::Vector3f> positions =
         {{-0.9, 0.3, 0},
         {-0.9, -0.3, 0},
         {-0.3, -0.3, 0}};
     auto vertexBuffer = renderer->createVertexBuffer(positions);
 
+
+
+    // The actual commands which shall be executed during the pipeline execution
+    // are recorded into a commandbuffer.
+    // One commandbuffer can hold many commands and also include multiple draw commands.
+    // During one frame, more than one commandbuffer may be executed.
+    // Currently, we only allow sequential execution though, multithreaded/parallel execution
+    // is a future feature.
     commandBuffer = new tz::CommandBuffer();
     commandBuffer->begin();
     commandBuffer->recordCommand(new tz::CmdBindPipeline (defaultPSO ));
     commandBuffer->recordCommand(new tz::CmdBindVertexBuffers({vertexBuffer}));
+    commandBuffer->recordCommand(new tz::CmdBindDescriptors({transformDescriptor}));
     commandBuffer->recordCommand(new tz::CmdDraw(3, 1, 0, 0));
     commandBuffer->end();
   }
+
+
 
   tz::ShaderPipeline* defaultShaderPipeline;
   tz::PipelineStateObject* defaultPSO;
@@ -71,7 +109,20 @@ struct GameGraphicsData
   std::string vertexShaderSource = R"(
     #version 460 core
     layout(location = 0) in vec3 pos;
+
+    layout(std140, binding = 0) uniform Camera
+    {
+      mat4 view;
+      mat4 proj;
+    } camera;
+
+    layout(std140, binding = 1) uniform Transform
+    {
+      mat4 world;
+    } transform;
+
     void main() {
+        //gl_Position = camera.proj * camera.view * transform.world * vec4(pos, 1);
         gl_Position = vec4(pos, 1);
     }
     )";

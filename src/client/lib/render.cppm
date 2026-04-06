@@ -16,6 +16,11 @@ import common;
  */
 export namespace tz {
 
+struct Buffer
+{
+  virtual void* getHandle() = 0;
+};
+
 struct VertexBuffer
 {
   virtual void* getHandle() = 0;
@@ -28,9 +33,38 @@ enum class VertexInputRate
   PerInstance
 };
 
-enum class AttributeDataFormat
+enum class DataType
 {
-  R32G32B32A32_FLOAT,
+  Byte,
+  Short,
+  Int,
+  UInt,
+  Float,
+  Double,
+
+};
+
+enum class ResourceType
+{
+  Ubo,
+  Ssbo,
+  Sampler
+};
+
+
+
+struct DescriptorBinding
+{
+  uint8_t set = 0;
+  uint8_t binding = 0;
+  ResourceType type;
+};
+
+struct Descriptor
+{
+  Buffer* buffer;
+  DescriptorBinding binding;
+
 };
 
 struct VertexBinding
@@ -45,7 +79,7 @@ struct VertexAttribute
 {
   uint32_t shaderLocation;
   uint32_t bufferSlot;
-  AttributeDataFormat dataFormat;
+  DataType dataType;
   int32_t componentCount;
   uint32_t offset;
 
@@ -72,7 +106,7 @@ struct VertexLayout
       hash += std::to_string(a.shaderLocation);
       hash += std::to_string(a.offset);
       hash += std::to_string(a.componentCount);
-      hash += std::to_string(static_cast<int>(a.dataFormat));
+      hash += std::to_string(static_cast<int>(a.dataType));
     }
 
     return hash;
@@ -150,6 +184,7 @@ struct PipelineStateObject
   RenderState renderState;
   ShaderPipeline* shaderPipeline = nullptr;
   VertexLayout vertexLayout;
+  std::vector<DescriptorBinding> descriptorBindings;
 
 };
 
@@ -167,6 +202,17 @@ class CmdBindPipeline : public Command
 
   public:
       PipelineStateObject* pso = nullptr;
+};
+
+class CmdBindDescriptors : public Command
+{
+  public:
+      CmdBindDescriptors(std::vector<Descriptor> descs) : descriptors(descs)
+      {
+
+      }
+
+      std::vector<Descriptor> descriptors;
 };
 
 class CmdBindVertexBuffers : public Command
@@ -242,6 +288,7 @@ class Renderer
   virtual void submitCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
   virtual VertexBuffer* createVertexBuffer(const std::vector<Eigen::Vector3f>& data) = 0;
+  virtual Buffer* createBuffer(uint64_t sizeInBytes, void* data) = 0;
 
 };
 

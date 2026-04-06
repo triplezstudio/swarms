@@ -120,6 +120,20 @@ WindowDesc OpenGLRenderer::getRequiredWindowDesc()
   return wd;
 }
 
+GLenum OpenGLRenderer::dataTypeToEnum(DataType dt)
+{
+  switch (dt)
+  {
+    case DataType::Float: return GL_FLOAT;
+    case DataType::Byte: return GL_BYTE;
+    case DataType::Short: return GL_SHORT;
+    case DataType::Int: return GL_INT;
+    case DataType::UInt: return GL_UNSIGNED_INT;
+    case DataType::Double: return GL_DOUBLE;
+    default: return GL_FLOAT;
+  }
+}
+
 GLenum OpenGLRenderer::primitiveTypeToEnum(PrimitiveType pt)
 {
   switch (pt)
@@ -155,10 +169,14 @@ void OpenGLRenderer::execCmdBindVertexBuffers(CmdBindVertexBuffers* cmd)
 
 }
 
+Buffer *OpenGLRenderer::createBuffer(uint64_t sizeInBytes, void *data)
+{
+  return new OpenGLBuffer(sizeInBytes, data);
+}
+
 VertexBuffer *OpenGLRenderer::createVertexBuffer(const std::vector<Eigen::Vector3f> &data)
 {
-  auto vb = new OpenGLVertexBuffer(data);
-  return vb;
+  return new OpenGLVertexBuffer(data);
 }
 
 void OpenGLRenderer::execCmdBindPipeline(CmdBindPipeline* cmd)
@@ -225,7 +243,9 @@ void OpenGLRenderer::execCmdBindPipeline(CmdBindPipeline* cmd)
     glEnableVertexArrayAttrib(vao, attr.shaderLocation);
     glVertexArrayAttribFormat(vao, attr.shaderLocation,
                               attr.componentCount,
-                              GL_FLOAT, GL_FALSE, attr.offset);
+                              dataTypeToEnum(attr.dataType),
+                              GL_FALSE,
+                              attr.offset);
     glVertexArrayAttribBinding(vao, attr.shaderLocation, attr.bufferSlot);
   }
 

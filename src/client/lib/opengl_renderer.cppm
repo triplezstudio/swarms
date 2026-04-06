@@ -26,6 +26,25 @@ struct VertexBufferUpdateInfo
   std::vector<float> data;
 };
 
+class OpenGLBuffer : public Buffer
+{
+  public:
+      OpenGLBuffer(uint64_t sizeInBytes, void* data)
+      {
+        GLuint handle;
+        glCreateBuffers(1, &handle);
+        glNamedBufferStorage(handle, sizeInBytes, data, GL_DYNAMIC_STORAGE_BIT);
+      }
+
+      void* getHandle()
+      {
+        return &handle;
+      }
+
+  private:
+      GLuint handle;
+};
+
 /**
  * Abstraction over an OpenGL VBO.
  */
@@ -232,6 +251,8 @@ class SWARMS_API OpenGLRenderer : public Renderer
 
   VertexBuffer* createVertexBuffer(const std::vector<Eigen::Vector3f>& data) override;
 
+  Buffer * createBuffer(uint64_t sizeInBytes, void *data) override;
+
   private:
   GLuint createVertexArrayObject();
   GLuint createVertexBuffer(VertexBufferCreateInfo vbCreateInfo);
@@ -244,6 +265,7 @@ class SWARMS_API OpenGLRenderer : public Renderer
   void execCmdDraw(CmdDraw* cmd);
 
   GLenum primitiveTypeToEnum(PrimitiveType pt);
+  GLenum dataTypeToEnum(DataType dt);
 
   private:
   tz::Window* window = nullptr;
