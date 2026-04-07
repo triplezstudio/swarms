@@ -35,10 +35,15 @@ add_subdirectory(
 	${CMAKE_CURRENT_SOURCE_DIR}/random
 	)
 
+add_subdirectory(
+	${CMAKE_CURRENT_SOURCE_DIR}/runtime
+	)
+
 target_sources (core_lib PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/Uuid.cc
 	)
 
 target_link_libraries (core_lib
 	time_lib
+	runtime_lib
 	)

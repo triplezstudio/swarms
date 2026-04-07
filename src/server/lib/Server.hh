@@ -3,9 +3,9 @@
 #pragma once
 
 #include "CoreObject.hh"
+#include "EnvironmentProcessor.hh"
 #include <atomic>
 #include <condition_variable>
-#include <unordered_map>
 
 namespace swarms {
 class Server : public runtime::CoreObject
@@ -21,6 +21,9 @@ class Server : public runtime::CoreObject
   std::atomic_bool m_running{false};
   std::mutex m_runningLocker{};
   std::condition_variable m_runningNotifier{};
+
+  core::IEnvironmentShPtr m_environment{};
+  core::EnvironmentProcessorPtr m_processor{};
 
   void initialize();
 
