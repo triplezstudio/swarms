@@ -159,6 +159,7 @@ GLenum OpenGLRenderer::resourceTypeToEnum(ResourceType rt)
     case ResourceType::Ubo: return GL_UNIFORM_BUFFER;
     case ResourceType::Ssbo: return GL_SHADER_STORAGE_BUFFER;
     case ResourceType::Sampler: return GL_SAMPLER_BUFFER;
+    default: return GL_UNIFORM_BUFFER;
   }
 }
 

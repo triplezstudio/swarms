@@ -8,7 +8,7 @@
 
 namespace tz {
 
-class SWARMS_API SDL2WindowSystem : public WindowSystem
+class TZ_API SDL2WindowSystem : public WindowSystem
 {
   public:
   SDL2WindowSystem();

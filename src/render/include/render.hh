@@ -1,5 +1,6 @@
 #pragma once
 
+#include <defines.h>
 #include <Eigen/Dense>
 #include <window_system.hh>
 
@@ -270,7 +271,7 @@ struct Mesh
   std::vector<uint32_t> indices;
 };
 
-class Renderer
+class TZ_API Renderer
 {
   public:
   virtual void init(tz::Window* window) = 0;

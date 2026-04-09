@@ -187,7 +187,7 @@ private:
   };
 };
 
-class SWARMS_API OpenGLShaderPipeline : public ShaderPipeline
+class TZ_API OpenGLShaderPipeline : public ShaderPipeline
 {
   public:
       void link(const std::vector<ShaderModule*>& modules) override;
@@ -211,7 +211,7 @@ class SWARMS_API OpenGLShaderPipeline : public ShaderPipeline
       GLuint programHandle;
 };
 
-class SWARMS_API OpenGLShaderModule : public ShaderModule
+class TZ_API OpenGLShaderModule : public ShaderModule
 {
 
   public:
@@ -231,7 +231,7 @@ class SWARMS_API OpenGLShaderModule : public ShaderModule
  * OpenGLRenderer is a custom renderer using the OpenGL 4.6 API.
  *
  */
-class SWARMS_API OpenGLRenderer : public Renderer
+class TZ_API OpenGLRenderer : public Renderer
 {
   public:
   void init(tz::Window* window) override;

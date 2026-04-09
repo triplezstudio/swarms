@@ -16,8 +16,10 @@ target_include_directories(window_sdl2_lib
 
 
 target_link_libraries(window_sdl2_lib
-                PRIVATE
-                    SDL2::SDL2 SDL2::SDL2main window_lib
+                PUBLIC
+                    SDL2::SDL2
+                    SDL2::SDL2main
+                    window_lib
 )
 
-target_compile_definitions(window_sdl2_lib PRIVATE EXPORT_WINDOW_SDL2_LIB)
+target_compile_definitions(window_sdl2_lib PUBLIC EXPORT_TZ_LIB)
