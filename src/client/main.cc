@@ -1,8 +1,8 @@
 
 #include <Eigen/Dense>
-#include "lib/render.hh"
-#include "lib/opengl_renderer.hh"
-#include "lib/sdl2.hh"
+#include <render.hh>
+#include <opengl_renderer.hh>
+#include <sdl2.hh>
 
 
 /**

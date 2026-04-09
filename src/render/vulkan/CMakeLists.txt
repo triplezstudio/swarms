@@ -1,45 +1,20 @@
-
-find_package(SDL2 CONFIG REQUIRED)
-find_package(Eigen3 CONFIG REQUIRED)
-find_package(GLEW REQUIRED)
-
-
-add_library(swarms_client_lib SHARED)
-
-set (CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-target_sources(swarms_client_lib PRIVATE
-                app.cpp
-                sdl2.cpp
-                opengl_renderer.cpp
-)
-
-target_include_directories(swarms_client_lib
-        PUBLIC ${CMAKE_SOURCE_DIR}/src
-)
-
-
-target_link_libraries(swarms_client_lib
-                PRIVATE
-                    SDL2::SDL2 SDL2::SDL2main GLEW::GLEW
-                PUBLIC
-                    Eigen3::Eigen
-)
-
 if (USE_VULKAN)
     message(STATUS "Trying to find VULKAN on system")
     find_package(Vulkan REQUIRED)
     message(STATUS "Vulkan found $ENV{VULKAN_SDK}")
 
-    target_sources(swarms_client_lib
+    add_library(render_vulkan_lib)
+    set (CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+    target_sources(render_vulkan_lib
             PRIVATE
-            app_sdl2_vulkan.cpp
+            vulkan_storage.cpp
             vulkan.cpp
             vulkan_storage.cpp
 
     )
 
-    target_link_libraries(swarms_client_lib PRIVATE
+    target_link_libraries(render_vulkan_lib PRIVATE
             Vulkan::Vulkan)
 
     # --------------------------------------------------------------------------
@@ -107,10 +82,7 @@ if (USE_VULKAN)
     add_custom_target(shaders ALL DEPENDS ${SHADER_OUTPUTS})
     add_dependencies(swarms_client shaders)
 
-else()
-    message(STATUS "Not using Vulkan!")
+    target_compile_definitions(render_vulkan_lib PRIVATE EXPORT_RENDER_VULKAN_LIB)
 endif()
 
-
-target_compile_definitions(swarms_client_lib PRIVATE EXPORT_SWARMS_LIB)
 

@@ -9,8 +9,8 @@
 #include <vector>
 
 #include <stdexcept>
-#include "common.hh"
-#include "sdl2.hh"
+#include <common.hh>
+#include <sdl2.hh>
 
 namespace tz {
 
@@ -26,7 +26,8 @@ void SDL2WindowSystem::pollEvents()
   {
     if (event.type == SDL_QUIT)
     {
-
+      // TODO handle graceful shutdown
+      exit(0);
     }
   }
 }

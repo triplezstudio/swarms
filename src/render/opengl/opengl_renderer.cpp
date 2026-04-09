@@ -11,9 +11,9 @@
 #include <algorithm>
 #include <limits>
 
-#include "opengl_renderer.hh"
-#include "common.hh"
-#include "window_system.hh"
+#include <opengl_renderer.hh>
+#include <common.hh>
+#include <window_system.hh>
 
 
 namespace tz
