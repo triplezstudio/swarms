@@ -9,8 +9,8 @@
 #include <vector>
 
 #include <stdexcept>
-#include "common.cppm"
-#include "sdl2.cppm"
+#include "common.hh"
+#include "sdl2.hh"
 
 namespace tz {
 

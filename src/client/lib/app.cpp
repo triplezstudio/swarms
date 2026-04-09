@@ -2,9 +2,9 @@
 #include <iostream>
 #include <functional>
 
-#include "app.cppm"
-#include "window_system.cppm"
-#include "render.cppm"
+#include "app.hh"
+#include "window_system.hh"
+#include "render.hh"
 
 namespace tz
 {

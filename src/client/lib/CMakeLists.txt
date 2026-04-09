@@ -32,11 +32,6 @@ if (USE_VULKAN)
     message(STATUS "Vulkan found $ENV{VULKAN_SDK}")
 
     target_sources(swarms_client_lib
-            PUBLIC
-            FILE_SET CXX_MODULES
-            FILES
-            vulkan.cppm
-
             PRIVATE
             app_sdl2_vulkan.cpp
             vulkan.cpp

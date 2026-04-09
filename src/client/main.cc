@@ -1,8 +1,8 @@
 
 #include <Eigen/Dense>
-#include "lib/render.cppm"
-#include "lib/opengl_renderer.cppm"
-#include "lib/sdl2.cppm"
+#include "lib/render.hh"
+#include "lib/opengl_renderer.hh"
+#include "lib/sdl2.hh"
 
 
 /**
