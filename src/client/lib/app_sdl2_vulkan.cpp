@@ -1,4 +1,3 @@
-module;
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #define VULKAN_HPP_TYPESAFE_CONVERSION 1
 
@@ -12,14 +11,6 @@ module;
 #include <vector>
 
 #include <stdexcept>
-
-module app;
-
-
-import :sdl2;
-
-import render.vulkan;
-
 
 
 namespace sdl2 {

@@ -1,16 +1,12 @@
 
-module;
+#pragma once
 #include "defines.h"
 #include <functional>
 #include <optional>
 #include <vulkan/vulkan_raii.hpp>
-export module render.vulkan;
 
-import render.base;
 
-import common;
-
-export namespace render {
+amespace render {
 
 struct VulkanInitData {
   client_common::NativeHandles nativeHandles;

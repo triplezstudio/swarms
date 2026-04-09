@@ -1,5 +1,4 @@
 
-module;
 #include <iostream>
 #include <Eigen/Dense>
 #ifdef _WIN32
@@ -7,14 +6,14 @@ module;
 #endif
 
 #include <GL/glew.h>
+
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <limits>
 
-module render.opengl;
-
-import common;
-import windowing;
+#include "opengl_renderer.cppm"
+#include "common.cppm"
+#include "window_system.cppm"
 
 
 namespace tz

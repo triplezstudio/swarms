@@ -1,15 +1,12 @@
-//
-// Created by mgrus on 28.03.2026.
-//
-module;
+#pragma once
 #include <defines.h>
-#include <SDL2/sdl.h>
-export module windowing.sdl2;
+#include <SDL2/SDL.h>
 
-import windowing;
-import common;
+#include "window_system.cppm"
+#include "common.cppm"
 
-export namespace tz {
+
+namespace tz {
 
 class SWARMS_API SDL2WindowSystem : public WindowSystem
 {

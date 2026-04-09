@@ -1,19 +1,13 @@
-module;
+#pragma once
 #include "defines.h"
 #include <Eigen/Dense>
 #include <GL/glew.h>
 #include <functional>
 #include <iostream>
 #include <map>
-export module render.opengl;
+#include "render.cppm"
 
-import app;
-import windowing;
-import render.base;
-
-import common;
-
-export namespace tz {
+namespace tz {
 
 struct VertexBufferCreateInfo
 {

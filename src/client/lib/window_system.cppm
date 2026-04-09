@@ -1,10 +1,8 @@
-module;
+#pragma once
 #include <string>
-export module windowing;
+#include "common.cppm"
 
-import common;
-
-export namespace tz {
+namespace tz {
 
 struct Window
 {
@@ -20,7 +18,6 @@ struct WindowDesc {
   std::string title;
 
   enum class GraphicsAPI {
-    None,
     OpenGL,
     Vulkan,
     DX11,

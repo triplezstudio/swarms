@@ -1,20 +1,16 @@
-module;
+
 #include <GL/glew.h>
 
 #include <SDL2/SDL.h>
 #include <SDL_syswm.h>
-#include <SDL_vulkan.h>
+
 
 #include <iostream>
 #include <vector>
 
 #include <stdexcept>
-
-
-
-module windowing.sdl2;
-
-import common;
+#include "common.cppm"
+#include "sdl2.cppm"
 
 namespace tz {
 

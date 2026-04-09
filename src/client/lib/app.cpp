@@ -1,17 +1,15 @@
-
-module;
 #include <SDL2/SDL.h>
 #include <iostream>
 #include <functional>
 
-module app;
-
-import windowing;
-import render.base;
+#include "app.cppm"
+#include "window_system.cppm"
+#include "render.cppm"
 
 namespace tz
 {
-App::App(tz::WindowSystem* windowSystem, tz::Renderer* renderer) : windowSystem(windowSystem),
+
+  App::App(tz::WindowSystem* windowSystem, tz::Renderer* renderer) : windowSystem(windowSystem),
   renderer(renderer)
 {
 

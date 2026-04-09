@@ -1,25 +1,14 @@
 
 find_package(SDL2 CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
-find_package(GLEW CONFIG REQUIRED)
+find_package(GLEW REQUIRED)
+
 
 add_library(swarms_client_lib SHARED)
 
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-target_sources(swarms_client_lib
-        PUBLIC
-            FILE_SET CXX_MODULES
-            FILES
-                app.cppm
-                sdl2.cppm
-                common.cppm
-                render.cppm
-                opengl_renderer.cppm
-                window_system.cppm
-
-
-        PRIVATE
+target_sources(swarms_client_lib PRIVATE
                 app.cpp
                 sdl2.cpp
                 opengl_renderer.cpp
@@ -28,6 +17,7 @@ target_sources(swarms_client_lib
 target_include_directories(swarms_client_lib
         PUBLIC ${CMAKE_SOURCE_DIR}/src
 )
+
 
 target_link_libraries(swarms_client_lib
                 PRIVATE

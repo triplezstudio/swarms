@@ -1,9 +1,8 @@
-module;
-#include <Eigen/Dense>
-export module render.base;
+#pragma once
 
-import windowing;
-import common;
+#include <Eigen/Dense>
+#include "window_system.cppm"
+
 
 /**
  * The render interface.
@@ -14,7 +13,7 @@ import common;
  * b) be able to provide platform optimal render backends so we need to be able to support
  *    multiple renderers behind this interface anyway.
  */
-export namespace tz {
+namespace tz {
 
 struct Buffer
 {

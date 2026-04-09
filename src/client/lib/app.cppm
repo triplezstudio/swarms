@@ -1,12 +1,10 @@
-module;
 #include <defines.h>
 #include <functional>
-export module app;
 
-import windowing;
-import render.base;
+#include "window_system.cppm"
+#include "render.cppm"
 
-export namespace tz {
+namespace tz {
 
   using FrameListener = std::function< void(float frameTime)>;
 

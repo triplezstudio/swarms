@@ -1,9 +1,8 @@
 
 #include <Eigen/Dense>
-import app;
-import render.base;
-import render.opengl;
-import windowing.sdl2;
+#include "lib/render.cppm"
+#include "lib/opengl_renderer.cppm"
+#include "lib/sdl2.cppm"
 
 
 /**
