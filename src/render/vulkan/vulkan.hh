@@ -5,7 +5,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 
-amespace render {
+namespace render {
 
 struct VulkanInitData {
   client_common::NativeHandles nativeHandles;
