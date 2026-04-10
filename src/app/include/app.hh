@@ -8,7 +8,7 @@ namespace tz {
 
   using FrameListener = std::function< void(float frameTime)>;
 
-  class SWARMS_API App
+  class TZ_API App
   {
     public:
       App(tz::WindowSystem* windowSystem, tz::Renderer* renderer);
