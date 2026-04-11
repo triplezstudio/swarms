@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AbstractEnvironment.hh"
+#include "EntityRegistry.hh"
 #include "IAgent.hh"
 #include "Uuid.hh"
 #include <unordered_map>
