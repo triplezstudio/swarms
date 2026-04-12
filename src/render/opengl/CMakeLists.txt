@@ -14,7 +14,6 @@ target_include_directories(render_opengl_lib
         PUBLIC include
 )
 
-
 target_link_libraries(render_opengl_lib
                 PUBLIC
                     Eigen3::Eigen GLEW::GLEW render_lib

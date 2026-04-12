@@ -63,7 +63,7 @@ void OpenGLRenderer::init(Window* window)
   // Prepare per-frame buffer to store the immediate-command data into:
   immediatePerFrameVAO = createVertexArrayObject();
   glBindVertexArray(immediatePerFrameVAO);
-  immediatePerFrameBuffer = new OpenGLVertexBuffer(1024 * 16);
+  immediatePerFrameBuffer = new OpenGLBuffer(1024 * 16);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(
     0,
@@ -167,7 +167,7 @@ void OpenGLRenderer::execCmdBindDescriptors(tz::CmdBindDescriptors *cmd)
 {
   for (auto& d : cmd->descriptors)
   {
-    glBindBufferBase(resourceTypeToEnum(d.binding.type), d.binding.binding, *reinterpret_cast<GLuint*>(d.buffer->getHandle()));
+    glBindBufferBase(resourceTypeToEnum(d->binding.type), d->binding.binding, *reinterpret_cast<GLuint*>(d->buffer->getHandle()));
   }
 }
 
@@ -185,16 +185,6 @@ void OpenGLRenderer::execCmdBindVertexBuffers(CmdBindVertexBuffers* cmd)
                               b.stride);
   }
 
-}
-
-Buffer *OpenGLRenderer::createBuffer(uint64_t sizeInBytes, void *data)
-{
-  return new OpenGLBuffer(sizeInBytes, data);
-}
-
-VertexBuffer *OpenGLRenderer::createVertexBuffer(const std::vector<Eigen::Vector3f> &data)
-{
-  return new OpenGLVertexBuffer(data);
 }
 
 void OpenGLRenderer::execCmdBindPipeline(CmdBindPipeline* cmd)
@@ -313,6 +303,10 @@ void OpenGLRenderer::submitCommandBuffer(tz::CommandBuffer *commandBuffer)
   frameCommandBuffers.push_back(commandBuffer);
 }
 
+Buffer* OpenGLRenderer::createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage)
+{
+  return new OpenGLBuffer(initialData, sizeInBytes);
+}
 
 void OpenGLRenderer::executeImmediateCommands()
 {
@@ -359,7 +353,7 @@ void OpenGLRenderer::endDraw()
 {
 
   // Append every immediate vertex data stream into our perFrameBuffer.
-  immediatePerFrameBuffer->appendData(positions);
+  immediatePerFrameBuffer->appendData(positions.data(), positions.size() * sizeof(Eigen::Vector3f));
 }
 
 void OpenGLRenderer::emitPosition(Eigen::Vector3f pos)

@@ -17,6 +17,8 @@ class TZ_API SDL2WindowSystem : public WindowSystem
   void present() override;
   Window * createWindow(WindowDesc desc) override;
 
+  GraphicsSurface createSurface(GraphicsInstance& instance, WindowDesc desc) override;
+
   private:
   client_common::NativeHandles getNativeHandles();
 

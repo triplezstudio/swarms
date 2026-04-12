@@ -1,16 +1,19 @@
 #pragma once
-#include <string>
 #include "common.hh"
+#include <string>
+#include <functional>
 
 namespace tz {
 
-struct Window
-{
-  void* nativeHandle = nullptr;
-  int width;
-  int height;
-
+struct GraphicsSurface {
+  void* handle;
 };
+
+struct GraphicsInstance
+{
+  void* handle;
+};
+
 
 struct WindowDesc {
   int width;
@@ -37,12 +40,22 @@ struct WindowDesc {
 
 };
 
+struct Window
+{
+  void* nativeHandle = nullptr;
+  int width;
+  int height;
+  std::function<GraphicsSurface (GraphicsInstance&, WindowDesc windowDesc)> surfaceCreationFunc;
+};
+
+
   class WindowSystem {
   public:
   virtual void init() = 0;
   virtual void pollEvents() = 0;
   virtual Window* createWindow(WindowDesc desc) = 0;
   virtual void present() = 0;
+  virtual GraphicsSurface createSurface(GraphicsInstance& instance, WindowDesc desc) = 0;
 
   };
 }

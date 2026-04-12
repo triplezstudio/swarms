@@ -1,7 +1,9 @@
-module;
-
 #include <iostream>
-#ifdef _WIN32
+#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
+#include <vulkan/vulkan_raii.hpp>
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+#ifdef _WINDOWS
 #define VK_USE_PLATFORM_WIN32_KHR
 #define NOMINMAX
 #elif defined(__linux__)
@@ -9,36 +11,76 @@ module;
 #define VK_USE_PLATFORM_WAYLAND_KHR
 #endif
 
-//#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
-#include <vulkan/vulkan_raii.hpp>
-#include <SDL_syswm.h>
-#include <vulkan/vulkan_win32.h>
-#include <SDL2/SDL.h>
+#include <vulkan_renderer.hh>
+
 #include <algorithm>
 #include <limits>
 #include <fstream>
 
-module render.vulkan;
+tz::WindowDesc tz::render::vulkan::VulkanRenderer::getRequiredWindowDesc()
+{
+  WindowDesc wd;
+  wd.api = tz::WindowDesc::GraphicsAPI::Vulkan;
+  wd.width = 1280;
+  wd.height = 720;
+  return wd;
+}
 
-import common;
-
-render::VulkanRenderer::VulkanRenderer(const render::VulkanInitData& vulkanInitData)
-  : extensions(vulkanInitData.extensions), nativeHandles(vulkanInitData.nativeHandles),
-  vulkanInitData(vulkanInitData)
+void tz::render::vulkan::VulkanRenderer::clearScreen()
 {
 
 }
 
-
-
-
-void render::VulkanRenderer::initSurface()
+void tz::render::vulkan::VulkanRenderer::beginDraw(PrimitiveType primitiveType)
 {
-  surface = vulkanInitData.surfaceCreationFunc.value()(instance);
+
 }
 
-void render::VulkanRenderer::createInstance()
+void tz::render::vulkan::VulkanRenderer::endDraw()
+{
+
+}
+
+void tz::render::vulkan::VulkanRenderer::emitPosition(Eigen::Vector3f position)
+{
+
+}
+void tz::render::vulkan::VulkanRenderer::emitColor(Eigen::Vector4f color)
+{
+
+}
+void tz::render::vulkan::VulkanRenderer::emitUV(Eigen::Vector2f uv)
+{
+
+}
+void tz::render::vulkan::VulkanRenderer::emitNormal(Eigen::Vector3f normal)
+{
+
+}
+
+void tz::render::vulkan::VulkanRenderer::beginFrame()
+{
+
+}
+void tz::render::vulkan::VulkanRenderer::endFrame()
+{
+
+}
+void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* commandBuffer)
+{
+
+}
+
+void tz::render::vulkan::VulkanRenderer::initSurface()
+{
+  GraphicsInstance gi;
+  gi.handle = reinterpret_cast<void*>(static_cast<VkInstance>(*instance));
+  auto rawSurface = window->surfaceCreationFunc(gi, getRequiredWindowDesc());
+  auto surfKHR = reinterpret_cast<VkSurfaceKHR>(rawSurface.handle);
+  surface = vk::raii::SurfaceKHR(instance, surfKHR);
+}
+
+void tz::render::vulkan::VulkanRenderer::createInstance()
 {
   vk::ApplicationInfo appInfo;
   appInfo.setPApplicationName("swarms")
@@ -51,7 +93,8 @@ void render::VulkanRenderer::createInstance()
   auto availableExtensions = context.enumerateInstanceExtensionProperties();
   std::cout << "Available extensions:\n";
   for (const auto& ext : availableExtensions) {
-    std::cout << "\t" << ext.extensionName << "\n";
+    std::cout << "\t" << ext.extensionName << std::endl;
+    extensions.push_back(ext.extensionName);
   }
 
   enableValidationLayers();
@@ -61,12 +104,14 @@ void render::VulkanRenderer::createInstance()
   createInfo.setPEnabledExtensionNames(extensions);
   createInfo.setPEnabledLayerNames(requiredLayers);
 
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(
+    reinterpret_cast<PFN_vkGetInstanceProcAddr>(vkGetInstanceProcAddr));
   instance = vk::raii::Instance(context, createInfo);
   VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
   std::cout << "Vulkan instance created" << std::endl;
 }
 
-vk::Extent2D render::VulkanRenderer::selectSwapExtent(vk::SurfaceCapabilitiesKHR const & capabilities)
+vk::Extent2D tz::render::vulkan::VulkanRenderer::selectSwapExtent(vk::SurfaceCapabilitiesKHR const & capabilities)
 {
   if (capabilities.currentExtent.width != (std::numeric_limits<uint32_t>::max)())
   {
@@ -81,7 +126,7 @@ vk::Extent2D render::VulkanRenderer::selectSwapExtent(vk::SurfaceCapabilitiesKHR
   };
 }
 
-vk::PresentModeKHR render::VulkanRenderer::selectSwapPresentMode(std::vector<vk::PresentModeKHR> const& availablePresentModes)
+vk::PresentModeKHR tz::render::vulkan::VulkanRenderer::selectSwapPresentMode(std::vector<vk::PresentModeKHR> const& availablePresentModes)
 {
   assert(std::ranges::any_of(availablePresentModes, [](auto presentMode) { return presentMode == vk::PresentModeKHR::eFifo; }));
   return std::ranges::any_of(availablePresentModes,
@@ -97,7 +142,7 @@ vk::PresentModeKHR render::VulkanRenderer::selectSwapPresentMode(std::vector<vk:
  * TODO: add "target" / optimal format definition.
  * Currently we look for 32Bit BGRA SRGB color format.
  */
-vk::SurfaceFormatKHR render::VulkanRenderer::selectSurfaceColorFormat(std::vector<vk::SurfaceFormatKHR> const& availableFormats)
+vk::SurfaceFormatKHR tz::render::vulkan::VulkanRenderer::selectSurfaceColorFormat(std::vector<vk::SurfaceFormatKHR> const& availableFormats)
 {
   if (availableFormats.empty()) {
     throw std::runtime_error("Available surface formats are empty!");
@@ -113,7 +158,7 @@ vk::SurfaceFormatKHR render::VulkanRenderer::selectSurfaceColorFormat(std::vecto
 
 }
 
-void render::VulkanRenderer::createLogicalDevice()
+void tz::render::vulkan::VulkanRenderer::createLogicalDevice()
 {
   auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
   auto graphicsQueueFamilyProperty = std::ranges::find_if(queueFamilyProperties, [](auto const& qfp) {
@@ -142,11 +187,12 @@ void render::VulkanRenderer::createLogicalDevice()
     .setPEnabledExtensionNames(requiredDeviceExtension);
 
   device = vk::raii::Device(physicalDevice, deviceCreateInfo);
+  VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);
   graphicsQueue = vk::raii::Queue( device, graphicsIndex, 0 );
 
 }
 
-bool render::VulkanRenderer::isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice)
+bool tz::render::vulkan::VulkanRenderer::isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice)
 {
   auto deviceProperties = physicalDevice.getProperties();
   auto queueFamilies = physicalDevice.getQueueFamilyProperties();
@@ -174,7 +220,7 @@ bool render::VulkanRenderer::isDeviceSuitable(const vk::raii::PhysicalDevice& ph
   return false;
 }
 
-void render::VulkanRenderer::pickPhysicalDevice()
+void tz::render::vulkan::VulkanRenderer::pickPhysicalDevice()
 {
   auto physicalDevices = instance.enumeratePhysicalDevices();
 
@@ -193,7 +239,7 @@ void render::VulkanRenderer::pickPhysicalDevice()
   }
 }
 
-void render::VulkanRenderer::setupDebugMessenger()
+void tz::render::vulkan::VulkanRenderer::setupDebugMessenger()
 {
   if (requiredLayers.empty()) return;
 
@@ -209,7 +255,7 @@ void render::VulkanRenderer::setupDebugMessenger()
 
 }
 
-void render::VulkanRenderer::enableValidationLayers()
+void tz::render::vulkan::VulkanRenderer::enableValidationLayers()
 {
 #ifndef NDEBUG
 
@@ -236,7 +282,7 @@ void render::VulkanRenderer::enableValidationLayers()
 #endif
 }
 
-VKAPI_ATTR vk::Bool32 VKAPI_CALL render::VulkanRenderer::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
+VKAPI_ATTR vk::Bool32 VKAPI_CALL tz::render::vulkan::VulkanRenderer::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
                                                       vk::DebugUtilsMessageTypeFlagsEXT              type,
                                                       const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
                                                       void *                                         pUserData)
@@ -246,7 +292,7 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL render::VulkanRenderer::debugCallback(vk::Debug
   return vk::False;
 }
 
-uint32_t render::VulkanRenderer::selectSwapMinImageCount(vk::SurfaceCapabilitiesKHR const& surfaceCapabilities) {
+uint32_t tz::render::vulkan::VulkanRenderer::selectSwapMinImageCount(vk::SurfaceCapabilitiesKHR const& surfaceCapabilities) {
   auto minImageCount = (std::max)(3u, surfaceCapabilities.minImageCount);
   if ((0 < surfaceCapabilities.maxImageCount) && (surfaceCapabilities.maxImageCount < minImageCount))
   {
@@ -255,7 +301,7 @@ uint32_t render::VulkanRenderer::selectSwapMinImageCount(vk::SurfaceCapabilities
   return minImageCount;
 }
 
-void render::VulkanRenderer::createSwapChain()
+void tz::render::vulkan::VulkanRenderer::createSwapChain()
 {
   auto presentModes = physicalDevice.getSurfacePresentModesKHR(*surface);
   auto surfaceCaps = physicalDevice.getSurfaceCapabilitiesKHR(*surface);
@@ -285,7 +331,7 @@ void render::VulkanRenderer::createSwapChain()
 
 }
 
-void render::VulkanRenderer::createImageViews()
+void tz::render::vulkan::VulkanRenderer::createImageViews()
 {
   if (swapChainImageViews.empty() == false)
   {
@@ -304,7 +350,7 @@ void render::VulkanRenderer::createImageViews()
   }
 }
 
-vk::raii::ShaderModule render::VulkanRenderer::createSlangShaderModule(const std::string& shaderBinaryPath)
+vk::raii::ShaderModule tz::render::vulkan::VulkanRenderer::createSlangShaderModule(const std::string& shaderBinaryPath)
 {
   std::vector<char> buffer;
   {
@@ -327,7 +373,7 @@ vk::raii::ShaderModule render::VulkanRenderer::createSlangShaderModule(const std
   return shaderModule;
 }
 
-void render::VulkanRenderer::createGraphicsPipeline()
+void tz::render::vulkan::VulkanRenderer::createGraphicsPipeline()
 {
   auto shaderModule = createSlangShaderModule("shader_binaries/default_shader.slang.spv");
 
@@ -376,12 +422,16 @@ void render::VulkanRenderer::createGraphicsPipeline()
   pipelineLayoutCreateInfo.setSetLayoutCount(0).setPushConstantRangeCount(0);
   pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
 
+  vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
+  pipelineRenderingCreateInfo.setColorAttachmentCount(1);
+  pipelineRenderingCreateInfo.setPColorAttachmentFormats(&surfaceFormat.format);
+
 
 }
 
-void render::VulkanRenderer::init()
+void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
 {
-
+  this->window = window;
   createInstance();
   setupDebugMessenger();
   initSurface();
@@ -390,5 +440,17 @@ void render::VulkanRenderer::init()
   createSwapChain();
   createImageViews();
   createGraphicsPipeline();
+}
+
+
+
+tz::Buffer* tz::render::vulkan::VulkanRenderer::createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage)
+{
+  vk::BufferCreateInfo createInfo;
+  createInfo.setSize(sizeInBytes);
+  createInfo.setUsage(toVkBufferUsage(bufferUsage));
+  createInfo.setSharingMode(vk::SharingMode::eExclusive);
+  auto b = vk::raii::Buffer(device, createInfo);
+  return new VulkanBuffer(std::move(b));
 }
 

@@ -2,6 +2,7 @@
 #include <Eigen/Dense>
 #include <render.hh>
 #include <opengl_renderer.hh>
+#include <vulkan_renderer.hh>
 #include <sdl2.hh>
 
 
@@ -70,16 +71,18 @@ struct GameGraphicsData
 
       auto transform = Eigen::Affine3f::Identity();
       transform.translate(Eigen::Vector3f(-0.2, 0.5, 0));
-      transformBuffer = renderer->createBuffer(sizeof(Eigen::Matrix4f), transform.matrix().data());
-      auto transformDescriptor = tz::Descriptor();
-      transformDescriptor.buffer = transformBuffer;
-      transformDescriptor.binding = transformBinding;
+      Eigen::Matrix4f m = transform.matrix();
+      std::vector<Eigen::Matrix4f> vm = {m};
+      transformBuffer = renderer->createBuffer(vm.data(), vm.size() * sizeof(Eigen::Matrix4f), tz::BufferUsage::Uniform);
+      auto transformDescriptor = new tz::Descriptor();
+      transformDescriptor->buffer = transformBuffer;
+      transformDescriptor->binding = transformBinding;
 
       std::vector<Eigen::Vector3f> positions =
         {{-0.2, 0.2, 0},
         {-0.2, -0.2, 0},
         {0.2, -0.2, 0}};
-    auto vertexBuffer = renderer->createVertexBuffer(positions);
+    auto vertexBuffer = renderer->createBuffer(positions.data(), positions.size() * sizeof(Eigen::Vector3f), tz::BufferUsage::Vertex);
 
 
 
@@ -92,7 +95,7 @@ struct GameGraphicsData
     commandBuffer = new tz::CommandBuffer();
     commandBuffer->begin();
     commandBuffer->recordCommand(new tz::CmdBindPipeline (defaultPSO ));
-    commandBuffer->recordCommand(new tz::CmdBindVertexBuffers({vertexBuffer}));
+    commandBuffer->recordCommand(new tz::CmdBindVertexBuffers ({vertexBuffer}));
     commandBuffer->recordCommand(new tz::CmdBindDescriptors({transformDescriptor}));
     commandBuffer->recordCommand(new tz::CmdDraw(3, 1, 0, 0));
     commandBuffer->end();
@@ -139,7 +142,7 @@ struct GameGraphicsData
 
 
 
-void runActiveLoopDemo()
+void runDemoGL()
 {
 
   tz::Renderer* renderer = reinterpret_cast<tz::Renderer *>(new tz::OpenGLRenderer());
@@ -149,10 +152,6 @@ void runActiveLoopDemo()
   renderer->init(window);
 
   auto gameGraphicsData = GameGraphicsData(renderer);
-
-
-
-
 
   while (true)
   {
@@ -192,7 +191,7 @@ void runActiveLoopDemo()
       static float angle = 0.0f;
       angle += 0.0001f;
       transform.rotate(Eigen::AngleAxis(angle, Eigen::Vector3f::UnitZ()));
-      gameGraphicsData.transformBuffer->updateData(sizeof(Eigen::Matrix4f), transform.matrix().data());
+      gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
     }
     renderer->submitCommandBuffer(gameGraphicsData.commandBuffer);
 
@@ -211,15 +210,80 @@ void runActiveLoopDemo()
 
 }
 
+void runDemoVulkan()
+{
+  tz::Renderer* renderer = reinterpret_cast<tz::Renderer *>(new tz::render::vulkan::VulkanRenderer());
+  auto ws = new tz::SDL2WindowSystem();
+  auto winDesc = renderer->getRequiredWindowDesc();
+  auto window = ws->createWindow(winDesc);
+  renderer->init(window);
+
+  auto gameGraphicsData = GameGraphicsData(renderer);
+
+  while (true)
+  {
+    ws->pollEvents();
+    renderer->beginFrame();
+    renderer->clearScreen();
+
+    // Immediate style rendering, similar to how OpenGL 2.0
+    // worked with its "glVertex" and "glNormal" calls.
+    // In the background these immediate calls are interpreted and
+    // mapped to "modern-gpu" architecture, uploading into VertexBuffers etc.
+    // The framework does make its best to interpret the incoming immediate
+    // commands efficiently, but immediate-mode will normally not be as performant
+    // as custom built buffers, pipeline states and shaders.
+    renderer->beginDraw(tz::PrimitiveType::Triangles);
+    renderer->emitPosition({-0.1, 0.1, -0.1});
+    renderer->emitPosition({-0.1, -0.1, -0.1});
+    renderer->emitPosition({0.1, -0.1, -0.1});
+
+    renderer->emitPosition({-0.09, 0.1, 0});
+    renderer->emitPosition({0.11, -0.1, 0});
+    renderer->emitPosition({0.11, 0.1, 0});
+    renderer->endDraw();
+
+    // Use modern command buffer approach.
+    // Every drawing/pipeline execution is materialised through
+    // specific commands which are recorded into a (reusable)
+    // commandBuffer, which gets submitted.
+    // Any number of command buffers may be submitted per frame.
+    // Submission it not immediate execution, but collection of the buffer.
+    // Update our transform buffer, making the object move:
+    {
+      static Eigen::Vector3f posOffset = {0, 0,0};
+      posOffset += Eigen::Vector3f {0.000, -0.000, 0};
+      auto transform = Eigen::Affine3f::Identity();
+      transform.translate(posOffset);
+      static float angle = 0.0f;
+      angle += 0.0001f;
+      transform.rotate(Eigen::AngleAxis(angle, Eigen::Vector3f::UnitZ()));
+      gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
+    }
+    renderer->submitCommandBuffer(gameGraphicsData.commandBuffer);
+
+    // Ending the frame is where all the drawing & computation work is actually being
+    // done on the GPU.
+    // For legacy frameworks as OpenGL this means all the actual draw calls are done.
+    // For modern APIs such as Vulkan and DX12, it means the actual submission
+    // of their internal command buffers, fence waiting etc.
+    renderer->endFrame();
+
+
+    // Final step for a frame to present the contents of the backbuffer
+    // to the actual display.
+    ws->present();
+  }
+}
+
 
 int main(int argc, char* argv[])
 {
-
-  runActiveLoopDemo();
-
-  // runFrameCallbackDemo();
-  // ...
-
+#ifndef USE_VULKAN
+  runDemoGL();
+#else
+  runDemoVulkan();
+#endif
 
 
   return 0;

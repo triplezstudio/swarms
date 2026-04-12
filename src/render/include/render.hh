@@ -7,8 +7,8 @@
 
 /**
  * The render interface.
- * It abstracts over any underlying render implementation, e.g. custom Vulkan, OpenGL
- * or any 3rd party render library.
+ * It abstracts over any underlying render api, e.g. Vulkan, OpenGL
+ * or a 3rd party render library.
  * In any case we want to be able to
  * a) switch render backends in the future if specific features are needed
  * b) be able to provide platform optimal render backends so we need to be able to support
@@ -16,16 +16,27 @@
  */
 namespace tz {
 
-struct Buffer
+enum class BufferUsage
 {
-  virtual void updateData(uint64_t sizeInBytes, void* data)= 0;
-  virtual void* getHandle() = 0;
+  Vertex,
+  Index,
+  Uniform,
+  Storage,
+  TansferDest,
+  TransferSource,
+  Indirect,
+
 };
 
-struct VertexBuffer
+struct Buffer
 {
+  virtual void updateData(void* data, size_t sizeInBytes)= 0;
+  virtual void appendData(void* data, size_t sizeInBytes) = 0;
   virtual void* getHandle() = 0;
-
+  virtual void bind() = 0;
+  virtual void unbind() = 0;
+  virtual void map() = 0;
+  virtual void unmap() = 0;
 };
 
 enum class VertexInputRate
@@ -63,6 +74,7 @@ struct DescriptorBinding
 
 struct Descriptor
 {
+
   Buffer* buffer;
   DescriptorBinding binding;
 
@@ -151,7 +163,28 @@ struct RenderState
   PrimitiveType primitiveType;
 };
 
+struct Image
+{
 
+};
+
+struct ImageView
+{
+
+};
+
+struct Sampler
+{
+
+};
+
+struct Texture
+{
+  Image image;
+  ImageView imageView;
+  Sampler sampler;
+
+};
 
 
 
@@ -205,24 +238,26 @@ class CmdBindPipeline : public Command
       PipelineStateObject* pso = nullptr;
 };
 
+
 class CmdBindDescriptors : public Command
 {
   public:
-      CmdBindDescriptors(std::vector<Descriptor> descs) : descriptors(descs)
+      CmdBindDescriptors(std::vector<Descriptor*> descs) : descriptors(descs)
       {
 
       }
 
-      std::vector<Descriptor> descriptors;
+      std::vector<Descriptor*> descriptors;
 };
+
 
 class CmdBindVertexBuffers : public Command
 {
   public:
-      CmdBindVertexBuffers(std::vector<VertexBuffer*> vbs) : vertexBuffers(vbs) {}
+      // TODO: we "must" copy the vbs here, maybe we can avoid this.
+      CmdBindVertexBuffers(std::vector<Buffer*> vbs) : vertexBuffers(vbs) {}
 
-
-  std::vector<VertexBuffer*> vertexBuffers;
+  std::vector<Buffer*> vertexBuffers;
 };
 
 class CmdDraw : public Command
@@ -271,6 +306,12 @@ struct Mesh
   std::vector<uint32_t> indices;
 };
 
+template<typename T>
+class TZ_API BufferFactory
+{
+  virtual Buffer* createBuffer(std::vector<T>& initialData, BufferUsage usage) = 0;
+};
+
 class TZ_API Renderer
 {
   public:
@@ -288,8 +329,8 @@ class TZ_API Renderer
   virtual void endFrame() = 0;
   virtual void submitCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
-  virtual VertexBuffer* createVertexBuffer(const std::vector<Eigen::Vector3f>& data) = 0;
-  virtual Buffer* createBuffer(uint64_t sizeInBytes, void* data) = 0;
+  virtual Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) = 0;
+
 
 };
 

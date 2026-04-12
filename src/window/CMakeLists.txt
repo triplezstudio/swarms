@@ -7,4 +7,8 @@ add_subdirectory(sdl2)
 
 target_compile_definitions(window_lib INTERFACE EXPORT_SWARMS_LIB)
 
+if(USE_VULKAN)
+    target_compile_definitions(window_lib INTERFACE USE_VULKAN)
+endif()
+
 

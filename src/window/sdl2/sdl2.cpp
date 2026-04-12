@@ -4,13 +4,13 @@
 #include <SDL2/SDL.h>
 #include <SDL_syswm.h>
 
-
-#include <iostream>
 #include <vector>
 
-#include <stdexcept>
+#include <SDL_vulkan.h>
 #include <common.hh>
 #include <sdl2.hh>
+#include <stdexcept>
+#include <iostream>
 
 namespace tz {
 
@@ -80,11 +80,43 @@ tz::Window* tz::SDL2WindowSystem::createWindow(tz::WindowDesc desc)
     SDL_GL_SetSwapInterval(0);
 
   }
+  else if (desc.api == WindowDesc::GraphicsAPI::Vulkan)
+  {
+    windowFlags |= SDL_WINDOW_VULKAN;
 
-  return new tz::Window { getNativeHandles().window };
+    window = SDL_CreateWindow("swarms v0.0.1",
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              640,
+                              480,
+                              windowFlags);
+  }
+
+
+  return new tz::Window { getNativeHandles().window, 640, 480, [this](GraphicsInstance& inst, WindowDesc desc) -> GraphicsSurface {
+      return createSurface(inst, desc);
+    }};
 
 }
 
+GraphicsSurface tz::SDL2WindowSystem::createSurface(GraphicsInstance& instance, WindowDesc desc) {
+  if (desc.api == WindowDesc::GraphicsAPI::Vulkan)
+  {
+    VkInstance vkInst = reinterpret_cast<VkInstance>(instance.handle);
+    VkSurfaceKHR rawSurface;
+    if (!SDL_Vulkan_CreateSurface(window, vkInst, &rawSurface))
+    {
+      std::cerr << "surface error: " << std::string(SDL_GetError()) << std::endl;
+      throw std::runtime_error("Could not create surface!" + std::string(SDL_GetError()));
+    }
+    return {rawSurface};
+  }
+  else {
+    // We only support surface creation for vulkan now.
+    return {};
+  }
+
+}
 
 client_common::NativeHandles SDL2WindowSystem::getNativeHandles()
 {

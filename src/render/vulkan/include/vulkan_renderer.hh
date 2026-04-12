@@ -1,11 +1,71 @@
 #pragma once
+#include "common.hh"
 #include "defines.h"
+#include "render.hh"
 #include <functional>
 #include <optional>
 #include <vulkan/vulkan_raii.hpp>
 
+namespace tz::render::vulkan {
 
-namespace render {
+inline vk::BufferUsageFlags toVkBufferUsage(BufferUsage bufferUsage)
+{
+  vk::BufferUsageFlags flags;
+  switch (bufferUsage)
+  {
+    case BufferUsage::Vertex: flags |= vk::BufferUsageFlagBits::eVertexBuffer; break;
+    case BufferUsage::Index: flags |= vk::BufferUsageFlagBits::eIndexBuffer; break;
+    case BufferUsage::Indirect: flags |= vk::BufferUsageFlagBits::eIndirectBuffer; break;
+    case BufferUsage::Storage: flags |= vk::BufferUsageFlagBits::eStorageBuffer; break;
+    case BufferUsage::TansferDest: flags |= vk::BufferUsageFlagBits::eTransferDst; break;
+    case BufferUsage::TransferSource: flags |= vk::BufferUsageFlagBits::eTransferSrc; break;
+    case BufferUsage::Uniform: flags |= vk::BufferUsageFlagBits::eUniformBuffer; break;
+  }
+  return flags;
+}
+
+class VulkanBuffer : public tz::Buffer
+{
+
+  public:
+  VulkanBuffer(vk::raii::Buffer vkBuffer)
+  {
+    buffer = std::move(vkBuffer);
+  }
+
+  void updateData(void* data, size_t sizeInBytes) override
+  {
+    
+  }
+
+  void appendData(void* data, size_t sizeInBytes) override
+  {
+    
+  }
+  
+  void* getHandle() override
+  {
+    return &buffer;
+  }
+  void bind() override
+  {
+
+  }
+  void unbind() override
+  {
+
+  }
+  void map() override
+  {
+
+  }
+  void unmap() override
+  {
+
+  }
+  private:
+      vk::raii::Buffer buffer = nullptr;
+};
 
 struct VulkanInitData {
   client_common::NativeHandles nativeHandles;
@@ -18,12 +78,25 @@ struct VulkanInitData {
  * VulkanRenderer is a custom renderer using the Vulkan API.
  *
  */
-class SWARMS_API VulkanRenderer : public render::Renderer
+class TZ_API VulkanRenderer : public Renderer
 {
   public:
-  VulkanRenderer(const VulkanInitData& vulkanInitData);
-  void init() override;
+  void init(tz::Window *window) override;
 
+  WindowDesc getRequiredWindowDesc() override;
+  void clearScreen() override;
+  void beginDraw(PrimitiveType primitiveType) override;
+  void endDraw() override;
+  void emitPosition(Eigen::Vector3f position) override;
+  void emitColor(Eigen::Vector4f color) override;
+  void emitUV(Eigen::Vector2f uv) override;
+  void emitNormal(Eigen::Vector3f normal) override;
+
+  void beginFrame() override;
+  void endFrame() override;
+  void submitCommandBuffer(CommandBuffer* commandBuffer) override;
+
+  Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
 
   private:
   void initSurface();
@@ -47,6 +120,7 @@ class SWARMS_API VulkanRenderer : public render::Renderer
                                                         void *                                         pUserData);
 
   private:
+  tz::Window* window = nullptr;
   vk::raii::Context context;
   vk::raii::Instance instance = nullptr;
   vk::raii::SurfaceKHR surface = nullptr;

@@ -20,39 +20,9 @@ struct VertexBufferUpdateInfo
   std::vector<float> data;
 };
 
+
+
 class OpenGLBuffer : public Buffer
-{
-  public:
-      OpenGLBuffer(uint64_t sizeInBytes, void* data)
-      {
-
-        glCreateBuffers(1, &handle);
-        glNamedBufferStorage(handle, sizeInBytes, data, GL_DYNAMIC_STORAGE_BIT);
-      }
-
-      void updateData(uint64_t sizeInBytes, void* data) override
-      {
-        glNamedBufferSubData(
-          handle,
-          0,
-          sizeInBytes,
-          data
-          );
-      }
-
-      void* getHandle()
-      {
-        return &handle;
-      }
-
-  private:
-      GLuint handle;
-};
-
-/**
- * Abstraction over an OpenGL VBO.
- */
-class OpenGLVertexBuffer : public VertexBuffer
 {
   public:
   /**
@@ -60,7 +30,7 @@ class OpenGLVertexBuffer : public VertexBuffer
   * This can be useful to implement dynamic streaming
   * and updating the buffer on the fly later.
   */
-  OpenGLVertexBuffer(uint64_t size): sizeInBytes(size)
+  OpenGLBuffer(uint64_t size): sizeInBytes(size)
   {
     glCreateBuffers(1, &handle);
     glBindBuffer(GL_ARRAY_BUFFER, handle);
@@ -71,22 +41,37 @@ class OpenGLVertexBuffer : public VertexBuffer
 
   }
 
-  template<typename T>
-  OpenGLVertexBuffer(std::vector<T> data)
+
+  OpenGLBuffer(void* data, size_t sizeInBytes)
   {
     glCreateBuffers(1, &handle);
     glBindBuffer(GL_ARRAY_BUFFER, handle);
-    sizeInBytes = data.size() * sizeof(T);
-    glBufferData(GL_ARRAY_BUFFER, sizeInBytes, data.data(), GL_STATIC_DRAW);
+    sizeInBytes = sizeInBytes;
+    glNamedBufferStorage(handle,
+                         sizeInBytes,
+                         data,
+                         GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
   }
 
-  template<typename T>
-  void appendData(std::vector<T> data)
+
+  void updateData(void* data, size_t sizeInBytes) override
   {
-    memcpy((uint8_t *) mappedPtr + currentAppendOffset, data.data(),
-           data.size() * sizeof(T));
-    currentAppendOffset += data.size() * sizeof(T);
-    elementCounter += data.size();
+    glNamedBufferSubData(
+      handle,
+      0,
+      sizeInBytes,
+      data
+    );
+  }
+
+  void appendData(void* data, size_t sizeInBytes) override
+  {
+    memcpy((uint8_t *) mappedPtr + currentAppendOffset, data,
+           sizeInBytes);
+    currentAppendOffset += sizeInBytes;
+
+    // TODO this is wrong: shall we put this explicitely in the signature?
+    elementCounter += 1;
   }
 
   uint64_t getNumberOfElements()
@@ -129,12 +114,15 @@ class OpenGLVertexBuffer : public VertexBuffer
     return &handle;
   }
 
+  protected:
+      uint32_t elementCounter = 0;
+
   private:
   GLuint handle;
   uint64_t sizeInBytes;
   void *mappedPtr = nullptr;
   uint64_t currentAppendOffset = 0;
-  uint32_t elementCounter = 0;
+
 
 
 };
@@ -176,7 +164,7 @@ public:
       glGenVertexArrays(1, &vertexArrayObject->handle);
       glBindVertexArray(vertexArrayObject->handle);
 
-      auto vbo = OpenGLVertexBuffer(_positions);
+      auto vbo = OpenGLBuffer(_positions.data(), _positions.size() * sizeof(Eigen::Vector3f));
 
       return vertexArrayObject;
     }
@@ -227,6 +215,7 @@ class TZ_API OpenGLShaderModule : public ShaderModule
 };
 
 
+
 /**
  * OpenGLRenderer is a custom renderer using the OpenGL 4.6 API.
  *
@@ -253,10 +242,6 @@ class TZ_API OpenGLRenderer : public Renderer
 
   void submitCommandBuffer(tz::CommandBuffer *commandBuffer) override;
 
-  VertexBuffer* createVertexBuffer(const std::vector<Eigen::Vector3f>& data) override;
-
-  Buffer * createBuffer(uint64_t sizeInBytes, void *data) override;
-
   private:
   GLuint createVertexArrayObject();
   GLuint createVertexBuffer(VertexBufferCreateInfo vbCreateInfo);
@@ -273,10 +258,12 @@ class TZ_API OpenGLRenderer : public Renderer
   GLenum dataTypeToEnum(DataType dt);
   GLenum resourceTypeToEnum(ResourceType rt);
 
+  Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
+
   private:
   tz::Window* window = nullptr;
 
-  OpenGLVertexBuffer *immediatePerFrameBuffer = nullptr;
+  OpenGLBuffer *immediatePerFrameBuffer = nullptr;
   GLuint immediatePerFrameVAO = 0;
 
   // These are used to store the current immediate-stream-data positions.
