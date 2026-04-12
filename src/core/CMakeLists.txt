@@ -43,6 +43,10 @@ add_subdirectory(
 	${CMAKE_CURRENT_SOURCE_DIR}/runtime
 	)
 
+add_subdirectory(
+	${CMAKE_CURRENT_SOURCE_DIR}/serialization
+	)
+
 target_sources (core_lib PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/Uuid.cc
 	)

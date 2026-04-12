@@ -3,31 +3,31 @@
 
 namespace swarms::core {
 
-AxisAlignedBoundingBox::AxisAlignedBoundingBox(const Eigen::Vector3f &center,
-                                               const Eigen::Vector3f &dims)
+AxisAlignedBoundingBox::AxisAlignedBoundingBox(const Eigen::Vector3d &center,
+                                               const Eigen::Vector3d &dims)
   : m_center(center)
   , m_dims(dims)
 {}
 
-auto AxisAlignedBoundingBox::dims() const -> Eigen::Vector3f
+auto AxisAlignedBoundingBox::dims() const -> Eigen::Vector3d
 {
   return m_dims;
 }
 
-auto AxisAlignedBoundingBox::position() const -> Eigen::Vector3f
+auto AxisAlignedBoundingBox::position() const -> Eigen::Vector3d
 {
   return m_center;
 }
 
-void AxisAlignedBoundingBox::moveTo(const Eigen::Vector3f &position)
+void AxisAlignedBoundingBox::moveTo(const Eigen::Vector3d &position)
 {
   m_center = position;
 }
 
-bool AxisAlignedBoundingBox::isInside(const Eigen::Vector3f &pos) const
+bool AxisAlignedBoundingBox::isInside(const Eigen::Vector3d &pos) const
 {
-  Eigen::Vector3f frontBottomLeft = m_center - m_dims / 2.0f;
-  Eigen::Vector3f backTopRight    = m_center + m_dims / 2.0f;
+  Eigen::Vector3d frontBottomLeft = m_center - m_dims / 2.0;
+  Eigen::Vector3d backTopRight    = m_center + m_dims / 2.0;
 
   if (pos(0) < frontBottomLeft(0))
   {
@@ -59,7 +59,7 @@ bool AxisAlignedBoundingBox::isInside(const Eigen::Vector3f &pos) const
   return true;
 }
 
-void AxisAlignedBoundingBox::translate(const Eigen::Vector3f &delta)
+void AxisAlignedBoundingBox::translate(const Eigen::Vector3d &delta)
 {
   m_center += delta;
 }
