@@ -6,7 +6,7 @@
 
 namespace swarms::core {
 
-TransformComponent::TransformComponent(IBoundingBoxPtr bbox)
+TransformComponent::TransformComponent(IBoundingBoxShPtr bbox)
   : AbstractComponent(ComponentType::TRANSFORM)
   , m_bbox(std::move(bbox))
 {
@@ -23,11 +23,11 @@ auto TransformComponent::position() const -> Eigen::Vector3d
 
 auto TransformComponent::size() const -> float
 {
-  if (const auto circleBox = dynamic_cast<CircleBox *>(m_bbox.get()); circleBox != nullptr)
+  if (const auto circleBox = std::dynamic_pointer_cast<CircleBox>(m_bbox); circleBox != nullptr)
   {
     return circleBox->radius();
   }
-  if (const auto aabb = dynamic_cast<AxisAlignedBoundingBox *>(m_bbox.get()); aabb != nullptr)
+  if (const auto aabb = std::dynamic_pointer_cast<AxisAlignedBoundingBox>(m_bbox); aabb != nullptr)
   {
     return aabb->dims().maxCoeff();
   }

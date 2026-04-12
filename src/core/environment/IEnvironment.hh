@@ -25,7 +25,7 @@ class IEnvironment
   /// does not exist or when the component is not valid.
   /// @param entityId - the identifier of the entity to attach the component to
   /// @param component - the component to attach
-  virtual void addComponent(const Uuid entityId, const IComponent &component) = 0;
+  virtual void addComponent(const Uuid entityId, IComponent &&component) = 0;
 
   /// @brief - Convenience helper allowing to create a component from a list of
   /// arguments and call the `addComponent` interface method with the newly

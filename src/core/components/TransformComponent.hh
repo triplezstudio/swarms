@@ -9,7 +9,7 @@ namespace swarms::core {
 class TransformComponent : public AbstractComponent
 {
   public:
-  TransformComponent(IBoundingBoxPtr bbox);
+  TransformComponent(IBoundingBoxShPtr bbox);
   ~TransformComponent() override = default;
 
   auto position() const -> Eigen::Vector3d;
@@ -30,7 +30,7 @@ class TransformComponent : public AbstractComponent
   auto transformToGlobal(const Eigen::Vector3d &localPos) const -> Eigen::Vector3d;
 
   private:
-  IBoundingBoxPtr m_bbox{};
+  IBoundingBoxShPtr m_bbox{};
 };
 
 using TransformComponentShPtr = std::shared_ptr<TransformComponent>;

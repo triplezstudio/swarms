@@ -20,9 +20,20 @@ class EntityRegistry
   /// @return - the identifier of the entity
   auto createEntity() -> Uuid;
 
+  /// @brief - Adds a component to the entity. If the entity does not exist, this function
+  /// will raise an error.
+  /// @param entityId - the entity to add the component to
+  /// @param component - the component to add to the entity
   template<typename Component>
-  void addComponent(const Uuid entityId, Component component);
+  void addComponent(const Uuid entityId, Component &&component);
 
+  /// @brief - Applied the function to all the entities having all required components set.
+  /// @tparam ...Components - the required components for an entity to qualify for the
+  /// application of the function
+  /// @tparam Func - the signature of the function: this parameter should be inferred from
+  /// the signature of of the lambda provided and does not need to be provided explicitly
+  /// in general.
+  /// @param modifier - a function to update components. Can be provided as a lambda
   template<typename... Components, typename Func>
   void apply(Func &&modifier);
 

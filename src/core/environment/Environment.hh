@@ -16,7 +16,7 @@ class Environment : public AbstractEnvironment
   ~Environment() override = default;
 
   auto createEntity() -> Uuid override;
-  void addComponent(const Uuid entityId, const IComponent &component) override;
+  void addComponent(const Uuid entityId, IComponent &&component) override;
 
   protected:
   void computePreAgentsStep(const time::TickData &data) override;

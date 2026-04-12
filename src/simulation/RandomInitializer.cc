@@ -36,7 +36,7 @@ void RandomInitializer::spawnAgent(core::IEnvironment &env, AgentProps config)
 {
   const auto entityId = env.createEntity();
 
-  auto box = std::make_unique<core::CircleBox>(config.position, config.radius);
+  auto box = std::make_shared<core::CircleBox>(config.position, config.radius);
   env.addComponent<core::TransformComponent>(entityId, std::move(box));
 
   debug("Spawned entity " + core::str(entityId) + " at " + core::str(config.position));
