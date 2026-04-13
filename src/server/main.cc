@@ -21,7 +21,7 @@ int main(int /*argc*/, char ** /*argv*/)
   raw.setLevel(swarms::log::Severity::DEBUG);
   swarms::log::Locator::provide(&raw);
 
-  swarms::Server server;
+  swarms::server::Server server;
 
   sigIntProcessing = [&server](const int /*signal*/) { server.requestStop(); };
   // https://en.cppreference.com/w/cpp/utility/program/signal

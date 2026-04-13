@@ -7,7 +7,7 @@
 #include <atomic>
 #include <condition_variable>
 
-namespace swarms {
+namespace swarms::server {
 class Server : public runtime::CoreObject
 {
   public:
@@ -32,4 +32,4 @@ class Server : public runtime::CoreObject
   void shutdown();
 };
 
-} // namespace swarms
+} // namespace swarms::server

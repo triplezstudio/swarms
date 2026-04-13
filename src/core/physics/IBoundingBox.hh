@@ -11,11 +11,11 @@ class IBoundingBox
   public:
   virtual ~IBoundingBox() = default;
 
-  virtual auto position() const -> Eigen::Vector3f        = 0;
-  virtual void moveTo(const Eigen::Vector3f &position)    = 0;
-  virtual bool isInside(const Eigen::Vector3f &pos) const = 0;
+  virtual auto position() const -> Eigen::Vector3d        = 0;
+  virtual void moveTo(const Eigen::Vector3d &position)    = 0;
+  virtual bool isInside(const Eigen::Vector3d &pos) const = 0;
 
-  virtual void translate(const Eigen::Vector3f &delta) = 0;
+  virtual void translate(const Eigen::Vector3d &delta) = 0;
 };
 
 using IBoundingBoxPtr   = std::unique_ptr<IBoundingBox>;

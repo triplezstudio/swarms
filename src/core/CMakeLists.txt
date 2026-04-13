@@ -16,6 +16,10 @@ add_subdirectory(
 	)
 
 add_subdirectory(
+	${CMAKE_CURRENT_SOURCE_DIR}/entities
+	)
+
+add_subdirectory(
 	${CMAKE_CURRENT_SOURCE_DIR}/environment
 	)
 
@@ -39,6 +43,10 @@ add_subdirectory(
 	${CMAKE_CURRENT_SOURCE_DIR}/runtime
 	)
 
+add_subdirectory(
+	${CMAKE_CURRENT_SOURCE_DIR}/serialization
+	)
+
 target_sources (core_lib PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/Uuid.cc
 	)
@@ -46,4 +54,5 @@ target_sources (core_lib PRIVATE
 target_link_libraries (core_lib
 	time_lib
 	runtime_lib
+	EnTT::EnTT
 	)

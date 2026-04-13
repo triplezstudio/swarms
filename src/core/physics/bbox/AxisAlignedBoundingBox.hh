@@ -8,20 +8,20 @@ namespace swarms::core {
 class AxisAlignedBoundingBox : public IBoundingBox
 {
   public:
-  AxisAlignedBoundingBox(const Eigen::Vector3f &center, const Eigen::Vector3f &dims);
+  AxisAlignedBoundingBox(const Eigen::Vector3d &center, const Eigen::Vector3d &dims);
   ~AxisAlignedBoundingBox() override = default;
 
-  auto dims() const -> Eigen::Vector3f;
+  auto dims() const -> Eigen::Vector3d;
 
-  auto position() const -> Eigen::Vector3f override;
-  void moveTo(const Eigen::Vector3f &position) override;
-  bool isInside(const Eigen::Vector3f &pos) const override;
+  auto position() const -> Eigen::Vector3d override;
+  void moveTo(const Eigen::Vector3d &position) override;
+  bool isInside(const Eigen::Vector3d &pos) const override;
 
-  void translate(const Eigen::Vector3f &delta) override;
+  void translate(const Eigen::Vector3d &delta) override;
 
   private:
-  Eigen::Vector3f m_center{Eigen::Vector3f::Zero()};
-  Eigen::Vector3f m_dims{Eigen::Vector3f::Ones()};
+  Eigen::Vector3d m_center{Eigen::Vector3d::Zero()};
+  Eigen::Vector3d m_dims{Eigen::Vector3d::Ones()};
 };
 
 } // namespace swarms::core

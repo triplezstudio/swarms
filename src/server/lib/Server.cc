@@ -2,9 +2,11 @@
 
 #include "Server.hh"
 #include "Environment.hh"
+#include "RNG.hh"
+#include "RandomInitializer.hh"
 #include "TimeManager.hh"
 
-namespace swarms {
+namespace swarms::server {
 
 Server::Server()
   : runtime::CoreObject("server")
@@ -48,6 +50,10 @@ void Server::initialize()
   m_environment = std::make_shared<core::Environment>();
   m_processor   = std::make_unique<core::EnvironmentProcessor>(
     m_environment, std::make_unique<time::TimeManager>(INITIAL_TICK, SIMULATION_TIME_STEP));
+
+  core::RNG rng;
+  simulation::RandomInitializer initializer(simulation::InitializationConfig{});
+  initializer.setup(*m_environment, rng);
 }
 
 void Server::setup()
@@ -74,4 +80,4 @@ void Server::shutdown()
   m_processor->stop();
 }
 
-} // namespace swarms
+} // namespace swarms::server

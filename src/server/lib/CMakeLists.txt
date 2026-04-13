@@ -14,4 +14,5 @@ target_sources (swarms_server_lib PRIVATE
 target_link_libraries (swarms_server_lib
 	runtime_lib
 	core_lib
+	simulation_lib
 	)

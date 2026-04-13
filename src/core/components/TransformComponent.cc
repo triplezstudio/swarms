@@ -16,7 +16,7 @@ TransformComponent::TransformComponent(IBoundingBoxShPtr bbox)
   }
 }
 
-auto TransformComponent::position() const -> Eigen::Vector3f
+auto TransformComponent::position() const -> Eigen::Vector3d
 {
   return m_bbox->position();
 }
@@ -39,17 +39,17 @@ auto TransformComponent::size() const -> float
   throw std::invalid_argument("Unsupported bounding box type " + name);
 }
 
-bool TransformComponent::contains(const Eigen::Vector3f &pos) const
+bool TransformComponent::contains(const Eigen::Vector3d &pos) const
 {
   return m_bbox && m_bbox->isInside(pos);
 }
 
-void TransformComponent::translate(const Eigen::Vector3f &delta)
+void TransformComponent::translate(const Eigen::Vector3d &delta)
 {
   m_bbox->translate(delta);
 }
 
-void TransformComponent::overridePosition(const Eigen::Vector3f &position)
+void TransformComponent::overridePosition(const Eigen::Vector3d &position)
 {
   m_bbox->moveTo(position);
 }
@@ -60,10 +60,10 @@ void TransformComponent::simulate(const time::TickData & /*data*/)
 }
 
 namespace {
-const Eigen::Vector3f Z_AXIS = Eigen::Vector3f(0.0, 0.0, 1.0);
+const Eigen::Vector3d Z_AXIS(0.0, 0.0, 1.0);
 }
 
-auto TransformComponent::transformToGlobal(const Eigen::Vector3f &localPos) const -> Eigen::Vector3f
+auto TransformComponent::transformToGlobal(const Eigen::Vector3d &localPos) const -> Eigen::Vector3d
 {
   return m_bbox->position() + localPos;
 }

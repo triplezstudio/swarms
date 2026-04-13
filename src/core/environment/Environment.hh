@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AbstractEnvironment.hh"
+#include "EntityRegistry.hh"
 #include "IAgent.hh"
 #include "Uuid.hh"
 #include <unordered_map>
@@ -14,6 +15,9 @@ class Environment : public AbstractEnvironment
   Environment()           = default;
   ~Environment() override = default;
 
+  auto createEntity() -> Uuid override;
+  void addComponent(const Uuid entityId, IComponent &&component) override;
+
   protected:
   void computePreAgentsStep(const time::TickData &data) override;
   void computeAgentsStep(const time::TickData &data) override;
@@ -22,6 +26,10 @@ class Environment : public AbstractEnvironment
   private:
   /// @brief - Holds the collection of agents currently living in the world.
   std::unordered_map<Uuid, IAgentShPtr> m_agents{};
+
+  /// @brief - The registry storing entities and components living  in the
+  /// environment.
+  EntityRegistry m_registry{};
 };
 
 } // namespace swarms::core
