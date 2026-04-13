@@ -378,9 +378,9 @@ void tz::render::vulkan::VulkanRenderer::createGraphicsPipeline()
   auto shaderModule = createSlangShaderModule("shader_binaries/default_shader.slang.spv");
 
   vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
-  vertShaderStageInfo.setStage(vk::ShaderStageFlagBits::eVertex).setModule(shaderModule).setPName("vertMain");
+  vertShaderStageInfo.setStage(vk::ShaderStageFlagBits::eVertex).setModule(shaderModule).setPName("main");
   vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
-  fragShaderStageInfo.setStage(vk::ShaderStageFlagBits::eFragment).setModule(shaderModule).setPName("fragMain");
+  fragShaderStageInfo.setStage(vk::ShaderStageFlagBits::eFragment).setModule(shaderModule).setPName("main");
   vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
 
@@ -425,6 +425,28 @@ void tz::render::vulkan::VulkanRenderer::createGraphicsPipeline()
   vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
   pipelineRenderingCreateInfo.setColorAttachmentCount(1);
   pipelineRenderingCreateInfo.setPColorAttachmentFormats(&surfaceFormat.format);
+
+  vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain;
+  pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
+    .setStages(shaderStages)
+    .setPVertexInputState(&vertexInputStateCreateInfo)
+    .setPInputAssemblyState(&inputAssembly)
+    .setPRasterizationState(&rasterizationStateCreateInfo)
+    .setPViewportState(&viewportStateCreateInfo)
+    .setPMultisampleState(&multisampleStateCreateInfo)
+    .setPColorBlendState(&colorBlendStateCreateInfo)
+    .setPDynamicState(&dsCreateInfo)
+    .setLayout(pipelineLayout)
+    .setRenderPass(nullptr);
+
+  // TODO is this equvivalent with the one below?
+  //pipelineCreateInfoChain.assign(pipelineRenderingCreateInfo);
+
+  pipelineCreateInfoChain.get<vk::PipelineRenderingCreateInfo>()
+    .setPColorAttachmentFormats(&surfaceFormat.format);
+
+  graphicsPipeline = vk::raii::Pipeline(device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
+
 
 
 }

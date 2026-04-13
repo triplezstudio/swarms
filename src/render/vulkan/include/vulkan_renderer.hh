@@ -131,6 +131,7 @@ class TZ_API VulkanRenderer : public Renderer
   vk::SurfaceFormatKHR surfaceFormat;
   vk::raii::SwapchainKHR swapChain = nullptr;
   vk::raii::PipelineLayout pipelineLayout = nullptr;
+  vk::raii::Pipeline graphicsPipeline = nullptr;
   std::vector<vk::Image> swapChainImages;
   std::vector<vk::raii::ImageView> swapChainImageViews;
   std::vector<const char*> extensions;

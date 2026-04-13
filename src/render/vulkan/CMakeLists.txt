@@ -62,7 +62,8 @@ if (USE_VULKAN)
 
         add_custom_command(
                 OUTPUT ${SHADER_OUTPUT}
-                COMMAND ${SLANGC} ${SHADER} -o ${SHADER_OUTPUT}
+                COMMAND ${SLANGC} ${SHADER}
+                        -o ${SHADER_OUTPUT}
                 DEPENDS ${SHADER}
                 COMMENT "Compiling shader: ${SHADER_NAME}"
                 VERBATIM
