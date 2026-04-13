@@ -20,7 +20,7 @@ struct InitializationConfig
   /// maximum value.
   double maxRadius{2.0};
 
-  /// @brief - Defines how many agents needs to be spawned.
+  /// @brief - Defines how many agents need to be spawned.
   unsigned agentsCount{10u};
 };
 
