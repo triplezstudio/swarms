@@ -24,6 +24,44 @@ inline vk::BufferUsageFlags toVkBufferUsage(BufferUsage bufferUsage)
   return flags;
 }
 
+class VulkanCommandBuffer : public tz::CommandBuffer
+{
+
+};
+
+class VulkanShaderPipeline : public tz::ShaderPipeline
+{
+  public:
+
+      void link(const std::vector<ShaderModule *> &modules) override
+      {
+        stages = modules;
+      }
+      void * getHandle() override
+      {
+        return stages.data();
+      }
+
+  private:
+      std::vector<ShaderModule*> stages;
+};
+
+class VulkanShaderModule : public tz::ShaderModule
+{
+
+  public:
+  VulkanShaderModule(vk::PipelineShaderStageCreateInfo createInfo): createInfo(createInfo) {}
+  void init(ShaderType type, const std::string& source) override {}
+  void* getHandle() override
+  {
+    return &createInfo;
+  }
+
+  private:
+      vk::PipelineShaderStageCreateInfo createInfo;
+
+};
+
 class VulkanBuffer : public tz::Buffer
 {
 
@@ -97,6 +135,8 @@ class TZ_API VulkanRenderer : public Renderer
   void submitCommandBuffer(CommandBuffer* commandBuffer) override;
 
   Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
+  ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
+  ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
 
   private:
   void initSurface();
@@ -107,6 +147,16 @@ class TZ_API VulkanRenderer : public Renderer
   void createSwapChain();
   void createImageViews();
   void createGraphicsPipeline();
+  void createCommandPool();
+  void createCommandBuffer();
+  void recordCommandBuffer(uint32_t imageIndex);
+  void transitionImageLayout( uint32_t imageIndex,
+                             vk::ImageLayout oldLayout,
+                             vk::ImageLayout newLayout,
+                             vk::AccessFlags2 srcAccessMask,
+                             vk::AccessFlags2 dstAccessMask,
+                             vk::PipelineStageFlags2 srcStageMask,
+                             vk::PipelineStageFlags2 dstStageMask);
   vk::raii::ShaderModule createSlangShaderModule(const std::string& shaderBinaryPath);
   bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice);
   vk::SurfaceFormatKHR selectSurfaceColorFormat(std::vector<vk::SurfaceFormatKHR> const& availableFormats);
@@ -132,6 +182,9 @@ class TZ_API VulkanRenderer : public Renderer
   vk::raii::SwapchainKHR swapChain = nullptr;
   vk::raii::PipelineLayout pipelineLayout = nullptr;
   vk::raii::Pipeline graphicsPipeline = nullptr;
+  vk::raii::CommandPool commandPool = nullptr;
+  vk::raii::CommandBuffer commandBuffer = nullptr;
+  uint32_t graphicsQueueIndex = 0;
   std::vector<vk::Image> swapChainImages;
   std::vector<vk::raii::ImageView> swapChainImageViews;
   std::vector<const char*> extensions;

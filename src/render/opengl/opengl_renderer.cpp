@@ -54,9 +54,9 @@ void OpenGLRenderer::init(Window* window)
   )";
 
   auto defaultVertexShader =  new OpenGLShaderModule();
-  defaultVertexShader->init(ShaderType::Vertex, vsSource);
+  defaultVertexShader->init({ShaderType::Vertex}, vsSource);
   auto defaultFragmentShader =  new OpenGLShaderModule();
-  defaultFragmentShader->init(ShaderType::Fragment, fsSource);
+  defaultFragmentShader->init({ShaderType::Fragment}, fsSource);
   defaultShaderPipeline = new OpenGLShaderPipeline();
   defaultShaderPipeline->link({defaultVertexShader, defaultFragmentShader});
 
@@ -389,15 +389,28 @@ GLuint OpenGLRenderer::createVertexArrayObject()
   auto vao = (new OpenGLVertexArrayObject::Builder())->positions({{0, 1, 2}})->build();
   return vao->getHandle();
 }
+ShaderModule *OpenGLRenderer::createShaderModule(tz::ShaderType type, const std::string &source)
+{
+  auto vs = new tz::OpenGLShaderModule();
 
+  vs->init(type, source);
+  return vs;
+}
+
+ShaderPipeline *OpenGLRenderer::createShaderPipeline(const std::vector<ShaderModule *> &modules)
+{
+  auto sp = new OpenGLShaderPipeline();
+  sp->link(modules);
+  return sp;
+}
 
 void OpenGLShaderModule::init(ShaderType type, const std::string& source)
 {
-
   switch (type)
   {
     case ShaderType::Vertex: handle = glCreateShader(GL_VERTEX_SHADER); break;
     case ShaderType::Fragment: handle = glCreateShader(GL_FRAGMENT_SHADER); break;
+    case ShaderType::Tessellation: handle = glCreateShader(GL_TESS_CONTROL_SHADER); break;
 
   }
 

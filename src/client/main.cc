@@ -20,16 +20,10 @@ struct GameGraphicsData
   // the rendering of our client data
   // in a custom struct which holds our
   // shaders, PSO, uniforms matrices, textures etc.
-  GameGraphicsData(tz::Renderer* renderer)
+  GameGraphicsData(tz::Renderer* renderer, tz::ShaderPipeline* shaderPipeline)
   {
 
-    // Shaders form the programmable part of our graphics pipeline:
-    tz::ShaderModule* vs = reinterpret_cast<tz::ShaderModule *>(new tz::OpenGLShaderModule());
-    vs->init(tz::ShaderType::Vertex, vertexShaderSource);
-    tz::ShaderModule* fs = reinterpret_cast<tz::ShaderModule *>(new tz::OpenGLShaderModule());
-    fs->init(tz::ShaderType::Fragment, fragmentShaderSource);
-    defaultShaderPipeline = reinterpret_cast<tz::ShaderPipeline *>(new tz::OpenGLShaderPipeline());
-    defaultShaderPipeline->link({vs, fs});
+
 
     // The PipelineStateObject holds all the state
     // we need for a pipeline execution, i.e. a draw call.
@@ -109,28 +103,35 @@ struct GameGraphicsData
   tz::Buffer* transformBuffer = nullptr;
 
 
-  std::string vertexShaderSource = R"(
-    #version 460 core
-    layout(location = 0) in vec3 pos;
 
-    layout(std140, binding = 0) uniform Camera
-    {
-      mat4 view;
-      mat4 proj;
-    } camera;
+};
 
-    layout(std140, binding = 1) uniform Transform
-    {
-      mat4 world;
-    } transform;
+std::string getGLSLVertexShader() {
+  return R"(
+#version 460 core
+layout(location = 0) in vec3 pos;
 
-    void main() {
-        //gl_Position = camera.proj * camera.view * transform.world * vec4(pos, 1);
-        gl_Position = transform.world * vec4(pos, 1);
-    }
-    )";
+layout(std140, binding = 0) uniform Camera
+{
+  mat4 view;
+  mat4 proj;
+} camera;
 
-  std::string fragmentShaderSource = R"(
+layout(std140, binding = 1) uniform Transform
+{
+  mat4 world;
+} transform;
+
+void main() {
+    //gl_Position = camera.proj * camera.view * transform.world * vec4(pos, 1);
+    gl_Position = transform.world * vec4(pos, 1);
+}
+)";
+}
+
+std::string getGLSLFragmentShader()
+{
+  return R"(
     #version 460 core
     out vec4 color;
     void main() {
@@ -138,8 +139,7 @@ struct GameGraphicsData
     }
 
     )";
-};
-
+}
 
 
 void runDemoGL()
@@ -151,7 +151,14 @@ void runDemoGL()
   auto window = ws->createWindow(winDesc);
   renderer->init(window);
 
-  auto gameGraphicsData = GameGraphicsData(renderer);
+  const std::string& vertexShaderSource = getGLSLVertexShader();
+  const std::string& fragmentShaderSource = getGLSLFragmentShader();
+  auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, vertexShaderSource);
+  auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, fragmentShaderSource);
+
+  auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
+
+  auto gameGraphicsData = GameGraphicsData(renderer, shaderPipeline);
 
   while (true)
   {
@@ -218,7 +225,15 @@ void runDemoVulkan()
   auto window = ws->createWindow(winDesc);
   renderer->init(window);
 
-  auto gameGraphicsData = GameGraphicsData(renderer);
+  auto spvPath = "shader_binaries/default_shader.slang.spv";
+
+  auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
+  auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
+
+  auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
+
+
+  auto gameGraphicsData = GameGraphicsData(renderer, shaderPipeline);
 
   while (true)
   {

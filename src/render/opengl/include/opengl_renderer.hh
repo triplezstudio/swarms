@@ -259,6 +259,8 @@ class TZ_API OpenGLRenderer : public Renderer
   GLenum resourceTypeToEnum(ResourceType rt);
 
   Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
+  ShaderModule * createShaderModule(tz::ShaderType types, const std::string &source) override;
+  ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
 
   private:
   tz::Window* window = nullptr;

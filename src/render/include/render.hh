@@ -199,7 +199,7 @@ enum class ShaderType {
  */
 class ShaderModule {
   public:
-  virtual void init(ShaderType type, const std::string& source) = 0;
+  virtual void init(ShaderType types, const std::string& source) = 0;
   virtual void* getHandle() = 0;
 };
 
@@ -330,6 +330,8 @@ class TZ_API Renderer
   virtual void submitCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
   virtual Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) = 0;
+  virtual ShaderModule* createShaderModule(ShaderType types, const std::string& source) = 0;
+  virtual ShaderPipeline* createShaderPipeline(const std::vector<ShaderModule*>& modules) = 0;
 
 
 };

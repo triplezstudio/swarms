@@ -164,17 +164,17 @@ void tz::render::vulkan::VulkanRenderer::createLogicalDevice()
   auto graphicsQueueFamilyProperty = std::ranges::find_if(queueFamilyProperties, [](auto const& qfp) {
       return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) != static_cast<vk::QueueFlags>(0);
   });
-  auto graphicsIndex = static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty));
+  graphicsQueueIndex = static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty));
 
   // We must check if the graphics queue family supports presentation.
   // "Normally" it does, but we bail out in case it does not.
   // TODO: look at "next" graphics queue family.
-  if (!physicalDevice.getSurfaceSupportKHR(graphicsIndex, *surface)) {
-    throw std::runtime_error("Queue Family " + std::to_string(graphicsIndex) + " does not support presentation!");
+  if (!physicalDevice.getSurfaceSupportKHR(graphicsQueueIndex, *surface)) {
+    throw std::runtime_error("Queue Family " + std::to_string(graphicsQueueIndex) + " does not support presentation!");
   }
 
   vk::DeviceQueueCreateInfo queueCreateInfo;
-  queueCreateInfo.queueFamilyIndex = graphicsIndex;
+  queueCreateInfo.queueFamilyIndex = graphicsQueueIndex;
   float queuePrio = 0.5;
   queueCreateInfo.setQueuePriorities(queuePrio);
 
@@ -188,7 +188,7 @@ void tz::render::vulkan::VulkanRenderer::createLogicalDevice()
 
   device = vk::raii::Device(physicalDevice, deviceCreateInfo);
   VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);
-  graphicsQueue = vk::raii::Queue( device, graphicsIndex, 0 );
+  graphicsQueue = vk::raii::Queue( device, graphicsQueueIndex, 0 );
 
 }
 
@@ -451,6 +451,113 @@ void tz::render::vulkan::VulkanRenderer::createGraphicsPipeline()
 
 }
 
+void tz::render::vulkan::VulkanRenderer::createCommandPool()
+{
+  vk::CommandPoolCreateInfo poolInfo;
+  poolInfo.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
+  .setQueueFamilyIndex(graphicsQueueIndex);
+
+  commandPool = vk::raii::CommandPool(device, poolInfo);
+
+}
+
+void tz::render::vulkan::VulkanRenderer::createCommandBuffer()
+{
+  vk::CommandBufferAllocateInfo allocInfo;
+  allocInfo.setCommandPool(commandPool)
+  .setLevel(vk::CommandBufferLevel::ePrimary)
+  .setCommandBufferCount(1);
+  commandBuffer = std::move(vk::raii::CommandBuffers(device, allocInfo).front());
+}
+
+void tz::render::vulkan::VulkanRenderer::transitionImageLayout(
+  uint32_t imageIndex,
+  vk::ImageLayout oldLayout,
+  vk::ImageLayout newLayout,
+  vk::AccessFlags2 srcAccessMask,
+  vk::AccessFlags2 dstAccessMask,
+  vk::PipelineStageFlags2 srcStageMask,
+  vk::PipelineStageFlags2 dstStageMask)
+{
+  vk::ImageMemoryBarrier2 barrier;
+  barrier.setSrcStageMask(srcStageMask)
+  .setDstStageMask(dstStageMask)
+  .setSrcAccessMask(srcAccessMask)
+  .setDstAccessMask(dstAccessMask)
+  .setOldLayout(oldLayout)
+  .setNewLayout(newLayout)
+  .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+  .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+  .setImage(swapChainImages[imageIndex])
+  .setSubresourceRange({
+      .aspectMask = vk::ImageAspectFlagBits::eColor,
+      .baseMipLevel = 0,
+      .levelCount = 1,
+      .baseArrayLayer = 0,
+      .layerCount = 1
+    });
+  vk::DependencyInfo dependencyInfo;
+  dependencyInfo.setDependencyFlags({})
+    .setImageMemoryBarriers({barrier});
+
+  commandBuffer.pipelineBarrier2(dependencyInfo);
+
+
+}
+
+void tz::render::vulkan::VulkanRenderer::recordCommandBuffer(uint32_t imageIndex)
+{
+
+  vk::CommandBufferBeginInfo beginInfo;
+  // Currently we do not use the beginInfo:
+  commandBuffer.begin({});
+
+  transitionImageLayout(
+    imageIndex,
+    vk::ImageLayout::eUndefined,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    {}, // no need to wait for the src access part
+    vk::AccessFlagBits2::eColorAttachmentWrite,
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput
+
+    );
+
+  vk::ClearValue clearColor = vk::ClearColorValue(0, 0, 0, 1);
+  vk::RenderingAttachmentInfo attachmentInfo;
+  attachmentInfo.setImageView(swapChainImageViews[imageIndex])
+  .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
+  .setLoadOp(vk::AttachmentLoadOp::eClear)
+  .setStoreOp(vk::AttachmentStoreOp::eStore)
+  .setClearValue(clearColor);
+
+  vk::RenderingInfo renderingInfo;
+  renderingInfo.setRenderArea({
+    .offset = {0, 0},
+    .extent = swapExtent
+  })
+  .setLayerCount(1)
+  .setColorAttachments({attachmentInfo});
+  commandBuffer.beginRendering(renderingInfo);
+  commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+  commandBuffer.setViewport(0, vk::Viewport(0, 0,
+                                            static_cast<float>(swapExtent.width)
+                                                , static_cast<float>(swapExtent.height), 0, 1));
+  commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0,0), swapExtent));
+  commandBuffer.draw(3, 1, 0, 0);
+  commandBuffer.endRendering();
+  transitionImageLayout(
+    imageIndex,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::ImageLayout::ePresentSrcKHR,
+    vk::AccessFlagBits2::eColorAttachmentWrite,
+    {},
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    vk::PipelineStageFlagBits2::eBottomOfPipe
+    );
+  commandBuffer.end();
+}
+
 void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
 {
   this->window = window;
@@ -462,6 +569,8 @@ void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
   createSwapChain();
   createImageViews();
   createGraphicsPipeline();
+  createCommandPool();
+  createCommandBuffer();
 }
 
 
@@ -475,4 +584,34 @@ tz::Buffer* tz::render::vulkan::VulkanRenderer::createBuffer(void* initialData, 
   auto b = vk::raii::Buffer(device, createInfo);
   return new VulkanBuffer(std::move(b));
 }
+
+tz::ShaderPipeline *tz::render::vulkan::VulkanRenderer::createShaderPipeline(const std::vector<ShaderModule *> &modules)
+{
+  auto sp = new tz::render::vulkan::VulkanShaderPipeline();
+  sp->link(modules);
+  return sp;
+}
+
+
+tz::ShaderModule *tz::render::vulkan::VulkanRenderer::createShaderModule(tz::ShaderType type,
+                                                                         const std::string &sprvFilePath)
+{
+    auto shaderModule = createSlangShaderModule(sprvFilePath);
+    vk::PipelineShaderStageCreateInfo shaderStageInfo;
+    vk::ShaderStageFlagBits flags;
+    switch (type)
+    {
+      case ShaderType::Vertex: flags = vk::ShaderStageFlagBits::eVertex; break;
+      case ShaderType::Fragment: flags = vk::ShaderStageFlagBits::eFragment; break;
+
+    }
+    shaderStageInfo.setStage(flags).setModule(shaderModule).setPName("main");
+
+    auto sm = new tz::render::vulkan::VulkanShaderModule(shaderStageInfo);
+    return reinterpret_cast<tz::ShaderModule*>(sm);
+
+}
+
+
+
 
