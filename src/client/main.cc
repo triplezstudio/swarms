@@ -241,30 +241,6 @@ void runDemoVulkan()
     renderer->beginFrame();
     renderer->clearScreen();
 
-    // Immediate style rendering, similar to how OpenGL 2.0
-    // worked with its "glVertex" and "glNormal" calls.
-    // In the background these immediate calls are interpreted and
-    // mapped to "modern-gpu" architecture, uploading into VertexBuffers etc.
-    // The framework does make its best to interpret the incoming immediate
-    // commands efficiently, but immediate-mode will normally not be as performant
-    // as custom built buffers, pipeline states and shaders.
-    renderer->beginDraw(tz::PrimitiveType::Triangles);
-    renderer->emitPosition({-0.1, 0.1, -0.1});
-    renderer->emitPosition({-0.1, -0.1, -0.1});
-    renderer->emitPosition({0.1, -0.1, -0.1});
-
-    renderer->emitPosition({-0.09, 0.1, 0});
-    renderer->emitPosition({0.11, -0.1, 0});
-    renderer->emitPosition({0.11, 0.1, 0});
-    renderer->endDraw();
-
-    // Use modern command buffer approach.
-    // Every drawing/pipeline execution is materialised through
-    // specific commands which are recorded into a (reusable)
-    // commandBuffer, which gets submitted.
-    // Any number of command buffers may be submitted per frame.
-    // Submission it not immediate execution, but collection of the buffer.
-    // Update our transform buffer, making the object move:
     {
       static Eigen::Vector3f posOffset = {0, 0,0};
       posOffset += Eigen::Vector3f {0.000, -0.000, 0};

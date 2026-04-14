@@ -60,14 +60,44 @@ void tz::render::vulkan::VulkanRenderer::emitNormal(Eigen::Vector3f normal)
 
 void tz::render::vulkan::VulkanRenderer::beginFrame()
 {
+  auto fenceResult = device.waitForFences(*drawFence, vk::True, UINT64_MAX);
+  if (fenceResult != vk::Result::eSuccess)
+  {
+    throw std::runtime_error("failed to wait for fence!");
+  }
+  device.resetFences(*drawFence);
 
+  auto [result, image] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphore, nullptr);
+  imageIndex = image;
+  recordCommandBuffer(imageIndex);
 }
 void tz::render::vulkan::VulkanRenderer::endFrame()
 {
 
 }
-void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* commandBuffer)
+void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* commandBufferProvided)
 {
+  vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+  const vk::SubmitInfo submitInfo {.waitSemaphoreCount = 1,
+                                    .pWaitSemaphores = &*presentCompleteSemaphore,
+                                    .pWaitDstStageMask = &waitDestinationStageMask,
+                                    .commandBufferCount = 1,
+                                    .pCommandBuffers = &*commandBuffer,
+                                    .signalSemaphoreCount = 1,
+                                    .pSignalSemaphores = &*renderFinishedSemaphore};
+
+  graphicsQueue.submit(submitInfo, *drawFence);
+
+  const vk::PresentInfoKHR presentInfoKhr {
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &*renderFinishedSemaphore,
+    .swapchainCount = 1,
+    .pSwapchains = &*swapChain,
+    .pImageIndices = &imageIndex
+  };
+
+  auto result = graphicsQueue.presentKHR(presentInfoKhr);
+
 
 }
 
@@ -558,6 +588,14 @@ void tz::render::vulkan::VulkanRenderer::recordCommandBuffer(uint32_t imageIndex
   commandBuffer.end();
 }
 
+void tz::render::vulkan::VulkanRenderer::createSyncObjects()
+{
+  presentCompleteSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo());
+  renderFinishedSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo());
+  drawFence = vk::raii::Fence(device, {.flags = vk::FenceCreateFlagBits::eSignaled});
+
+}
+
 void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
 {
   this->window = window;
@@ -571,6 +609,7 @@ void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
   createGraphicsPipeline();
   createCommandPool();
   createCommandBuffer();
+  createSyncObjects();
 }
 
 

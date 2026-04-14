@@ -157,6 +157,7 @@ class TZ_API VulkanRenderer : public Renderer
                              vk::AccessFlags2 dstAccessMask,
                              vk::PipelineStageFlags2 srcStageMask,
                              vk::PipelineStageFlags2 dstStageMask);
+  void createSyncObjects();
   vk::raii::ShaderModule createSlangShaderModule(const std::string& shaderBinaryPath);
   bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice);
   vk::SurfaceFormatKHR selectSurfaceColorFormat(std::vector<vk::SurfaceFormatKHR> const& availableFormats);
@@ -184,6 +185,14 @@ class TZ_API VulkanRenderer : public Renderer
   vk::raii::Pipeline graphicsPipeline = nullptr;
   vk::raii::CommandPool commandPool = nullptr;
   vk::raii::CommandBuffer commandBuffer = nullptr;
+
+  uint32_t imageIndex = 0;
+
+  // Synchronization primitives:
+  vk::raii::Semaphore presentCompleteSemaphore = nullptr;
+  vk::raii::Semaphore renderFinishedSemaphore = nullptr;
+  vk::raii::Fence drawFence = nullptr;
+
   uint32_t graphicsQueueIndex = 0;
   std::vector<vk::Image> swapChainImages;
   std::vector<vk::raii::ImageView> swapChainImageViews;
