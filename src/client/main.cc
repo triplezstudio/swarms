@@ -23,8 +23,6 @@ struct GameGraphicsData
   GameGraphicsData(tz::Renderer* renderer, tz::ShaderPipeline* shaderPipeline)
   {
 
-
-
     // The PipelineStateObject holds all the state
     // we need for a pipeline execution, i.e. a draw call.
     // Think of renderstate handling and description
@@ -68,7 +66,7 @@ struct GameGraphicsData
       Eigen::Matrix4f m = transform.matrix();
       std::vector<Eigen::Matrix4f> vm = {m};
       transformBuffer = renderer->createBuffer(vm.data(), vm.size() * sizeof(Eigen::Matrix4f), tz::BufferUsage::Uniform);
-      auto transformDescriptor = new tz::Descriptor();
+      transformDescriptor = new tz::Descriptor();
       transformDescriptor->buffer = transformBuffer;
       transformDescriptor->binding = transformBinding;
 
@@ -76,9 +74,7 @@ struct GameGraphicsData
         {{-0.2, 0.2, 0},
         {-0.2, -0.2, 0},
         {0.2, -0.2, 0}};
-    auto vertexBuffer = renderer->createBuffer(positions.data(), positions.size() * sizeof(Eigen::Vector3f), tz::BufferUsage::Vertex);
-
-
+      triangleVertexBuffer = renderer->createBuffer(positions.data(), positions.size() * sizeof(Eigen::Vector3f), tz::BufferUsage::Vertex);
 
     // The actual commands which shall be executed during the pipeline execution
     // are recorded into a commandbuffer.
@@ -86,13 +82,8 @@ struct GameGraphicsData
     // During one frame, more than one commandbuffer may be executed.
     // Currently, we only allow sequential execution though, multithreaded/parallel execution
     // is a future feature.
-    commandBuffer = new tz::CommandBuffer();
-    commandBuffer->begin();
-    commandBuffer->recordCommand(new tz::CmdBindPipeline (defaultPSO ));
-    commandBuffer->recordCommand(new tz::CmdBindVertexBuffers ({vertexBuffer}));
-    commandBuffer->recordCommand(new tz::CmdBindDescriptors({transformDescriptor}));
-    commandBuffer->recordCommand(new tz::CmdDraw(3, 1, 0, 0));
-    commandBuffer->end();
+    commandBuffer = renderer->createCommandBuffer();
+
   }
 
 
@@ -101,8 +92,8 @@ struct GameGraphicsData
   tz::PipelineStateObject* defaultPSO;
   tz::CommandBuffer* commandBuffer = nullptr;
   tz::Buffer* transformBuffer = nullptr;
-
-
+  tz::Buffer* triangleVertexBuffer = nullptr;
+  tz::Descriptor* transformDescriptor = nullptr;
 
 };
 
@@ -200,6 +191,12 @@ void runDemoGL()
       transform.rotate(Eigen::AngleAxis(angle, Eigen::Vector3f::UnitZ()));
       gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
     }
+    gameGraphicsData.commandBuffer->begin();
+    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindPipeline (gameGraphicsData.defaultPSO ));
+    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindVertexBuffers ({gameGraphicsData.triangleVertexBuffer}));
+    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
+    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdDraw(3, 1, 0, 0));
+    gameGraphicsData.commandBuffer->end();
     renderer->submitCommandBuffer(gameGraphicsData.commandBuffer);
 
     // Ending the frame is where all the drawing & computation work is actually being
@@ -231,8 +228,6 @@ void runDemoVulkan()
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
 
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
-
-
   auto gameGraphicsData = GameGraphicsData(renderer, shaderPipeline);
 
   while (true)
@@ -251,6 +246,13 @@ void runDemoVulkan()
       transform.rotate(Eigen::AngleAxis(angle, Eigen::Vector3f::UnitZ()));
       gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
     }
+
+    gameGraphicsData.commandBuffer->begin();
+    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindPipeline (gameGraphicsData.defaultPSO ));
+    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindVertexBuffers ({gameGraphicsData.triangleVertexBuffer}));
+    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
+    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdDraw(3, 1, 0, 0));
+    gameGraphicsData.commandBuffer->end();
     renderer->submitCommandBuffer(gameGraphicsData.commandBuffer);
 
     // Ending the frame is where all the drawing & computation work is actually being

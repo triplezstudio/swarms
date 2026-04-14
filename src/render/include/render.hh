@@ -215,6 +215,8 @@ class ShaderPipeline {
 
 struct PipelineStateObject
 {
+
+  virtual ~PipelineStateObject() = default;
   RenderState renderState;
   ShaderPipeline* shaderPipeline = nullptr;
   VertexLayout vertexLayout;
@@ -277,7 +279,12 @@ class CmdDraw : public Command
 class CommandBuffer
 {
   public:
-      void recordCommand(Command* cmd)
+      virtual void* getHandle()
+      {
+        return nullptr;
+      }
+
+      virtual void recordCommand(Command* cmd)
       {
         commands.push_back(cmd);
       }
@@ -285,11 +292,11 @@ class CommandBuffer
       using iterator = std::vector<Command*>::iterator;
       using const_iterator = std::vector<Command*>::const_iterator;
 
-      iterator begin() { return commands.begin(); }
-      iterator end()   { return commands.end(); }
+      virtual iterator begin() { return commands.begin(); }
+      virtual iterator end()   { return commands.end(); }
 
-      const_iterator begin() const { return commands.begin(); }
-      const_iterator end()   const { return commands.end(); }
+      virtual const_iterator begin() const { return commands.begin(); }
+      virtual const_iterator end()   const { return commands.end(); }
 
   private:
   std::vector<Command*> commands;
@@ -329,10 +336,28 @@ class TZ_API Renderer
   virtual void endFrame() = 0;
   virtual void submitCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
+  virtual CommandBuffer* createCommandBuffer() = 0;
+  virtual void beginCommandBuffer(CommandBuffer* cb) = 0;
   virtual Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) = 0;
   virtual ShaderModule* createShaderModule(ShaderType types, const std::string& source) = 0;
   virtual ShaderPipeline* createShaderPipeline(const std::vector<ShaderModule*>& modules) = 0;
+  virtual PipelineStateObject* createPipelineStateObject(RenderState& renderState,
+                                             ShaderPipeline* shaderPipeline,
+              VertexLayout& vertexLayout,
+              std::vector<DescriptorBinding>& descriptorBindings)
+  {
+    auto pso =  new PipelineStateObject();
+    pso->renderState = renderState;
+    pso->shaderPipeline = shaderPipeline;
+    pso->vertexLayout = vertexLayout;
+    pso->descriptorBindings = descriptorBindings;
+    return pso;
+  };
 
+  virtual void recordCommand(CommandBuffer* cb, Command* cmd)
+  {
+    cb->recordCommand(cmd);
+  }
 
 };
 

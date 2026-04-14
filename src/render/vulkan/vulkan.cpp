@@ -491,7 +491,7 @@ void tz::render::vulkan::VulkanRenderer::createCommandPool()
 
 }
 
-void tz::render::vulkan::VulkanRenderer::createCommandBuffer()
+void tz::render::vulkan::VulkanRenderer::createDefaultCommandBuffer()
 {
   vk::CommandBufferAllocateInfo allocInfo;
   allocInfo.setCommandPool(commandPool)
@@ -608,7 +608,7 @@ void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
   createImageViews();
   createGraphicsPipeline();
   createCommandPool();
-  createCommandBuffer();
+  createDefaultCommandBuffer();
   createSyncObjects();
 }
 
@@ -652,5 +652,144 @@ tz::ShaderModule *tz::render::vulkan::VulkanRenderer::createShaderModule(tz::Sha
 }
 
 
+/**
+ * This creates a commandBuffer for each frame-in-flight.
+ */
+tz::CommandBuffer *tz::render::vulkan::VulkanRenderer::createCommandBuffer()
+{
+  vk::CommandBufferAllocateInfo allocInfo;
+  allocInfo.setCommandPool(commandPool)
+    .setLevel(vk::CommandBufferLevel::ePrimary)
+    .setCommandBufferCount(maxFramesInFlight);
+  auto cbs = vk::raii::CommandBuffers(device, allocInfo);
+  auto size = cbs.size();
+
+  // Store this "logical commandbuffer" to point to the actual
+  auto vulkanCB = new VulkanCommandBuffer(std::move(cbs));
+  this->customCommandBuffers[vulkanCB] = &cbs;
+  return vulkanCB;
+
+}
+
+vk::raii::CommandBuffer& tz::render::vulkan::VulkanRenderer::getCommandBufferForCurrentFrame(tz::CommandBuffer* cb)
+{
+  auto cbs = customCommandBuffers[cb];
+  auto& currentFrameCommandBuffer = cbs->at(imageIndex);
+  return currentFrameCommandBuffer;
+}
 
 
+void tz::render::vulkan::VulkanRenderer::beginCommandBuffer(tz::CommandBuffer *cb)
+{
+
+  auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
+  currentFrameCommandBuffer.begin({});
+
+  transitionImageLayout(
+    imageIndex,
+    vk::ImageLayout::eUndefined,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    {}, // no need to wait for the src access part
+    vk::AccessFlagBits2::eColorAttachmentWrite,
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput
+  );
+
+}
+
+void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* commandBuffer, tz::Command *cmd)
+{
+
+  auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(commandBuffer);
+  if (auto c = dynamic_cast<CmdBindPipeline*>(cmd))
+  {
+    // TODO retrieve the PSO based on the incoming generic PSO.
+    //c->pso
+    currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+
+  }
+}
+
+// TODO : WIP - implement the creation of the pipeline based on the actual incoming parameters,
+// currently the implementation is based on the default graphics pipeline creation.
+tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineStateObject(
+  tz::RenderState &renderState,
+  tz::ShaderPipeline *shaderPipeline,
+  tz::VertexLayout &vertexLayout,
+  std::vector<DescriptorBinding> &descriptorBindings)
+{
+  auto shaderModule = createSlangShaderModule("shader_binaries/default_shader.slang.spv");
+
+  vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
+  vertShaderStageInfo.setStage(vk::ShaderStageFlagBits::eVertex).setModule(shaderModule).setPName("main");
+  vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
+  fragShaderStageInfo.setStage(vk::ShaderStageFlagBits::eFragment).setModule(shaderModule).setPName("main");
+  vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+
+  std::vector<vk::DynamicState> dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+  vk::PipelineDynamicStateCreateInfo dsCreateInfo;
+  dsCreateInfo.setDynamicStates(dynamicStates);
+
+  // Leaving empty for now, as we are first only using hardcoded values.
+  vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
+  vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
+  inputAssembly.setTopology(vk::PrimitiveTopology::eTriangleList);
+  vk::PipelineViewportStateCreateInfo viewportStateCreateInfo;
+  viewportStateCreateInfo.setViewportCount(1).setScissorCount(1);
+
+  vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo;
+  rasterizationStateCreateInfo.setDepthClampEnable(vk::False)
+    .setRasterizerDiscardEnable(vk::False)
+    .setPolygonMode(vk::PolygonMode::eFill)
+    .setCullMode(vk::CullModeFlagBits::eBack)
+    .setFrontFace(vk::FrontFace::eClockwise)
+    .setDepthBiasEnable(vk::False)
+    .setLineWidth(1.0f);
+
+  vk::PipelineMultisampleStateCreateInfo multisampleStateCreateInfo;
+  multisampleStateCreateInfo.setRasterizationSamples(vk::SampleCountFlagBits::e1)
+    .setSampleShadingEnable(vk::False);
+
+  vk::PipelineColorBlendAttachmentState colorBlendAttachmentState;
+  colorBlendAttachmentState.setBlendEnable(vk::False)
+    .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB |
+                       vk::ColorComponentFlagBits::eA);
+
+  vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
+  colorBlendStateCreateInfo.setLogicOpEnable(vk::False)
+    .setLogicOp(vk::LogicOp::eCopy)
+    .setPAttachments(&colorBlendAttachmentState);
+
+  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
+  pipelineLayoutCreateInfo.setSetLayoutCount(0).setPushConstantRangeCount(0);
+  pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
+
+  vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
+  pipelineRenderingCreateInfo.setColorAttachmentCount(1);
+  pipelineRenderingCreateInfo.setPColorAttachmentFormats(&surfaceFormat.format);
+
+  vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain;
+  pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
+    .setStages(shaderStages)
+    .setPVertexInputState(&vertexInputStateCreateInfo)
+    .setPInputAssemblyState(&inputAssembly)
+    .setPRasterizationState(&rasterizationStateCreateInfo)
+    .setPViewportState(&viewportStateCreateInfo)
+    .setPMultisampleState(&multisampleStateCreateInfo)
+    .setPColorBlendState(&colorBlendStateCreateInfo)
+    .setPDynamicState(&dsCreateInfo)
+    .setLayout(pipelineLayout)
+    .setRenderPass(nullptr);
+
+  // TODO is this equvivalent with the one below?
+  //pipelineCreateInfoChain.assign(pipelineRenderingCreateInfo);
+
+  pipelineCreateInfoChain.get<vk::PipelineRenderingCreateInfo>()
+    .setPColorAttachmentFormats(&surfaceFormat.format);
+
+  auto customGraphicsPipeline = vk::raii::Pipeline(device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
+  auto vulkanPSO = new tz::render::vulkan::VulkanPSO(std::move(customGraphicsPipeline));
+  return vulkanPSO;
+
+}

@@ -4,6 +4,7 @@
 #include "render.hh"
 #include <functional>
 #include <optional>
+#include <map>
 #include <vulkan/vulkan_raii.hpp>
 
 namespace tz::render::vulkan {
@@ -27,6 +28,18 @@ inline vk::BufferUsageFlags toVkBufferUsage(BufferUsage bufferUsage)
 class VulkanCommandBuffer : public tz::CommandBuffer
 {
 
+  public:
+  explicit VulkanCommandBuffer(vk::raii::CommandBuffers&& cbs) {
+    this->cbs = std::move(cbs);
+  }
+
+  void * getHandle() override
+  {
+    return &cbs;
+  }
+
+  private:
+      vk::raii::CommandBuffers cbs = nullptr;
 };
 
 class VulkanShaderPipeline : public tz::ShaderPipeline
@@ -61,6 +74,8 @@ class VulkanShaderModule : public tz::ShaderModule
       vk::PipelineShaderStageCreateInfo createInfo;
 
 };
+
+
 
 class VulkanBuffer : public tz::Buffer
 {
@@ -105,11 +120,29 @@ class VulkanBuffer : public tz::Buffer
       vk::raii::Buffer buffer = nullptr;
 };
 
-struct VulkanInitData {
+struct VulkanInitData
+{
   client_common::NativeHandles nativeHandles;
   std::vector<const char*> extensions;
   std::optional<std::function<vk::raii::SurfaceKHR(vk::raii::Instance&)>> surfaceCreationFunc;
   std::function<void(int* width, int* height)> displaySizeFunc;
+};
+
+struct VulkanPSO : public PipelineStateObject
+{
+
+  VulkanPSO(vk::raii::Pipeline&& pipeline)
+  {
+    this->pipeline = std::move(pipeline);
+  }
+
+  vk::raii::Pipeline& getHandle()
+  {
+    return pipeline;
+  }
+
+  private:
+      vk::raii::Pipeline pipeline = nullptr;
 };
 
 /**
@@ -137,6 +170,10 @@ class TZ_API VulkanRenderer : public Renderer
   Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
   ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
+  CommandBuffer * createCommandBuffer() override;
+  void beginCommandBuffer(tz::CommandBuffer *cb) override;
+  void recordCommand(tz::CommandBuffer* cb, tz::Command *cmd) override;
+  PipelineStateObject * createPipelineStateObject(tz::RenderState &renderState, tz::ShaderPipeline *shaderPipeline, tz::VertexLayout &vertexLayout, std::vector<DescriptorBinding> &descriptorBindings) override;
 
   private:
   void initSurface();
@@ -148,7 +185,7 @@ class TZ_API VulkanRenderer : public Renderer
   void createImageViews();
   void createGraphicsPipeline();
   void createCommandPool();
-  void createCommandBuffer();
+  void createDefaultCommandBuffer();
   void recordCommandBuffer(uint32_t imageIndex);
   void transitionImageLayout( uint32_t imageIndex,
                              vk::ImageLayout oldLayout,
@@ -158,6 +195,7 @@ class TZ_API VulkanRenderer : public Renderer
                              vk::PipelineStageFlags2 srcStageMask,
                              vk::PipelineStageFlags2 dstStageMask);
   void createSyncObjects();
+  vk::raii::CommandBuffer& getCommandBufferForCurrentFrame(tz::CommandBuffer* cb);
   vk::raii::ShaderModule createSlangShaderModule(const std::string& shaderBinaryPath);
   bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice);
   vk::SurfaceFormatKHR selectSurfaceColorFormat(std::vector<vk::SurfaceFormatKHR> const& availableFormats);
@@ -171,6 +209,7 @@ class TZ_API VulkanRenderer : public Renderer
                                                         void *                                         pUserData);
 
   private:
+  const int maxFramesInFlight = 2;
   tz::Window* window = nullptr;
   vk::raii::Context context;
   vk::raii::Instance instance = nullptr;
@@ -202,6 +241,8 @@ class TZ_API VulkanRenderer : public Renderer
   std::vector<char const*> requiredLayers;
   vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
   vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> deviceFeatures;
+  std::map<CommandBuffer*, vk::raii::CommandBuffers*> customCommandBuffers;
+
 };
 
 }
