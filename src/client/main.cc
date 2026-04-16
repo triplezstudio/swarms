@@ -2,7 +2,9 @@
 #include <Eigen/Dense>
 #include <render.hh>
 #include <opengl_renderer.hh>
+#ifdef USE_VULKAN
 #include <vulkan_renderer.hh>
+#endif
 #include <sdl2.hh>
 
 
@@ -217,6 +219,7 @@ void runDemoGL()
 
 }
 
+#ifdef USE_VULKAN
 void runDemoVulkan()
 {
   tz::Renderer* renderer = reinterpret_cast<tz::Renderer *>(new tz::render::vulkan::VulkanRenderer());
@@ -271,6 +274,7 @@ void runDemoVulkan()
     ws->present();
   }
 }
+#endif
 
 
 int main(int argc, char* argv[])
