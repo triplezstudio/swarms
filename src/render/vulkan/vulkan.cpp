@@ -644,9 +644,10 @@ tz::ShaderModule *tz::render::vulkan::VulkanRenderer::createShaderModule(tz::Sha
       case ShaderType::Fragment: flags = vk::ShaderStageFlagBits::eFragment; break;
 
     }
-    shaderStageInfo.setStage(flags).setModule(shaderModule).setPName("main");
+    shaderStageInfo.setStage(flags)
+      .setModule(shaderModule).setPName("main");
 
-    auto sm = new tz::render::vulkan::VulkanShaderModule(shaderStageInfo);
+    auto sm = new tz::render::vulkan::VulkanShaderModule(shaderStageInfo, std::move(shaderModule));
     return reinterpret_cast<tz::ShaderModule*>(sm);
 
 }
@@ -718,14 +719,14 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
   tz::VertexLayout &vertexLayout,
   std::vector<DescriptorBinding> &descriptorBindings)
 {
-  auto shaderModule = createSlangShaderModule("shader_binaries/default_shader.slang.spv");
-
-  vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
-  vertShaderStageInfo.setStage(vk::ShaderStageFlagBits::eVertex).setModule(shaderModule).setPName("main");
-  vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
-  fragShaderStageInfo.setStage(vk::ShaderStageFlagBits::eFragment).setModule(shaderModule).setPName("main");
-  vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
-
+  auto vsp = reinterpret_cast<tz::render::vulkan::VulkanShaderPipeline*>(shaderPipeline);
+  auto shaderModules = *reinterpret_cast<std::vector<ShaderModule*>*>(vsp->getHandle());
+  std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+    for (auto& sm : shaderModules)
+  {
+    auto ci = reinterpret_cast<vk::PipelineShaderStageCreateInfo*>(sm->getHandle());
+    shaderStages.push_back(*ci);
+  }
 
   std::vector<vk::DynamicState> dynamicStates = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
   vk::PipelineDynamicStateCreateInfo dsCreateInfo;
@@ -771,7 +772,8 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
 
   vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain;
   pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
-    .setStages(shaderStages)
+    .setPStages(shaderStages.data())
+    .setStageCount(shaderStages.size())
     .setPVertexInputState(&vertexInputStateCreateInfo)
     .setPInputAssemblyState(&inputAssembly)
     .setPRasterizationState(&rasterizationStateCreateInfo)
@@ -781,9 +783,6 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
     .setPDynamicState(&dsCreateInfo)
     .setLayout(pipelineLayout)
     .setRenderPass(nullptr);
-
-  // TODO is this equvivalent with the one below?
-  //pipelineCreateInfoChain.assign(pipelineRenderingCreateInfo);
 
   pipelineCreateInfoChain.get<vk::PipelineRenderingCreateInfo>()
     .setPColorAttachmentFormats(&surfaceFormat.format);

@@ -52,7 +52,7 @@ class VulkanShaderPipeline : public tz::ShaderPipeline
       }
       void * getHandle() override
       {
-        return stages.data();
+        return &stages;
       }
 
   private:
@@ -63,7 +63,8 @@ class VulkanShaderModule : public tz::ShaderModule
 {
 
   public:
-  VulkanShaderModule(vk::PipelineShaderStageCreateInfo createInfo): createInfo(createInfo) {}
+  VulkanShaderModule(vk::PipelineShaderStageCreateInfo createInfo, vk::raii::ShaderModule&& shaderModule):
+        createInfo(createInfo), shaderModule(std::move(shaderModule)) {}
   void init(ShaderType type, const std::string& source) override {}
   void* getHandle() override
   {
@@ -72,6 +73,7 @@ class VulkanShaderModule : public tz::ShaderModule
 
   private:
       vk::PipelineShaderStageCreateInfo createInfo;
+      vk::raii::ShaderModule shaderModule;
 
 };
 

@@ -27,22 +27,22 @@ struct GameGraphicsData
     // we need for a pipeline execution, i.e. a draw call.
     // Think of renderstate handling and description
     // of vertex attributes and uniform buffers etc.
-    defaultPSO = new tz::PipelineStateObject {};
-    defaultPSO->renderState.primitiveType = tz::PrimitiveType::Triangles;
-    defaultPSO->renderState.cullMode = tz::CullMode::Back;
-    defaultPSO->renderState.blending = false;
-    defaultPSO->renderState.depthTesting = true;
-    defaultPSO->renderState.fillMode = tz::FillMode::Solid;
-    defaultPSO->renderState.frontFace = tz::FrontFace::CounterClockwise;
-    defaultPSO->renderState.stencilTesting = false;
-    defaultPSO->shaderPipeline = defaultShaderPipeline;
-    defaultPSO->vertexLayout.bindings =
+    auto pso = new tz::PipelineStateObject {};
+    pso->renderState.primitiveType = tz::PrimitiveType::Triangles;
+    pso->renderState.cullMode = tz::CullMode::Back;
+    pso->renderState.blending = false;
+    pso->renderState.depthTesting = true;
+    pso->renderState.fillMode = tz::FillMode::Solid;
+    pso->renderState.frontFace = tz::FrontFace::CounterClockwise;
+    pso->renderState.stencilTesting = false;
+    pso->shaderPipeline = shaderPipeline;
+    pso->vertexLayout.bindings =
       {tz::VertexBinding {
         .bufferSlot = 0,
         .stride = sizeof(float) * 3,
         .vertexInputRate=tz::VertexInputRate::PerVertex,
       }};
-    defaultPSO->vertexLayout.attributes =
+    pso->vertexLayout.attributes =
       {
         tz::VertexAttribute {
           .shaderLocation = 0,
@@ -52,6 +52,9 @@ struct GameGraphicsData
           .offset = 0
         }
       };
+
+      defaultPSO = renderer->createPipelineStateObject(pso->renderState, pso->shaderPipeline,
+                                                     pso->vertexLayout, pso->descriptorBindings);
 
       tz::DescriptorBinding transformBinding;
       transformBinding.set = 0;
