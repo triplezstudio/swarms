@@ -633,6 +633,8 @@ void tz::render::vulkan::VulkanRenderer::createSyncObjects()
 
 }
 
+
+
 void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
 {
   this->window = window;
@@ -645,6 +647,7 @@ void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
   createImageViews();
   createGraphicsPipeline();
   createCommandPool();
+  createDescriptorPool();
   createDefaultCommandBuffer();
   createSyncObjects();
 }
@@ -805,6 +808,23 @@ void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz
 
   }
 
+  else if (auto c = dynamic_cast<CmdBindDescriptors*>(cmd))
+  {
+    // TODO: this command must have a reference to the current pipeline layout
+    auto& pipelineLayout = dynamic_cast<VulkanPSO*>(c->pso)->getPipelineLayout();
+    std::vector<vk::DescriptorSet> descriptorSets;
+    for (auto& ds : c->descriptorSets)
+    {
+      auto vds = reinterpret_cast<VulkanDescriptorSet*>(ds);
+      auto& vulkanDS = vds->descSets[currentFrameIndex];
+      descriptorSets.push_back(*vulkanDS);
+    }
+
+    currentFrameCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout,
+                                                 0, descriptorSets,
+                                                 nullptr);
+  }
+
   else if (auto c = dynamic_cast<CmdBindVertexBuffers*>(cmd))
   {
     std::vector<vk::Buffer> rawBuffers;
@@ -833,9 +853,11 @@ void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz
     {
       vk::Viewport targetVp;
       targetVp.width = vp.width;
-      targetVp.height = vp.height;
+      targetVp.height = -(float)vp.height;    // This flips the y coordinate, a vulkan quirk
       targetVp.x = vp.x;
-      targetVp.y = vp.y;
+      targetVp.y = vp.height;                 // Start at the botto, so we don't need any projection -y trick
+      targetVp.minDepth = 0;
+      targetVp.maxDepth = 1;
       targetVps.push_back(targetVp);
     }
     currentFrameCommandBuffer.setViewport(0, targetVps);
@@ -916,7 +938,7 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
   tz::RenderState &renderState,
   tz::ShaderPipeline *shaderPipeline,
   tz::VertexLayout &vertexLayout,
-  const std::vector<DescriptorBinding> &descriptorBindings)
+  const std::vector<DescriptorSetLayout*> &descriptorSetLayouts)
 {
   auto vsp = reinterpret_cast<tz::render::vulkan::VulkanShaderPipeline*>(shaderPipeline);
   auto shaderModules = *reinterpret_cast<std::vector<ShaderModule*>*>(vsp->getHandle());
@@ -965,8 +987,17 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
     .setPAttachments(&colorBlendAttachmentState);
 
   vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
-  pipelineLayoutCreateInfo.setSetLayoutCount(0).setPushConstantRangeCount(0);
-  pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
+
+  std::vector<vk::DescriptorSetLayout> descSetLayouts;
+  for (auto& descLayoutWrapper : descriptorSetLayouts)
+  {
+    auto& descLayout = reinterpret_cast<VulkanDescriptorSetLayout*>(descLayoutWrapper)->dsLayout;
+    descSetLayouts.push_back(descLayout);
+  }
+  pipelineLayoutCreateInfo.setSetLayoutCount(descriptorSetLayouts.size());
+  pipelineLayoutCreateInfo.setSetLayouts(descSetLayouts);
+  pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
+  auto customPipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
 
   vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
   pipelineRenderingCreateInfo.setColorAttachmentCount(1);
@@ -983,14 +1014,14 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
     .setPMultisampleState(&multisampleStateCreateInfo)
     .setPColorBlendState(&colorBlendStateCreateInfo)
     .setPDynamicState(&dsCreateInfo)
-    .setLayout(pipelineLayout)
+    .setLayout(customPipelineLayout)
     .setRenderPass(nullptr);
 
   pipelineCreateInfoChain.get<vk::PipelineRenderingCreateInfo>()
     .setPColorAttachmentFormats(&surfaceFormat.format);
 
   auto customGraphicsPipeline = vk::raii::Pipeline(device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
-  auto vulkanPSO = new tz::render::vulkan::VulkanPSO(std::move(customGraphicsPipeline));
+  auto vulkanPSO = new tz::render::vulkan::VulkanPSO(std::move(customGraphicsPipeline), std::move(customPipelineLayout));
   return vulkanPSO;
 
 }
@@ -1008,4 +1039,151 @@ void tz::render::vulkan::VulkanRenderer::endCommandBuffer(tz::CommandBuffer *cb)
     vk::PipelineStageFlagBits2::eBottomOfPipe
   );
   currentFrameCommandBuffer.end();
+}
+
+vk::DescriptorType tz::render::vulkan::toVulkanDescriptorType(tz::ResourceType resourceType)
+{
+  switch (resourceType)
+  {
+    case tz::ResourceType::Ubo: return vk::DescriptorType::eUniformBuffer;
+    case tz::ResourceType::Ssbo: return vk::DescriptorType::eStorageBuffer;
+    case tz::ResourceType::Sampler: return vk::DescriptorType::eSampler;
+  }
+}
+
+vk::ShaderStageFlagBits tz::render::vulkan::toShaderStageFlags(tz::ShaderType shaderType)
+{
+  switch (shaderType)
+  {
+    case tz::ShaderType::Vertex: return vk::ShaderStageFlagBits::eVertex;
+    case tz::ShaderType::Fragment: return vk::ShaderStageFlagBits::eFragment;
+    case tz::ShaderType::Tessellation: return vk::ShaderStageFlagBits::eTessellationControl;
+  }
+}
+
+tz::DescriptorBinding *tz::render::vulkan::VulkanRenderer::createDescriptorBinding(
+  uint8_t binding,
+  tz::ResourceType resourceType,
+  tz::ShaderType shaderType,
+  uint32_t count
+  )
+{
+
+    vk::DescriptorSetLayoutBinding layoutBinding(binding,
+                                               toVulkanDescriptorType(resourceType),
+                                               count,
+                                               toShaderStageFlags(shaderType),
+                                               nullptr);
+    auto descriptorBinding = new VulkanDescriptorBinding(std::move(layoutBinding));
+    return descriptorBinding;
+}
+
+
+
+tz::Buffer *tz::render::vulkan::VulkanRenderer::createMultiframeBuffer(void *initialData,
+                                                                       size_t sizeInBytes,
+                                                                       tz::BufferUsage bufferUsage)
+{
+  std::vector<vk::raii::Buffer> vulkanBuffers;
+  std::vector<vk::raii::DeviceMemory> memories;
+  for (size_t i = 0; i < maxFramesInFlight; i++)
+  {
+    auto b = dynamic_cast<VulkanBuffer*>(createBuffer(initialData, sizeInBytes, bufferUsage));
+    auto vulkanBuffer = vk::raii::Buffer(device, b->getBuffer());
+    auto vulkanMemory = vk::raii::DeviceMemory(device, b->getMemory());
+    vulkanBuffers.push_back(std::move(vulkanBuffer));
+    memories.push_back(std::move(vulkanMemory));
+  }
+  auto buffer = new VulkanBuffer(std::move(vulkanBuffers), std::move(memories));
+  return buffer;
+}
+void tz::render::vulkan::VulkanRenderer::updateBuffer(tz::Buffer *buffer,
+                                                      void *data,
+                                                      size_t sizeInBytes)
+{
+  auto currentFrameBuffer = dynamic_cast<VulkanBuffer*>(buffer)->getMultiBufferByIndex(currentFrameIndex);
+  auto& currentFrameBufferMem = dynamic_cast<VulkanBuffer*>(buffer)->getMultiMemoryByIndex(currentFrameIndex);
+  auto targetMemory = currentFrameBufferMem.mapMemory(0, sizeInBytes);
+  memcpy(targetMemory, data, sizeInBytes);
+  currentFrameBufferMem.unmapMemory();
+  // TODo we should maybe better permanently map certain buffers (via flag) but for now
+  // we just stick with simple map/unmap.
+}
+
+
+
+void tz::render::vulkan::VulkanRenderer::createDescriptorPool()
+{
+  vk::DescriptorPoolSize poolSize;
+  poolSize.setType(vk::DescriptorType::eUniformBuffer)
+          .setDescriptorCount(maxFramesInFlight);
+
+  vk::DescriptorPoolCreateInfo poolInfo;
+  poolInfo.setPoolSizes(poolSize)
+          .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
+          .setMaxSets(maxFramesInFlight);
+
+  uboDescriptorPool = vk::raii::DescriptorPool(device, poolInfo);
+}
+
+
+tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout, tz::Buffer* multiFrameBuffer)
+{
+
+  auto vdb = reinterpret_cast<VulkanDescriptorSetLayout*>(descriptorSetLayout);
+  std::vector<vk::DescriptorSetLayout> layouts;
+  std::vector<vk::Buffer> buffers;
+  for (uint32_t i = 0; i< maxFramesInFlight; i++)
+  {
+    auto& dsl = vdb->dsLayout;
+    layouts.push_back(dsl);
+  }
+
+  vk::DescriptorSetAllocateInfo allocateInfo;
+  allocateInfo.setDescriptorPool(uboDescriptorPool)
+    .setDescriptorSetCount(maxFramesInFlight)
+  .setSetLayouts(layouts);
+
+  std::vector<vk::raii::DescriptorSet> descriptorSets;
+  descriptorSets = device.allocateDescriptorSets(allocateInfo);
+
+  for (uint32_t i = 0; i< maxFramesInFlight; i++)
+  {
+    vk::DescriptorBufferInfo descBufferInfo;
+    auto vbuf = dynamic_cast<VulkanBuffer*>(multiFrameBuffer);
+    auto frameIndexBuffer = vbuf->getMultiBufferByIndex(i);
+    descBufferInfo.setBuffer(frameIndexBuffer)
+    .setOffset(0)
+    .setRange(VK_WHOLE_SIZE);
+
+    vk::WriteDescriptorSet writeDescriptorSet;
+    writeDescriptorSet.setDstSet(descriptorSets[i])
+    .setDstBinding(0) // TODO is this the "setIndex"?!
+    .setDstArrayElement(0)
+    .setDescriptorCount(1)
+      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+    .setBufferInfo(descBufferInfo);
+    device.updateDescriptorSets(writeDescriptorSet, {});
+  }
+
+  auto vulkanDescriptorWrapper = new tz::render::vulkan::VulkanDescriptorSet(std::move(descriptorSets));
+  return vulkanDescriptorWrapper;
+
+}
+tz::DescriptorSetLayout *tz::render::vulkan::VulkanRenderer::createDescriptorSetLayout(
+  const std::vector<DescriptorBinding *>& bindings)
+{
+  std::vector<vk::DescriptorSetLayoutBinding> layoutBindings;
+  for (auto& lb : bindings)
+  {
+    auto vulkanBinding = reinterpret_cast<VulkanDescriptorBinding*>(lb);
+    auto descLayout = vulkanBinding->getDescLayout();
+    layoutBindings.push_back(descLayout);
+  }
+  vk::DescriptorSetLayoutCreateInfo layoutInfo{};
+  layoutInfo.setBindings(layoutBindings);
+  auto descriptorLayout = vk::raii::DescriptorSetLayout(device, layoutInfo);
+
+  auto dsLayout = new tz::render::vulkan::VulkanDescriptorSetLayout(std::move(descriptorLayout));
+  return dsLayout;
 }

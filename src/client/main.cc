@@ -6,6 +6,7 @@
 #include <vulkan_renderer.hh>
 #endif
 #include <sdl2.hh>
+#include <cmath>
 
 
 /**
@@ -56,14 +57,14 @@ struct GameGraphicsData
       };
 
       defaultPSO = renderer->createPipelineStateObject(pso->renderState, pso->shaderPipeline,
-                                                     pso->vertexLayout, pso->descriptorBindings);
+                                                     pso->vertexLayout, pso->descriptorSetLayouts);
 
       tz::DescriptorBinding transformBinding;
-      transformBinding.set = 0;
-      transformBinding.binding = 1;
+      transformBinding.setIndex      = 0;
+      transformBinding.bindingIndex  = 1;
       transformBinding.type = tz::ResourceType::Ubo;
       defaultPSO->descriptorBindings = {
-        transformBinding
+        &transformBinding
       };
 
       auto transform = Eigen::Affine3f::Identity();
@@ -73,7 +74,7 @@ struct GameGraphicsData
       transformBuffer = renderer->createBuffer(vm.data(), vm.size() * sizeof(Eigen::Matrix4f), tz::BufferUsage::Uniform);
       transformDescriptor = new tz::Descriptor();
       transformDescriptor->buffer = transformBuffer;
-      transformDescriptor->binding = transformBinding;
+      transformDescriptor->binding = &transformBinding;
 
       std::vector<Eigen::Vector3f> positions =
         {{-0.2, 0.2, 0},
@@ -199,7 +200,7 @@ void runDemoGL()
     gameGraphicsData.commandBuffer->begin();
     gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindPipeline (gameGraphicsData.defaultPSO ));
     gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindVertexBuffers ({gameGraphicsData.triangleVertexBuffer}));
-    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
+    //gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}, gameGraphicsData.defaultPSO));
     gameGraphicsData.commandBuffer->recordCommand(new tz::CmdDraw(3, 1, 0, 0));
     gameGraphicsData.commandBuffer->end();
     renderer->submitCommandBuffer(gameGraphicsData.commandBuffer);
@@ -219,6 +220,57 @@ void runDemoGL()
 
 }
 
+// TODO move into math or other helper library (might even already exist!?)
+Eigen::Matrix4f lookAt(const Eigen::Vector3f& eye,
+                       const Eigen::Vector3f& center,
+                       const Eigen::Vector3f& up)
+{
+  Eigen::Vector3f f = (center - eye).normalized();
+  Eigen::Vector3f s = f.cross(up).normalized();
+  Eigen::Vector3f u = s.cross(f);
+
+  Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
+
+  // Rotation part (Indices are mat(row, col))
+  mat(0,0) =  s.x();
+  mat(0,1) =  s.y(); // Changed from (1,0)
+  mat(0,2) =  s.z(); // Changed from (2,0)
+
+  mat(1,0) =  u.x();
+  mat(1,1) =  u.y();
+  mat(1,2) =  u.z();
+
+  mat(2,0) = -f.x();
+  mat(2,1) = -f.y();
+  mat(2,2) = -f.z();
+
+  // Translation part (Now in the 4th Column)
+  mat(0,3) = -s.dot(eye);
+  mat(1,3) = -u.dot(eye);
+  mat(2,3) =  f.dot(eye);
+
+  return mat;
+}
+
+Eigen::Matrix4f perspective(float fovY, float aspect, float zNear, float zFar)
+{
+  float tanHalfFovy = std::tan(fovY * 0.5f);
+  Eigen::Matrix4f m = Eigen::Matrix4f::Zero();
+
+  m(0,0) = 1.0f / (aspect * tanHalfFovy);
+  m(1,1) = 1.0f / (tanHalfFovy);
+
+  // Vulkan Depth [0, 1]
+  m(2,2) = zFar / (zNear - zFar);
+  m(2,3) = (zNear * zFar) / (zNear - zFar); // Translation moved to Col 3
+
+  // Perspective Divide
+  m(3,2) = -1.0f; // Moved from (2,3) to (3,2) for Column-Major
+
+  return m;
+}
+
+
 #ifdef USE_VULKAN
 void runDemoVulkan()
 {
@@ -228,7 +280,7 @@ void runDemoVulkan()
   auto window = ws->createWindow(winDesc);
   renderer->init(window);
 
-  auto spvPath = "shader_binaries/default_shader_stage2.slang.spv";
+  auto spvPath = "shader_binaries/default_shader_stage3.slang.spv";
 
   auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
@@ -236,9 +288,9 @@ void runDemoVulkan()
 
   std::vector<tz::Vertex> vertices =
   {
-    {{-0.2, 0.2, 0}, {1, 1, 0}},
-    {{-0.2, -0.2, 0}, {0, 1, 1}},
-    {{0.2, -0.2, 0}, {0, 1, 1}}
+    {{-0.2, 0.2, 0.5}, {1, 1, 0}},
+    {{-0.2, -0.2, 0.5}, {0, 1, 1}},
+    {{0.2, -0.2, 0.5}, {0, 1, 1}}
   };
   auto triVertexBuffer = renderer->createBuffer(vertices.data(),
                                                 vertices.size() * sizeof(tz::Vertex),
@@ -246,13 +298,31 @@ void runDemoVulkan()
 
   std::vector<tz::Vertex> vertices2 =
     {
-      {{0.2, 0.4, 0}, {1, 0.5, 0}},
-      {{0.2, -0.5, 0}, {0.3, 1, 1}},
-      {{0.4, -0.5, 0}, {0.8, 1, 1}}
+      {{0.2, 0.4, 0.5}, {1, 0.5, 0}},
+      {{0.2, -0.5, 0.5}, {0.3, 1, 1}},
+      {{0.4, -0.5, 0.5}, {0.8, 1, 1}}
     };
   auto triVertexBuffer2 = renderer->createBuffer(vertices2.data(),
                                                  vertices2.size() * sizeof (tz::Vertex),
                                                  tz::BufferUsage::Vertex);
+
+  // Descriptor layout and binding:
+  auto transform = Eigen::Affine3f::Identity();
+  transform.translate(Eigen::Vector3f(-0.08, -0.08, 0));
+  Eigen::Matrix4f tm = transform.matrix();
+  Eigen::Matrix4f m = Eigen::Matrix4f::Identity();
+  std::vector<Eigen::Matrix4f> vm = {m};
+  tz::TransformUniformBufferObject transformUBO;
+  transformUBO.model = tm;
+  transformUBO.view = lookAt({0, 0, -1.17}, {0, 0, 0}, {0, 1,0});
+  transformUBO.proj = perspective(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
+
+
+  //auto transformBuffer = renderer->createBuffer(&transform, vm.size() * sizeof(Eigen::Matrix4f), tz::BufferUsage::Uniform);
+  auto transformBuffer = renderer->createMultiframeBuffer(&transformUBO, sizeof(transformUBO), tz::BufferUsage::Uniform);
+  auto transformDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo, tz::ShaderType::Vertex, 1);
+  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding});
+  auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout, transformBuffer);
 
   tz::RenderState rs = {};
   rs.primitiveType = tz::PrimitiveType::Triangles;
@@ -292,7 +362,11 @@ void runDemoVulkan()
 
   auto pso = renderer->createPipelineStateObject(rs, shaderPipeline,
                                                    vertexLayout,
-                                                 {});
+                                                 {descriptorSetLayout});
+
+
+
+  //auto createdDescriptor = renderer->createMultiframeDescriptors(transformDescriptor);
 
   auto commandBuffer = renderer->createCommandBuffer();
 
@@ -330,12 +404,12 @@ void runDemoVulkan()
 
     // first triangle:
     renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer}));
-    //renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({descriptorSet}, pso));
     renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
 
     // second triangle:
     renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer2}));
-    //renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({descriptorSet}, pso));
     renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
 
 

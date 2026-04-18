@@ -84,6 +84,37 @@ class VulkanShaderModule : public tz::ShaderModule
 
 };
 
+class VulkanDescriptorSet : public tz::DescriptorSet
+{
+  public:
+      VulkanDescriptorSet(std::vector<vk::raii::DescriptorSet>&& descriptorSets) : descSets(std::move(descriptorSets)) {}
+
+      std::vector<vk::raii::DescriptorSet> descSets;
+
+};
+
+class VulkanDescriptorSetLayout : public tz::DescriptorSetLayout
+{
+  public:
+      VulkanDescriptorSetLayout(vk::raii::DescriptorSetLayout&& dsLayout)
+      : dsLayout(std::move(dsLayout)) {}
+
+      vk::raii::DescriptorSetLayout dsLayout;
+};
+
+class VulkanDescriptorBinding : public tz::DescriptorBinding
+{
+  public:
+      VulkanDescriptorBinding(vk::DescriptorSetLayoutBinding&& descriptorSetLayout)
+        : descSetLayoutBinding(std::move(descriptorSetLayout)) {}
+
+      vk::DescriptorSetLayoutBinding getDescLayout()
+      {
+        return descSetLayoutBinding;
+      }
+
+  vk::DescriptorSetLayoutBinding descSetLayoutBinding;
+};
 
 
 class VulkanBuffer : public tz::Buffer
@@ -94,6 +125,12 @@ class VulkanBuffer : public tz::Buffer
   {
     buffer = std::move(vkBuffer);
     devMemory = std::move(memory);
+  }
+
+  VulkanBuffer(std::vector<vk::raii::Buffer>&& multiBuffers, std::vector<vk::raii::DeviceMemory>&& multiMemories)
+  {
+    this->multiBuffers = std::move(multiBuffers);
+    this->multiMemories = std::move(multiMemories);
   }
 
   void updateData(void* data, size_t sizeInBytes) override
@@ -111,9 +148,34 @@ class VulkanBuffer : public tz::Buffer
     return (void *) &(*buffer);
   }
 
+  vk::raii::Buffer&& pullOutBuffer()
+  {
+    return std::move(buffer);
+  }
+
+  vk::raii::DeviceMemory&& pullOutMemory()
+  {
+    return std::move(memory);
+  }
+
   vk::Buffer getBuffer()
   {
     return *buffer;
+  }
+
+  vk::Buffer getMultiBufferByIndex(int index)
+  {
+    return *multiBuffers[index];
+  }
+
+  vk::raii::DeviceMemory& getMultiMemoryByIndex(int index)
+  {
+    return multiMemories[index];
+  }
+
+  vk::DeviceMemory getMemory()
+  {
+    return *memory;
   }
 
   void bind() override
@@ -135,6 +197,13 @@ class VulkanBuffer : public tz::Buffer
   private:
       vk::raii::Buffer buffer = nullptr;
       vk::raii::DeviceMemory memory = nullptr;
+
+      // These multibuffers are useful to have
+      // one logical buffer which cover n buffers, e.g. one for each frame in flight.
+      // So the client only must deal with one buffer at any time, but inside
+      // the engine, the current frame-index buffer can be used.
+      std::vector<vk::raii::Buffer> multiBuffers;
+      std::vector<vk::raii::DeviceMemory> multiMemories;
 };
 
 struct VulkanInitData
@@ -148,9 +217,10 @@ struct VulkanInitData
 struct VulkanPSO : public PipelineStateObject
 {
 
-  VulkanPSO(vk::raii::Pipeline&& pipeline)
+  VulkanPSO(vk::raii::Pipeline&& pipeline, vk::raii::PipelineLayout&& layout)
   {
     this->pipeline = std::move(pipeline);
+    this->pipelineLayout = std::move(layout);
   }
 
   vk::raii::Pipeline& getHandle()
@@ -158,8 +228,14 @@ struct VulkanPSO : public PipelineStateObject
     return pipeline;
   }
 
+  vk::raii::PipelineLayout& getPipelineLayout()
+  {
+    return pipelineLayout;
+  }
+
   private:
       vk::raii::Pipeline pipeline = nullptr;
+      vk::raii::PipelineLayout pipelineLayout = nullptr;
 };
 
 /**
@@ -185,16 +261,23 @@ class TZ_API VulkanRenderer : public Renderer
   void submitCommandBuffer(CommandBuffer*cb) override;
 
   Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
+  Buffer * createMultiframeBuffer(void *initialData, size_t sizeInBytes, tz::BufferUsage bufferUsage) override;
+  DescriptorBinding * createDescriptorBinding(uint8_t binding,
+                                             tz::ResourceType resourceType,
+                                             tz::ShaderType shaderType,
+                                             uint32_t count) override;
+  DescriptorSetLayout * createDescriptorSetLayout(const std::vector<DescriptorBinding *> &bindings) override;
   ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
   CommandBuffer * createCommandBuffer() override;
+  DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout, Buffer* multiFrameBuffer) override;
   void beginCommandBuffer(tz::CommandBuffer *cb) override;
   void endCommandBuffer(tz::CommandBuffer *cb) override;
   void recordCommand(tz::CommandBuffer* cb, tz::Command *cmd) override;
   PipelineStateObject * createPipelineStateObject(tz::RenderState &renderState,
                                                  tz::ShaderPipeline *shaderPipeline,
                                                  tz::VertexLayout &vertexLayout,
-                                                 const std::vector<DescriptorBinding> &descriptorBindings) override;
+                                                 const std::vector<DescriptorSetLayout*> &descriptorSetLayouts) override;
 
   private:
   void initSurface();
@@ -230,6 +313,7 @@ class TZ_API VulkanRenderer : public Renderer
                                                         vk::DebugUtilsMessageTypeFlagsEXT              type,
                                                         const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
                                                         void *                                         pUserData);
+  void updateBuffer(tz::Buffer *buffer, void *data, size_t sizeInBytes) override;
 
   private:
   const uint32_t maxFramesInFlight = 2;
@@ -240,6 +324,7 @@ class TZ_API VulkanRenderer : public Renderer
   vk::raii::PhysicalDevice physicalDevice = nullptr;
   vk::raii::Device device = nullptr;
   vk::raii::Queue graphicsQueue = nullptr;
+  vk::raii::DescriptorPool uboDescriptorPool = nullptr;
   vk::Extent2D swapExtent;
   vk::SurfaceFormatKHR surfaceFormat;
   vk::raii::SwapchainKHR swapChain = nullptr;
@@ -270,6 +355,7 @@ class TZ_API VulkanRenderer : public Renderer
     const std::vector<tz::VertexAttribute> &vertexAttributes);
   vk::Format toVulkanAttributeFormat(VertexAttribute va);
   uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags);
+  void createDescriptorPool();
   void transitionImageLayout(CommandBuffer *cb,
                              vk::ImageLayout oldLayout,
                              vk::ImageLayout newLayout,
@@ -279,4 +365,6 @@ class TZ_API VulkanRenderer : public Renderer
                              vk::PipelineStageFlags2 dstStageMask);
 };
 
-}
+vk::DescriptorType toVulkanDescriptorType(ResourceType resourceType);
+vk::ShaderStageFlagBits toShaderStageFlags(ShaderType shaderType);
+} // namespace tz::render::vulkan

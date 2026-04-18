@@ -22,6 +22,13 @@ struct Vertex
   Eigen::Vector3f color;
 };
 
+struct TransformUniformBufferObject
+{
+  Eigen::Matrix4f model;
+  Eigen::Matrix4f view;
+  Eigen::Matrix4f proj;
+};
+
 enum class BufferUsage
 {
   Vertex,
@@ -69,20 +76,60 @@ enum class ResourceType
   Sampler
 };
 
+enum class ShaderType {
+  Vertex,
+  Fragment,
+  Tessellation
+};
 
 
+/**
+ * This is abstracted in GL, but maps almost 1:1
+ * to a vk::DescriptorSetLayoutBinding.
+ * It represents one specific resource binding in a shader.
+ *
+ */
 struct DescriptorBinding
 {
-  uint8_t set = 0;
-  uint8_t binding = 0;
+  uint8_t setIndex = 0;
+  uint8_t bindingIndex = 0;
   ResourceType type;
+  ShaderType shaderType;
+  uint32_t count = 1;   // This is useful for arrays/instancing
+};
+
+
+/**
+ * This represents a list of layout bindings for shader resources.
+ * Schematic only, no real resources are behind this.
+ * There may be multile sets used by one pipeline.
+ * All the sets used must be defined in the pipelineLayout member of
+ * the active PipelineStateObject.
+ */
+struct DescriptorSetLayout
+{
+  std::vector<DescriptorBinding*> descriptorBindings;
+};
+
+/**
+ * This combines a list of DescriptorBindings
+ * into 1 set.
+ * It is more efficient for modern APIs like
+ * Vulkan to handle sets of descriptor bindings at once.
+ * These sets are then bound to a pipeline via pipeline layouts.
+ */
+struct DescriptorSet
+{
+  Buffer* buffer;
+  DescriptorBinding* binding;
+
 };
 
 struct Descriptor
 {
 
   Buffer* buffer;
-  DescriptorBinding binding;
+  DescriptorBinding* binding;
 
 };
 
@@ -194,11 +241,7 @@ struct Texture
 
 
 
-enum class ShaderType {
-  Vertex,
-  Fragment,
-  Tessellation
-};
+
 
 /**
  * A single shader - e.g. vertex shader, or fragment shader.
@@ -242,7 +285,8 @@ struct PipelineStateObject
   RenderState renderState;
   ShaderPipeline* shaderPipeline = nullptr;
   VertexLayout vertexLayout;
-  std::vector<DescriptorBinding> descriptorBindings;
+  std::vector<DescriptorBinding*> descriptorBindings;
+  std::vector<DescriptorSetLayout*> descriptorSetLayouts;
 
 };
 
@@ -266,9 +310,11 @@ class CmdBindPipeline : public Command
 class CmdBindDescriptors : public Command
 {
   public:
-      CmdBindDescriptors(std::vector<Descriptor*> descs) : descriptors(descs) {}
+      CmdBindDescriptors(std::vector<DescriptorSet*> descriptorSets, PipelineStateObject* pso)
+        : descriptorSets(descriptorSets), pso(pso) {}
 
-      std::vector<Descriptor*> descriptors;
+      std::vector<DescriptorSet*> descriptorSets;
+      PipelineStateObject* pso;
 };
 
 class CmdSetViewPorts : public Command
@@ -372,18 +418,34 @@ class TZ_API Renderer
 
   virtual CommandBuffer* createCommandBuffer() = 0;
   virtual Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) = 0;
+  virtual Buffer* createMultiframeBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage)
+  {
+    return nullptr;
+  }
+  virtual DescriptorBinding* createDescriptorBinding(
+    uint8_t binding,
+    tz::ResourceType resourceType,
+    tz::ShaderType shaderType,
+    uint32_t count)
+  {
+    return nullptr;
+  }
+  virtual DescriptorSetLayout* createDescriptorSetLayout(const std::vector<DescriptorBinding*>& bindings)
+  {
+    return nullptr;
+  }
   virtual ShaderModule* createShaderModule(ShaderType types, const std::string& source) = 0;
   virtual ShaderPipeline* createShaderPipeline(const std::vector<ShaderModule*>& modules) = 0;
   virtual PipelineStateObject* createPipelineStateObject(RenderState& renderState,
                                              ShaderPipeline* shaderPipeline,
               VertexLayout& vertexLayout,
-              const std::vector<DescriptorBinding>& descriptorBindings)
+              const std::vector<DescriptorSetLayout*>&descriptorSetLayouts)
   {
     auto pso =  new PipelineStateObject();
     pso->renderState = renderState;
     pso->shaderPipeline = shaderPipeline;
     pso->vertexLayout = vertexLayout;
-    pso->descriptorBindings = descriptorBindings;
+    pso->descriptorSetLayouts = descriptorSetLayouts;
     return pso;
   };
 
@@ -400,6 +462,18 @@ class TZ_API Renderer
   virtual void recordCommand(CommandBuffer* cb, Command* cmd)
   {
     cb->recordCommand(cmd);
+  }
+
+  virtual void updateBuffer(Buffer* buffer, void* data, size_t sizeInBytes)
+  {
+    // noop to avoid impl for GL
+  }
+
+
+  virtual tz::DescriptorSet *createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout, tz::Buffer* multiFrameBuffer)
+  {
+    // provide dummy impl. for GL
+    return nullptr;
   }
 
 };

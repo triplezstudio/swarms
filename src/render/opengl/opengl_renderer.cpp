@@ -165,9 +165,9 @@ GLenum OpenGLRenderer::resourceTypeToEnum(ResourceType rt)
 
 void OpenGLRenderer::execCmdBindDescriptors(tz::CmdBindDescriptors *cmd)
 {
-  for (auto& d : cmd->descriptors)
+  for (auto& d : cmd->descriptorSets)
   {
-    glBindBufferBase(resourceTypeToEnum(d->binding.type), d->binding.binding, *reinterpret_cast<GLuint*>(d->buffer->getHandle()));
+    glBindBufferBase(resourceTypeToEnum(d->binding->type), d->binding->bindingIndex, *reinterpret_cast<GLuint*>(d->buffer->getHandle()));
   }
 }
 
