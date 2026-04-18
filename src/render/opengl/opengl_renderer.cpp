@@ -408,10 +408,7 @@ CommandBuffer *OpenGLRenderer::createCommandBuffer()
   auto cb = new CommandBuffer();
   return cb;
 }
-void OpenGLRenderer::beginCommandBuffer(tz::CommandBuffer *cb)
-{
-  // noop as of now for GL
-}
+
 
 void OpenGLShaderModule::init(ShaderType type, const std::string& source)
 {

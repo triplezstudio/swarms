@@ -75,14 +75,15 @@ void tz::render::vulkan::VulkanRenderer::endFrame()
 {
 
 }
-void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* commandBufferProvided)
+void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* cb)
 {
+  auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
   vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
   const vk::SubmitInfo submitInfo {.waitSemaphoreCount = 1,
                                     .pWaitSemaphores = &*presentCompleteSemaphore,
                                     .pWaitDstStageMask = &waitDestinationStageMask,
                                     .commandBufferCount = 1,
-                                    .pCommandBuffers = &*commandBuffer,
+                                    .pCommandBuffers = &*currentFrameCommandBuffer,
                                     .signalSemaphoreCount = 1,
                                     .pSignalSemaphores = &*renderFinishedSemaphore};
 
@@ -323,7 +324,7 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL tz::render::vulkan::VulkanRenderer::debugCallba
 }
 
 uint32_t tz::render::vulkan::VulkanRenderer::selectSwapMinImageCount(vk::SurfaceCapabilitiesKHR const& surfaceCapabilities) {
-  auto minImageCount = (std::max)(3u, surfaceCapabilities.minImageCount);
+  auto minImageCount = (std::max)(maxFramesInFlight, surfaceCapabilities.minImageCount);
   if ((0 < surfaceCapabilities.maxImageCount) && (surfaceCapabilities.maxImageCount < minImageCount))
   {
     minImageCount = surfaceCapabilities.maxImageCount;
@@ -501,6 +502,41 @@ void tz::render::vulkan::VulkanRenderer::createDefaultCommandBuffer()
 }
 
 void tz::render::vulkan::VulkanRenderer::transitionImageLayout(
+  tz::CommandBuffer* cb,
+  vk::ImageLayout oldLayout,
+  vk::ImageLayout newLayout,
+  vk::AccessFlags2 srcAccessMask,
+  vk::AccessFlags2 dstAccessMask,
+  vk::PipelineStageFlags2 srcStageMask,
+  vk::PipelineStageFlags2 dstStageMask)
+{
+  auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
+
+  vk::ImageMemoryBarrier2 barrier;
+  barrier.setSrcStageMask(srcStageMask)
+    .setDstStageMask(dstStageMask)
+    .setSrcAccessMask(srcAccessMask)
+    .setDstAccessMask(dstAccessMask)
+    .setOldLayout(oldLayout)
+    .setNewLayout(newLayout)
+    .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+    .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+    .setImage(swapChainImages[imageIndex])
+    .setSubresourceRange({
+      .aspectMask = vk::ImageAspectFlagBits::eColor,
+      .baseMipLevel = 0,
+      .levelCount = 1,
+      .baseArrayLayer = 0,
+      .layerCount = 1
+    });
+  vk::DependencyInfo dependencyInfo;
+  dependencyInfo.setDependencyFlags({})
+    .setImageMemoryBarriers({barrier});
+
+  currentFrameCommandBuffer.pipelineBarrier2(dependencyInfo);
+}
+
+void tz::render::vulkan::VulkanRenderer::transitionImageLayout(
   uint32_t imageIndex,
   vk::ImageLayout oldLayout,
   vk::ImageLayout newLayout,
@@ -541,6 +577,7 @@ void tz::render::vulkan::VulkanRenderer::recordCommandBuffer(uint32_t imageIndex
   vk::CommandBufferBeginInfo beginInfo;
   // Currently we do not use the beginInfo:
   commandBuffer.begin({});
+
 
   transitionImageLayout(
     imageIndex,
@@ -612,7 +649,23 @@ void tz::render::vulkan::VulkanRenderer::init(tz::Window* window)
   createSyncObjects();
 }
 
+uint32_t tz::render::vulkan::VulkanRenderer::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties )
+{
 
+  auto memProperties = physicalDevice.getMemoryProperties();
+
+  // Checking each bit of the memory type bitmask and for support of cpu uploading:
+  for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+  {
+    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+    {
+      return i;
+    }
+  }
+
+
+  throw std::runtime_error("failed to find suitable memory type!");
+}
 
 tz::Buffer* tz::render::vulkan::VulkanRenderer::createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage)
 {
@@ -621,7 +674,22 @@ tz::Buffer* tz::render::vulkan::VulkanRenderer::createBuffer(void* initialData, 
   createInfo.setUsage(toVkBufferUsage(bufferUsage));
   createInfo.setSharingMode(vk::SharingMode::eExclusive);
   auto b = vk::raii::Buffer(device, createInfo);
-  return new VulkanBuffer(std::move(b));
+
+  // Allocating memory for the buffer and binding it to the buffer:
+  vk::MemoryRequirements memRequirements = b.getMemoryRequirements();
+  vk::MemoryAllocateInfo memoryAllocateInfo;
+  memoryAllocateInfo.allocationSize = memRequirements.size;
+  memoryAllocateInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits,
+                                                      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+  vk::raii::DeviceMemory bufferMemory = vk::raii::DeviceMemory(device,memoryAllocateInfo);
+  b.bindMemory(*bufferMemory, 0);
+
+  // Filling the data into the memory:
+  void* targetDataPtr = bufferMemory.mapMemory(0, memRequirements.size);
+  memcpy(targetDataPtr, initialData, sizeInBytes);
+  bufferMemory.unmapMemory();
+
+  return new VulkanBuffer(std::move(b), std::move(bufferMemory));
 }
 
 tz::ShaderPipeline *tz::render::vulkan::VulkanRenderer::createShaderPipeline(const std::vector<ShaderModule *> &modules)
@@ -667,16 +735,14 @@ tz::CommandBuffer *tz::render::vulkan::VulkanRenderer::createCommandBuffer()
 
   // Store this "logical commandbuffer" to point to the actual
   auto vulkanCB = new VulkanCommandBuffer(std::move(cbs));
-  this->customCommandBuffers[vulkanCB] = &cbs;
   return vulkanCB;
 
 }
 
 vk::raii::CommandBuffer& tz::render::vulkan::VulkanRenderer::getCommandBufferForCurrentFrame(tz::CommandBuffer* cb)
 {
-  auto cbs = customCommandBuffers[cb];
-  auto& currentFrameCommandBuffer = cbs->at(imageIndex);
-  return currentFrameCommandBuffer;
+  auto& cfb = dynamic_cast<VulkanCommandBuffer*>(cb)->getCommandBufferForImage(imageIndex);
+  return cfb;
 }
 
 
@@ -687,7 +753,7 @@ void tz::render::vulkan::VulkanRenderer::beginCommandBuffer(tz::CommandBuffer *c
   currentFrameCommandBuffer.begin({});
 
   transitionImageLayout(
-    imageIndex,
+    cb,
     vk::ImageLayout::eUndefined,
     vk::ImageLayout::eColorAttachmentOptimal,
     {}, // no need to wait for the src access part
@@ -696,19 +762,140 @@ void tz::render::vulkan::VulkanRenderer::beginCommandBuffer(tz::CommandBuffer *c
     vk::PipelineStageFlagBits2::eColorAttachmentOutput
   );
 
+  vk::ClearValue clearColor = vk::ClearColorValue(0, 0, 0, 1);
+  vk::RenderingAttachmentInfo attachmentInfo;
+  attachmentInfo.setImageView(swapChainImageViews[imageIndex])
+    .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
+    .setLoadOp(vk::AttachmentLoadOp::eClear)
+    .setStoreOp(vk::AttachmentStoreOp::eStore)
+    .setClearValue(clearColor);
+
+  vk::RenderingInfo renderingInfo;
+  renderingInfo.setRenderArea({
+                                .offset = {0, 0},
+                                .extent = swapExtent
+                              })
+    .setLayerCount(1)
+    .setColorAttachments({attachmentInfo});
+  currentFrameCommandBuffer.beginRendering(renderingInfo);
+
 }
 
-void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* commandBuffer, tz::Command *cmd)
+
+void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz::Command *cmd)
 {
 
-  auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(commandBuffer);
+  auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
   if (auto c = dynamic_cast<CmdBindPipeline*>(cmd))
   {
-    // TODO retrieve the PSO based on the incoming generic PSO.
-    //c->pso
-    currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+    auto vpso = reinterpret_cast<tz::render::vulkan::VulkanPSO*>(c->pso);
+    currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *vpso->getHandle());
 
   }
+
+  else if (auto c = dynamic_cast<CmdBindVertexBuffers*>(cmd))
+  {
+    std::vector<vk::Buffer> rawBuffers;
+    std::vector<vk::DeviceSize> offsets;
+    for (auto& b : c->vertexBuffers)
+    {
+      auto vb = reinterpret_cast<tz::render::vulkan::VulkanBuffer*>(b);
+      auto handle = vb->getBuffer();
+      rawBuffers.push_back(handle);
+      offsets.push_back(0);
+    }
+    currentFrameCommandBuffer.bindVertexBuffers(0, rawBuffers, offsets);
+  }
+
+  else if (auto c = dynamic_cast<CmdDraw*>(cmd))
+  {
+    currentFrameCommandBuffer.draw(static_cast<uint32_t>(c->vertexCount), c->instanceCount, c->firstVertex, c->firstInstance);
+  }
+
+  else if (auto c = dynamic_cast<CmdSetViewPorts*>(cmd))
+  {
+    // The number of viewports must actually be consistent with the
+    // pipeline setup. So setting 1 there, but passing in > 1 would not work.
+    std::vector<vk::Viewport> targetVps;
+    for (auto& vp: c->viewPorts)
+    {
+      vk::Viewport targetVp;
+      targetVp.width = vp.width;
+      targetVp.height = vp.height;
+      targetVp.x = vp.x;
+      targetVp.y = vp.y;
+      targetVps.push_back(targetVp);
+    }
+    currentFrameCommandBuffer.setViewport(0, targetVps);
+  }
+  else if (auto c = dynamic_cast<CmdSetScissors*>(cmd))
+  {
+    std::vector<vk::Rect2D> rects;
+    for (auto& s: c->scissors)
+    {
+      vk::Rect2D r;
+      r.offset.x = s.x;
+      r.offset.y = s.y;
+      r.extent.width = s.width;
+      r.extent.height = s.height;
+      rects.push_back(r);
+    }
+    currentFrameCommandBuffer.setScissor(0, rects);
+  }
+}
+
+vk::VertexInputRate tz::render::vulkan::VulkanRenderer::toVulkanInputRate(tz::VertexInputRate ir)
+{
+  switch (ir)
+  {
+    case tz::VertexInputRate::PerVertex: return vk::VertexInputRate::eVertex;
+    case tz::VertexInputRate::PerInstance: return vk::VertexInputRate::eInstance;
+  }
+}
+
+vk::Format tz::render::vulkan::VulkanRenderer::toVulkanAttributeFormat(tz::VertexAttribute va)
+{
+  switch (va.componentCount)
+  {
+    case 1: return vk::Format::eR32Sfloat;
+    case 2: return vk::Format::eR32G32Sfloat;
+    case 3: return vk::Format::eR32G32B32Sfloat;
+    case 4: return vk::Format::eR32G32B32A32Sfloat;
+  }
+}
+
+std::vector<vk::VertexInputAttributeDescription>
+  tz::render::vulkan::VulkanRenderer::toVulkanAttributeDescriptions(const std::vector<tz::VertexAttribute>& vertexAttributes)
+{
+  std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+  for (auto& va : vertexAttributes)
+  {
+    vk::VertexInputAttributeDescription viad;
+    viad.binding = va.bufferSlot;
+    viad.offset = va.offset;
+    viad.location = va.shaderLocation;
+    viad.format = toVulkanAttributeFormat(va);
+    attributeDescriptions.push_back(viad);
+  }
+
+  return attributeDescriptions;
+}
+
+std::vector<vk::VertexInputBindingDescription>
+  tz::render::vulkan::VulkanRenderer::toVulkanBindingDescriptions(const std::vector<tz::VertexBinding>& vertexBindings)
+{
+  std::vector<vk::VertexInputBindingDescription> vertexInputBindingDescriptions;
+  for (auto& vb : vertexBindings)
+  {
+    vk::VertexInputBindingDescription vbd;
+    vbd.binding = vb.bufferSlot;
+    vbd.stride = vb.stride;
+    vbd.inputRate = toVulkanInputRate(vb.vertexInputRate);
+    vertexInputBindingDescriptions.push_back(vbd);
+  }
+
+  return vertexInputBindingDescriptions;
+
 }
 
 // TODO : WIP - implement the creation of the pipeline based on the actual incoming parameters,
@@ -717,7 +904,7 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
   tz::RenderState &renderState,
   tz::ShaderPipeline *shaderPipeline,
   tz::VertexLayout &vertexLayout,
-  std::vector<DescriptorBinding> &descriptorBindings)
+  const std::vector<DescriptorBinding> &descriptorBindings)
 {
   auto vsp = reinterpret_cast<tz::render::vulkan::VulkanShaderPipeline*>(shaderPipeline);
   auto shaderModules = *reinterpret_cast<std::vector<ShaderModule*>*>(vsp->getHandle());
@@ -732,8 +919,11 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
   vk::PipelineDynamicStateCreateInfo dsCreateInfo;
   dsCreateInfo.setDynamicStates(dynamicStates);
 
-  // Leaving empty for now, as we are first only using hardcoded values.
+  auto bindingDescriptions = toVulkanBindingDescriptions(vertexLayout.bindings);
+  auto attributeDescriptions = toVulkanAttributeDescriptions(vertexLayout.attributes);
   vk::PipelineVertexInputStateCreateInfo vertexInputStateCreateInfo;
+  vertexInputStateCreateInfo.setVertexBindingDescriptions(bindingDescriptions);
+  vertexInputStateCreateInfo.setVertexAttributeDescriptions(attributeDescriptions);
   vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
   inputAssembly.setTopology(vk::PrimitiveTopology::eTriangleList);
   vk::PipelineViewportStateCreateInfo viewportStateCreateInfo;
@@ -791,4 +981,19 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
   auto vulkanPSO = new tz::render::vulkan::VulkanPSO(std::move(customGraphicsPipeline));
   return vulkanPSO;
 
+}
+void tz::render::vulkan::VulkanRenderer::endCommandBuffer(tz::CommandBuffer *cb)
+{
+  auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
+  currentFrameCommandBuffer.endRendering();
+  transitionImageLayout(
+    cb,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::ImageLayout::ePresentSrcKHR,
+    vk::AccessFlagBits2::eColorAttachmentWrite,
+    {},
+    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    vk::PipelineStageFlagBits2::eBottomOfPipe
+  );
+  currentFrameCommandBuffer.end();
 }

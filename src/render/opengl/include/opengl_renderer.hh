@@ -262,7 +262,6 @@ class TZ_API OpenGLRenderer : public Renderer
   ShaderModule * createShaderModule(tz::ShaderType types, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
   CommandBuffer * createCommandBuffer() override;
-  void beginCommandBuffer(tz::CommandBuffer *cb) override;
 
   private:
   tz::Window* window = nullptr;

@@ -33,9 +33,16 @@ class VulkanCommandBuffer : public tz::CommandBuffer
     this->cbs = std::move(cbs);
   }
 
+
+
   void * getHandle() override
   {
     return &cbs;
+  }
+
+  vk::raii::CommandBuffer& getCommandBufferForImage(int imageIndex)
+  {
+    return cbs[imageIndex];
   }
 
   private:
@@ -83,9 +90,10 @@ class VulkanBuffer : public tz::Buffer
 {
 
   public:
-  VulkanBuffer(vk::raii::Buffer vkBuffer)
+  VulkanBuffer(vk::raii::Buffer&& vkBuffer, vk::raii::DeviceMemory&& devMemory)
   {
     buffer = std::move(vkBuffer);
+    devMemory = std::move(memory);
   }
 
   void updateData(void* data, size_t sizeInBytes) override
@@ -100,8 +108,14 @@ class VulkanBuffer : public tz::Buffer
   
   void* getHandle() override
   {
-    return &buffer;
+    return (void *) &(*buffer);
   }
+
+  vk::Buffer getBuffer()
+  {
+    return *buffer;
+  }
+
   void bind() override
   {
 
@@ -120,6 +134,7 @@ class VulkanBuffer : public tz::Buffer
   }
   private:
       vk::raii::Buffer buffer = nullptr;
+      vk::raii::DeviceMemory memory = nullptr;
 };
 
 struct VulkanInitData
@@ -167,15 +182,19 @@ class TZ_API VulkanRenderer : public Renderer
 
   void beginFrame() override;
   void endFrame() override;
-  void submitCommandBuffer(CommandBuffer* commandBuffer) override;
+  void submitCommandBuffer(CommandBuffer*cb) override;
 
   Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
   ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
   CommandBuffer * createCommandBuffer() override;
   void beginCommandBuffer(tz::CommandBuffer *cb) override;
+  void endCommandBuffer(tz::CommandBuffer *cb) override;
   void recordCommand(tz::CommandBuffer* cb, tz::Command *cmd) override;
-  PipelineStateObject * createPipelineStateObject(tz::RenderState &renderState, tz::ShaderPipeline *shaderPipeline, tz::VertexLayout &vertexLayout, std::vector<DescriptorBinding> &descriptorBindings) override;
+  PipelineStateObject * createPipelineStateObject(tz::RenderState &renderState,
+                                                 tz::ShaderPipeline *shaderPipeline,
+                                                 tz::VertexLayout &vertexLayout,
+                                                 const std::vector<DescriptorBinding> &descriptorBindings) override;
 
   private:
   void initSurface();
@@ -196,6 +215,8 @@ class TZ_API VulkanRenderer : public Renderer
                              vk::AccessFlags2 dstAccessMask,
                              vk::PipelineStageFlags2 srcStageMask,
                              vk::PipelineStageFlags2 dstStageMask);
+  std::vector<vk::VertexInputBindingDescription> toVulkanBindingDescriptions(const std::vector<tz::VertexBinding>& vertexBindings);
+  vk::VertexInputRate toVulkanInputRate(VertexInputRate ir);
   void createSyncObjects();
   vk::raii::CommandBuffer& getCommandBufferForCurrentFrame(tz::CommandBuffer* cb);
   vk::raii::ShaderModule createSlangShaderModule(const std::string& shaderBinaryPath);
@@ -211,7 +232,7 @@ class TZ_API VulkanRenderer : public Renderer
                                                         void *                                         pUserData);
 
   private:
-  const int maxFramesInFlight = 2;
+  const uint32_t maxFramesInFlight = 2;
   tz::Window* window = nullptr;
   vk::raii::Context context;
   vk::raii::Instance instance = nullptr;
@@ -245,6 +266,17 @@ class TZ_API VulkanRenderer : public Renderer
   vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> deviceFeatures;
   std::map<CommandBuffer*, vk::raii::CommandBuffers*> customCommandBuffers;
 
+  std::vector<vk::VertexInputAttributeDescription> toVulkanAttributeDescriptions(
+    const std::vector<tz::VertexAttribute> &vertexAttributes);
+  vk::Format toVulkanAttributeFormat(VertexAttribute va);
+  uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags);
+  void transitionImageLayout(CommandBuffer *cb,
+                             vk::ImageLayout oldLayout,
+                             vk::ImageLayout newLayout,
+                             vk::AccessFlags2 srcAccessMask,
+                             vk::AccessFlags2 dstAccessMask,
+                             vk::PipelineStageFlags2 srcStageMask,
+                             vk::PipelineStageFlags2 dstStageMask);
 };
 
 }

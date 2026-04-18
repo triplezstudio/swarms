@@ -228,13 +228,65 @@ void runDemoVulkan()
   auto window = ws->createWindow(winDesc);
   renderer->init(window);
 
-  auto spvPath = "shader_binaries/default_shader.slang.spv";
+  auto spvPath = "shader_binaries/default_shader_stage2.slang.spv";
 
   auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
 
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
-  auto gameGraphicsData = GameGraphicsData(renderer, shaderPipeline);
+  //auto gameGraphicsData = GameGraphicsData(renderer, shaderPipeline);
+
+  std::vector<tz::Vertex> vertices =
+  {
+    {{-0.2, 0.2, 0}, {1, 1, 0}},
+    {{-0.2, -0.2, 0}, {0, 1, 1}},
+    {{0.2, -0.2, 0}, {0, 1, 1}}
+  };
+  auto triVertexBuffer = renderer->createBuffer(vertices.data(),
+                                                vertices.size() * sizeof(tz::Vertex),
+                                                tz::BufferUsage::Vertex);
+
+  tz::RenderState rs = {};
+  rs.primitiveType = tz::PrimitiveType::Triangles;
+  rs.cullMode = tz::CullMode::Back;
+  rs.blending = false;
+  rs.depthTesting = true;
+  rs.fillMode = tz::FillMode::Solid;
+  rs.frontFace = tz::FrontFace::CounterClockwise;
+  rs.stencilTesting = false;
+  tz::VertexLayout vertexLayout;
+  vertexLayout.bindings =
+    {tz::VertexBinding {
+      .bufferSlot = 0,
+      .stride = sizeof(tz::Vertex),
+      .vertexInputRate=tz::VertexInputRate::PerVertex,
+    }};
+  vertexLayout.attributes =
+    {
+      tz::VertexAttribute {
+        .shaderLocation = 0,
+        .bufferSlot = 0,
+        .dataType = tz::DataType::Float,
+        .componentCount = 3,
+        .offset = 0
+      }  ,
+      {
+        tz::VertexAttribute
+        {
+          .shaderLocation = 1,
+          .bufferSlot = 0,
+          .dataType = tz::DataType::Float,
+          .componentCount = 3,
+          .offset = sizeof(float) * 3
+        }
+      }
+    };
+
+  auto pso = renderer->createPipelineStateObject(rs, shaderPipeline,
+                                                   vertexLayout,
+                                                 {});
+
+  auto commandBuffer = renderer->createCommandBuffer();
 
   while (true)
   {
@@ -250,22 +302,22 @@ void runDemoVulkan()
       static float angle = 0.0f;
       angle += 0.0001f;
       transform.rotate(Eigen::AngleAxis(angle, Eigen::Vector3f::UnitZ()));
-      gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
+      //gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
     }
 
-    gameGraphicsData.commandBuffer->begin();
-    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindPipeline (gameGraphicsData.defaultPSO ));
-    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindVertexBuffers ({gameGraphicsData.triangleVertexBuffer}));
-    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
-    gameGraphicsData.commandBuffer->recordCommand(new tz::CmdDraw(3, 1, 0, 0));
-    gameGraphicsData.commandBuffer->end();
-    renderer->submitCommandBuffer(gameGraphicsData.commandBuffer);
 
-    // Ending the frame is where all the drawing & computation work is actually being
-    // done on the GPU.
-    // For legacy frameworks as OpenGL this means all the actual draw calls are done.
-    // For modern APIs such as Vulkan and DX12, it means the actual submission
-    // of their internal command buffers, fence waiting etc.
+    renderer->beginCommandBuffer(commandBuffer);
+    renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (pso ) );
+    // TODO command clear impl.
+    renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer}));
+    //renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
+    renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
+    renderer->endCommandBuffer(commandBuffer);
+    renderer->submitCommandBuffer(commandBuffer);
+
+
     renderer->endFrame();
 
 

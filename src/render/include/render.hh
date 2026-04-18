@@ -16,6 +16,12 @@
  */
 namespace tz {
 
+struct Vertex
+{
+  Eigen::Vector3f pos;
+  Eigen::Vector3f color;
+};
+
 enum class BufferUsage
 {
   Vertex,
@@ -203,6 +209,22 @@ class ShaderModule {
   virtual void* getHandle() = 0;
 };
 
+struct ViewPort
+{
+  int x;
+  int y;
+  int width;
+  int height;
+};
+
+struct Scissor
+{
+  int x;
+  int y;
+  int width;
+  int height;
+};
+
 /**
  * Represents a combination of different shader modules (or stages).
  * E.g. a vertex->fragmentShader pairing.
@@ -244,14 +266,26 @@ class CmdBindPipeline : public Command
 class CmdBindDescriptors : public Command
 {
   public:
-      CmdBindDescriptors(std::vector<Descriptor*> descs) : descriptors(descs)
-      {
-
-      }
+      CmdBindDescriptors(std::vector<Descriptor*> descs) : descriptors(descs) {}
 
       std::vector<Descriptor*> descriptors;
 };
 
+class CmdSetViewPorts : public Command
+{
+  public:
+      CmdSetViewPorts(std::vector<ViewPort> viewPorts) : viewPorts(viewPorts) {}
+
+      std::vector<ViewPort> viewPorts;
+};
+
+class CmdSetScissors : public Command
+{
+  public:
+      CmdSetScissors(std::vector<Scissor> scissors) : scissors(scissors) {}
+
+      std::vector<Scissor> scissors;
+};
 
 class CmdBindVertexBuffers : public Command
 {
@@ -337,14 +371,13 @@ class TZ_API Renderer
   virtual void submitCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
   virtual CommandBuffer* createCommandBuffer() = 0;
-  virtual void beginCommandBuffer(CommandBuffer* cb) = 0;
   virtual Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) = 0;
   virtual ShaderModule* createShaderModule(ShaderType types, const std::string& source) = 0;
   virtual ShaderPipeline* createShaderPipeline(const std::vector<ShaderModule*>& modules) = 0;
   virtual PipelineStateObject* createPipelineStateObject(RenderState& renderState,
                                              ShaderPipeline* shaderPipeline,
               VertexLayout& vertexLayout,
-              std::vector<DescriptorBinding>& descriptorBindings)
+              const std::vector<DescriptorBinding>& descriptorBindings)
   {
     auto pso =  new PipelineStateObject();
     pso->renderState = renderState;
@@ -353,6 +386,16 @@ class TZ_API Renderer
     pso->descriptorBindings = descriptorBindings;
     return pso;
   };
+
+  virtual void beginCommandBuffer(CommandBuffer* cb)
+  {
+
+  }
+
+  virtual void endCommandBuffer(CommandBuffer* cb)
+  {
+
+  }
 
   virtual void recordCommand(CommandBuffer* cb, Command* cmd)
   {
