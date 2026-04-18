@@ -232,9 +232,7 @@ void runDemoVulkan()
 
   auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
-
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
-  //auto gameGraphicsData = GameGraphicsData(renderer, shaderPipeline);
 
   std::vector<tz::Vertex> vertices =
   {
@@ -245,6 +243,16 @@ void runDemoVulkan()
   auto triVertexBuffer = renderer->createBuffer(vertices.data(),
                                                 vertices.size() * sizeof(tz::Vertex),
                                                 tz::BufferUsage::Vertex);
+
+  std::vector<tz::Vertex> vertices2 =
+    {
+      {{0.2, 0.4, 0}, {1, 0.5, 0}},
+      {{0.2, -0.5, 0}, {0.3, 1, 1}},
+      {{0.4, -0.5, 0}, {0.8, 1, 1}}
+    };
+  auto triVertexBuffer2 = renderer->createBuffer(vertices2.data(),
+                                                 vertices2.size() * sizeof (tz::Vertex),
+                                                 tz::BufferUsage::Vertex);
 
   tz::RenderState rs = {};
   rs.primitiveType = tz::PrimitiveType::Triangles;
@@ -292,8 +300,19 @@ void runDemoVulkan()
   {
     ws->pollEvents();
     renderer->beginFrame();
-    renderer->clearScreen();
+    renderer->beginCommandBuffer(commandBuffer);
 
+    // Next we record actual draw commands per mesh.
+    // We also can use more advanced features like instancing etc.
+    // but for now we keep it conceptually simple.
+    // There is general 2 different items we can draw:
+    // 1. different meshes, then we need a differently bound vertex buffer
+    // 2. same mesh, but at different locations: we reuse the same vertex buffer,
+    // but either bind different "transform descriptors" (matrices...) for each draw call
+    // or we have an instanced setup as mentioned above, where we can pass in many
+    // transforms in one draw call.
+
+    // TODO: actual transformation
     {
       static Eigen::Vector3f posOffset = {0, 0,0};
       posOffset += Eigen::Vector3f {0.000, -0.000, 0};
@@ -305,15 +324,21 @@ void runDemoVulkan()
       //gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
     }
 
-
-    renderer->beginCommandBuffer(commandBuffer);
     renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (pso ) );
-    // TODO command clear impl.
     renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
     renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
+
+    // first triangle:
     renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer}));
     //renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
     renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
+
+    // second triangle:
+    renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer2}));
+    //renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({gameGraphicsData.transformDescriptor}));
+    renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
+
+
     renderer->endCommandBuffer(commandBuffer);
     renderer->submitCommandBuffer(commandBuffer);
 

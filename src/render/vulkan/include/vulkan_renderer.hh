@@ -207,7 +207,7 @@ class TZ_API VulkanRenderer : public Renderer
   void createGraphicsPipeline();
   void createCommandPool();
   void createDefaultCommandBuffer();
-  void recordCommandBuffer(uint32_t imageIndex);
+  void recordDefaultCommandBuffer();
   void transitionImageLayout( uint32_t imageIndex,
                              vk::ImageLayout oldLayout,
                              vk::ImageLayout newLayout,
@@ -248,7 +248,7 @@ class TZ_API VulkanRenderer : public Renderer
   vk::raii::CommandPool commandPool = nullptr;
   vk::raii::CommandBuffer commandBuffer = nullptr;
 
-  uint32_t imageIndex = 0;
+  uint32_t currentFrameIndex = 0;
 
   // Synchronization primitives:
   vk::raii::Semaphore presentCompleteSemaphore = nullptr;

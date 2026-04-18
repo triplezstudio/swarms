@@ -67,9 +67,8 @@ void tz::render::vulkan::VulkanRenderer::beginFrame()
   }
   device.resetFences(*drawFence);
 
-  auto [result, image] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphore, nullptr);
-  imageIndex = image;
-  recordCommandBuffer(imageIndex);
+  auto [result, nextFrameIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphore, nullptr);
+  currentFrameIndex    = nextFrameIndex;
 }
 void tz::render::vulkan::VulkanRenderer::endFrame()
 {
@@ -94,8 +93,7 @@ void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* cb)
     .pWaitSemaphores = &*renderFinishedSemaphore,
     .swapchainCount = 1,
     .pSwapchains = &*swapChain,
-    .pImageIndices = &imageIndex
-  };
+    .pImageIndices = &currentFrameIndex};
 
   auto result = graphicsQueue.presentKHR(presentInfoKhr);
 
@@ -521,7 +519,7 @@ void tz::render::vulkan::VulkanRenderer::transitionImageLayout(
     .setNewLayout(newLayout)
     .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
     .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-    .setImage(swapChainImages[imageIndex])
+    .setImage(swapChainImages[currentFrameIndex])
     .setSubresourceRange({
       .aspectMask = vk::ImageAspectFlagBits::eColor,
       .baseMipLevel = 0,
@@ -571,16 +569,19 @@ void tz::render::vulkan::VulkanRenderer::transitionImageLayout(
 
 }
 
-void tz::render::vulkan::VulkanRenderer::recordCommandBuffer(uint32_t imageIndex)
+/**
+ * This function is mainly a PoC and just hardcodes some commands.
+ * TOTO probably remove after initial implementation stages!?
+ * @param imageIndex    The current "frame-in-flight"
+ */
+void tz::render::vulkan::VulkanRenderer::recordDefaultCommandBuffer()
 {
 
   vk::CommandBufferBeginInfo beginInfo;
   // Currently we do not use the beginInfo:
   commandBuffer.begin({});
 
-
-  transitionImageLayout(
-    imageIndex,
+  transitionImageLayout(currentFrameIndex,
     vk::ImageLayout::eUndefined,
     vk::ImageLayout::eColorAttachmentOptimal,
     {}, // no need to wait for the src access part
@@ -592,7 +593,7 @@ void tz::render::vulkan::VulkanRenderer::recordCommandBuffer(uint32_t imageIndex
 
   vk::ClearValue clearColor = vk::ClearColorValue(0, 0, 0, 1);
   vk::RenderingAttachmentInfo attachmentInfo;
-  attachmentInfo.setImageView(swapChainImageViews[imageIndex])
+  attachmentInfo.setImageView(swapChainImageViews[currentFrameIndex])
   .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
   .setLoadOp(vk::AttachmentLoadOp::eClear)
   .setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -613,8 +614,7 @@ void tz::render::vulkan::VulkanRenderer::recordCommandBuffer(uint32_t imageIndex
   commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0,0), swapExtent));
   commandBuffer.draw(3, 1, 0, 0);
   commandBuffer.endRendering();
-  transitionImageLayout(
-    imageIndex,
+  transitionImageLayout(currentFrameIndex,
     vk::ImageLayout::eColorAttachmentOptimal,
     vk::ImageLayout::ePresentSrcKHR,
     vk::AccessFlagBits2::eColorAttachmentWrite,
@@ -741,11 +741,23 @@ tz::CommandBuffer *tz::render::vulkan::VulkanRenderer::createCommandBuffer()
 
 vk::raii::CommandBuffer& tz::render::vulkan::VulkanRenderer::getCommandBufferForCurrentFrame(tz::CommandBuffer* cb)
 {
-  auto& cfb = dynamic_cast<VulkanCommandBuffer*>(cb)->getCommandBufferForImage(imageIndex);
+  auto& cfb = dynamic_cast<VulkanCommandBuffer*>(cb)->getCommandBufferForImage(currentFrameIndex);
   return cfb;
 }
 
 
+/**
+ * Marks the start of the recording process of the command buffer.
+ * The passed in logical commandbuffer internally holds as many "real"
+ * vulkan command buffers as we have "framesInFlight".
+ * So for example 2 for double buffering, 3 for triple buffering and so on.
+ * First thing is always to grab the actual current vulkan commandbuffer to
+ * render into.
+ *
+ * We are also currently implicitely clearing the main swapchain "framebuffer" now.
+ *
+ * @param cb    The "logical" API commandbuffer object. Wrapper for the real vulkan command buffers.
+ */
 void tz::render::vulkan::VulkanRenderer::beginCommandBuffer(tz::CommandBuffer *cb)
 {
 
@@ -764,7 +776,7 @@ void tz::render::vulkan::VulkanRenderer::beginCommandBuffer(tz::CommandBuffer *c
 
   vk::ClearValue clearColor = vk::ClearColorValue(0, 0, 0, 1);
   vk::RenderingAttachmentInfo attachmentInfo;
-  attachmentInfo.setImageView(swapChainImageViews[imageIndex])
+  attachmentInfo.setImageView(swapChainImageViews[currentFrameIndex])
     .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
     .setLoadOp(vk::AttachmentLoadOp::eClear)
     .setStoreOp(vk::AttachmentStoreOp::eStore)
