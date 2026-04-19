@@ -502,6 +502,65 @@ void tz::render::vulkan::VulkanRenderer::createDefaultCommandBuffer()
   commandBuffer = std::move(vk::raii::CommandBuffers(device, allocInfo).front());
 }
 
+/**
+ * This method specifically transfers images from one layout to another.
+ * @param image
+ * @param oldLayout
+ * @param newLayout
+ */
+void tz::render::vulkan::VulkanRenderer::transitionImageLayout(const vk::raii::Image& image,
+                                                               vk::ImageLayout oldLayout,
+                                                               vk::ImageLayout newLayout)
+{
+  auto cb = beginOneTimeCommandbuffer();
+  vk::ImageMemoryBarrier barrier;
+  barrier.oldLayout        = oldLayout;
+  barrier.newLayout        = newLayout;
+  barrier.image            = image;
+  barrier.subresourceRange = vk::ImageSubresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+  // For defining the source and destination stage during the barrier operation,
+  // we check for some specific situations.
+  vk::PipelineStageFlags sourceStage;
+  vk::PipelineStageFlags destinationStage;
+
+  if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal)
+  {
+    barrier.srcAccessMask = {};
+    barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+    sourceStage           = vk::PipelineStageFlagBits::eTopOfPipe;
+    destinationStage      = vk::PipelineStageFlagBits::eTransfer;
+  }
+  else if (oldLayout == vk::ImageLayout::eTransferDstOptimal
+           && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+  {
+    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+    sourceStage           = vk::PipelineStageFlagBits::eTransfer;
+    destinationStage      = vk::PipelineStageFlagBits::eFragmentShader;
+  }
+  else
+  {
+    throw std::invalid_argument("unsupported image layout transition!");
+  }
+
+  cb.pipelineBarrier(sourceStage, destinationStage, {}, {}, nullptr, barrier);
+  endOneTimeCommandBuffer(cb);
+}
+
+void tz::render::vulkan::VulkanRenderer::copyBufferToImage(const vk::raii::Buffer& buffer, vk::raii::Image& image, uint32_t width, uint32_t height)
+{
+  auto cb = beginOneTimeCommandbuffer();
+  vk::BufferImageCopy region;
+  region.bufferOffset = 0;
+  region.bufferRowLength = 0;
+  region.bufferImageHeight = 0;
+  region.imageSubresource = { vk::ImageAspectFlagBits::eColor, 0, 0, 1};
+  region.imageOffset = {0, 0, 0};
+  region.imageExtent = {width, height, 1};
+  cb.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, {region});
+  endOneTimeCommandBuffer(cb);
+}
+
 void tz::render::vulkan::VulkanRenderer::transitionImageLayout(
   tz::CommandBuffer* cb,
   vk::ImageLayout oldLayout,
@@ -1211,12 +1270,53 @@ tz::DescriptorSetLayout *tz::render::vulkan::VulkanRenderer::createDescriptorSet
   auto dsLayout = new tz::render::vulkan::VulkanDescriptorSetLayout(std::move(descriptorLayout));
   return dsLayout;
 }
+
+vk::raii::CommandBuffer tz::render::vulkan::VulkanRenderer::beginOneTimeCommandbuffer()
+{
+  vk::CommandBufferAllocateInfo allocInfo;
+  allocInfo.commandPool = commandPool;
+  allocInfo.level = vk::CommandBufferLevel::ePrimary;
+  allocInfo.commandBufferCount = 1;
+  auto cb = std::move(device.allocateCommandBuffers(allocInfo).front());
+
+  vk::CommandBufferBeginInfo beginInfo;
+  beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+  cb.begin(beginInfo);
+  return cb;
+}
+
+void tz::render::vulkan::VulkanRenderer::endOneTimeCommandBuffer(vk::raii::CommandBuffer& cb)
+{
+  cb.end();
+  vk::SubmitInfo submitInfo;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &*cb;
+  graphicsQueue.submit(submitInfo, nullptr);
+  graphicsQueue.waitIdle();
+
+
+};
+
+void tz::render::vulkan::VulkanRenderer::copyBuffer(vk::raii::Buffer& srcBuffer,
+                                                    vk::raii::Buffer& targetBuffer, vk::DeviceSize size)
+{
+  vk::raii::CommandBuffer cb = beginOneTimeCommandbuffer();
+  cb.copyBuffer(srcBuffer, targetBuffer, vk::BufferCopy(0, 0, size));
+  endOneTimeCommandBuffer(cb);
+}
+
 tz::Texture *tz::render::vulkan::VulkanRenderer::createTexture(tz::Image *image)
 {
+  auto vImage = reinterpret_cast<tz::render::vulkan::VulkanImage*>(image);
   // First we create an image view:
   vk::ImageViewCreateInfo viewInfo;
-  viewInfo.image = reinterpret_cast<tz::render::vulkan::VulkanImage*>(image)->getImage();
+  viewInfo.image = vImage->getImage();
   viewInfo.format = vk::Format::eR8G8B8A8Srgb;
+
+  transitionImageLayout(vImage->getRaiiImage(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+  copyBufferToImage(vImage->getStagingBuffer(), vImage->getRaiiImage(), vImage->width, vImage->height);
+  transitionImageLayout(vImage->getRaiiImage(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+
   //viewInfo.
   // TODO wip
   return nullptr;
@@ -1273,6 +1373,8 @@ tz::Image *tz::render::vulkan::VulkanRenderer::createImage(tz::BitmapData bitmap
   allocInfo.memoryTypeIndex = findMemoryType(memReqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
   imageMemory = vk::raii::DeviceMemory(device, allocInfo);
   image.bindMemory(imageMemory, 0);
-  auto vulkanImage = new tz::render::vulkan::VulkanImage(std::move(image), std::move(imageMemory));
+  auto vulkanImage = new tz::render::vulkan::VulkanImage(std::move(image), std::move(imageMemory), std::move(stagingBuffer->pullOutBuffer()));
+  vulkanImage->width = bitmapData.width;
+  vulkanImage->height = bitmapData.height;
   return vulkanImage;
 }

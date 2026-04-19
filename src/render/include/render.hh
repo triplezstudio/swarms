@@ -220,6 +220,8 @@ struct Image
 {
   uint8_t* pixels;
   size_t size = 0;
+  uint32_t width = 0;
+  uint32_t height = 0;
 };
 
 struct ImageView

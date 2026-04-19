@@ -119,12 +119,22 @@ class VulkanDescriptorBinding : public tz::DescriptorBinding
 class VulkanImage : public tz::Image
 {
   public:
-      VulkanImage(vk::raii::Image&& image, vk::raii::DeviceMemory&& imageMemory)
-      : image(std::move(image)), imageMemory(std::move(imageMemory)){}
+      VulkanImage(vk::raii::Image&& image, vk::raii::DeviceMemory&& imageMemory, vk::raii::Buffer&& stagingBuffer)
+      : image(std::move(image)), imageMemory(std::move(imageMemory)), stagingBuffer(std::move(stagingBuffer)) {}
+
+      vk::raii::Image& getRaiiImage()
+      {
+        return image;
+      }
 
       vk::Image getImage()
       {
         return *image;
+      }
+
+      vk::raii::Buffer& getStagingBuffer()
+      {
+        return stagingBuffer;
       }
 
       vk::DeviceMemory getMemory()
@@ -135,6 +145,7 @@ class VulkanImage : public tz::Image
   private:
       vk::raii::Image image;
       vk::raii::DeviceMemory imageMemory;
+      vk::raii::Buffer stagingBuffer;
 };
 
 class VulkanBuffer : public tz::Buffer
@@ -392,6 +403,16 @@ class TZ_API VulkanRenderer : public Renderer
                              vk::PipelineStageFlags2 srcStageMask,
                              vk::PipelineStageFlags2 dstStageMask);
   VulkanBuffer *createStagingBuffer(size_t sizeInBytes);
+  vk::raii::CommandBuffer beginOneTimeCommandbuffer();
+  void endOneTimeCommandBuffer(vk::raii::CommandBuffer &cb);
+  void copyBuffer(vk::raii::Buffer &srcBuffer, vk::raii::Buffer &targetBuffer, vk::DeviceSize size);
+  void transitionImageLayout(const vk::raii::Image &image,
+                             vk::ImageLayout oldLayout,
+                             vk::ImageLayout newLayout);
+  void copyBufferToImage(const vk::raii::Buffer &buffer,
+                         vk::raii::Image &image,
+                         uint32_t width,
+                         uint32_t height);
 };
 
 vk::DescriptorType toVulkanDescriptorType(ResourceType resourceType);
