@@ -838,6 +838,13 @@ void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz
                                                  nullptr);
   }
 
+  else if (auto c = dynamic_cast<CmdBindIndexBuffer*>(cmd))
+  {
+    auto vib = reinterpret_cast<tz::render::vulkan::VulkanBuffer*>(c->indexBuffer);
+    auto indexBuffer = vib->getBuffer();
+    currentFrameCommandBuffer.bindIndexBuffer(indexBuffer, c->offset, vk::IndexType::eUint32);
+  }
+
   else if (auto c = dynamic_cast<CmdBindVertexBuffers*>(cmd))
   {
     std::vector<vk::Buffer> rawBuffers;

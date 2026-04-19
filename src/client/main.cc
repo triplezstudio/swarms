@@ -298,13 +298,23 @@ void runDemoVulkan()
 
   std::vector<tz::Vertex> vertices2 =
     {
-      {{0.2, 0.4, 0.5}, {1, 0.5, 0}},
+      {{0.2, 0.5, 0.5}, {1, 0.5, 0}},
       {{0.2, -0.5, 0.5}, {0.3, 1, 1}},
-      {{0.4, -0.5, 0.5}, {0.8, 1, 1}}
+      {{0.4, -0.5, 0.5}, {0.8, 1, 1}},
+      {{0.4, 0.5, 0.5}, {0.3, 0.3, 0.5}}
+    };
+  std::vector<uint32_t> indices =
+    {
+      0, 1, 2,
+      0, 2, 3
     };
   auto triVertexBuffer2 = renderer->createBuffer(vertices2.data(),
                                                  vertices2.size() * sizeof (tz::Vertex),
                                                  tz::BufferUsage::Vertex);
+
+  auto quadIndexBuffer = renderer->createBuffer(indices.data(),
+                                                indices.size() * sizeof(uint32_t),
+                                                tz::BufferUsage::Index);
 
   // Descriptor layout and binding for the transformation matrix:
   // First we create the model, view, projection matrices:
@@ -402,15 +412,16 @@ void runDemoVulkan()
     renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
     renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
 
-    // first triangle:
+    // triangle:
     renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer}));
     renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({descriptorSet}, pso));
     renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
 
-    // second triangle:
+    // quad::
     renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer2}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
     renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({descriptorSet}, pso));
-    renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
+    renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(indices.size(), 1, 0, 0, 0));
 
 
     renderer->endCommandBuffer(commandBuffer);

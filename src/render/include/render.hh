@@ -333,6 +333,15 @@ class CmdSetScissors : public Command
       std::vector<Scissor> scissors;
 };
 
+class CmdBindIndexBuffer : public Command
+{
+  public:
+      CmdBindIndexBuffer(Buffer* buffer, uint32_t offset) : indexBuffer(buffer), offset(offset) {}
+
+      Buffer* indexBuffer;
+      uint32_t offset;
+};
+
 class CmdBindVertexBuffers : public Command
 {
   public:
