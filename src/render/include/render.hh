@@ -342,6 +342,22 @@ class CmdBindVertexBuffers : public Command
   std::vector<Buffer*> vertexBuffers;
 };
 
+class CmdDrawIndexed : public Command
+{
+  public:
+      CmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
+                      uint32_t vertexOffset, uint32_t firstInstance) :
+                      indexCount(indexCount), instanceCount(instanceCount), firstIndex(firstIndex),
+                      vertexOffset(vertexOffset), firstInstance(firstInstance) {}
+
+      uint32_t indexCount;
+      uint32_t instanceCount;
+      uint32_t firstIndex;
+      uint32_t vertexOffset;
+      uint32_t firstInstance;
+
+};
+
 class CmdDraw : public Command
 {
   public:

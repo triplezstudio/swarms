@@ -306,7 +306,8 @@ void runDemoVulkan()
                                                  vertices2.size() * sizeof (tz::Vertex),
                                                  tz::BufferUsage::Vertex);
 
-  // Descriptor layout and binding:
+  // Descriptor layout and binding for the transformation matrix:
+  // First we create the model, view, projection matrices:
   auto transform = Eigen::Affine3f::Identity();
   transform.translate(Eigen::Vector3f(-0.08, -0.08, 0));
   Eigen::Matrix4f tm = transform.matrix();
@@ -317,13 +318,13 @@ void runDemoVulkan()
   transformUBO.view = lookAt({0, 0, -1.17}, {0, 0, 0}, {0, 1,0});
   transformUBO.proj = perspective(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
 
-
-  //auto transformBuffer = renderer->createBuffer(&transform, vm.size() * sizeof(Eigen::Matrix4f), tz::BufferUsage::Uniform);
+  // Next we store the matrices data into a buffer and setup the descriptor bindings, layouts and sets:
   auto transformBuffer = renderer->createMultiframeBuffer(&transformUBO, sizeof(transformUBO), tz::BufferUsage::Uniform);
   auto transformDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo, tz::ShaderType::Vertex, 1);
   auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding});
   auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout, transformBuffer);
 
+  // Prepare the pipeline state object
   tz::RenderState rs = {};
   rs.primitiveType = tz::PrimitiveType::Triangles;
   rs.cullMode = tz::CullMode::Back;
@@ -366,8 +367,7 @@ void runDemoVulkan()
 
 
 
-  //auto createdDescriptor = renderer->createMultiframeDescriptors(transformDescriptor);
-
+  // We create the commandbuffer once and record into it every frame:
   auto commandBuffer = renderer->createCommandBuffer();
 
   while (true)

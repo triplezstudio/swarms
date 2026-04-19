@@ -60,16 +60,19 @@ void tz::render::vulkan::VulkanRenderer::emitNormal(Eigen::Vector3f normal)
 
 void tz::render::vulkan::VulkanRenderer::beginFrame()
 {
-  auto fenceResult = device.waitForFences(*drawFence, vk::True, UINT64_MAX);
+  currentFrameIndex    = (currentFrameIndex + 1) % maxFramesInFlight;
+  auto fenceResult = device.waitForFences(*drawFences[currentFrameIndex], vk::True, UINT64_MAX);
   if (fenceResult != vk::Result::eSuccess)
   {
     throw std::runtime_error("failed to wait for fence!");
   }
-  device.resetFences(*drawFence);
+  device.resetFences(*drawFences[currentFrameIndex]);
 
-  auto [result, nextFrameIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphore, nullptr);
-  currentFrameIndex    = nextFrameIndex;
+  auto [result, nextImageIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[currentFrameIndex], nullptr);
+
+  imageIndex = nextImageIndex;
 }
+
 void tz::render::vulkan::VulkanRenderer::endFrame()
 {
 
@@ -79,21 +82,21 @@ void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* cb)
   auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
   vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
   const vk::SubmitInfo submitInfo {.waitSemaphoreCount = 1,
-                                    .pWaitSemaphores = &*presentCompleteSemaphore,
+                                    .pWaitSemaphores = &*presentCompleteSemaphores[currentFrameIndex],
                                     .pWaitDstStageMask = &waitDestinationStageMask,
                                     .commandBufferCount = 1,
                                     .pCommandBuffers = &*currentFrameCommandBuffer,
                                     .signalSemaphoreCount = 1,
-                                    .pSignalSemaphores = &*renderFinishedSemaphore};
+                                    .pSignalSemaphores = &*renderFinishedSemaphores[currentFrameIndex]};
 
-  graphicsQueue.submit(submitInfo, *drawFence);
+  graphicsQueue.submit(submitInfo, *drawFences[currentFrameIndex]);
 
   const vk::PresentInfoKHR presentInfoKhr {
     .waitSemaphoreCount = 1,
-    .pWaitSemaphores = &*renderFinishedSemaphore,
+    .pWaitSemaphores = &*renderFinishedSemaphores[currentFrameIndex],
     .swapchainCount = 1,
     .pSwapchains = &*swapChain,
-    .pImageIndices = &currentFrameIndex};
+    .pImageIndices = &imageIndex};
 
   auto result = graphicsQueue.presentKHR(presentInfoKhr);
 
@@ -519,7 +522,7 @@ void tz::render::vulkan::VulkanRenderer::transitionImageLayout(
     .setNewLayout(newLayout)
     .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
     .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-    .setImage(swapChainImages[currentFrameIndex])
+    .setImage(swapChainImages[imageIndex])
     .setSubresourceRange({
       .aspectMask = vk::ImageAspectFlagBits::eColor,
       .baseMipLevel = 0,
@@ -593,7 +596,7 @@ void tz::render::vulkan::VulkanRenderer::recordDefaultCommandBuffer()
 
   vk::ClearValue clearColor = vk::ClearColorValue(0, 0, 0, 1);
   vk::RenderingAttachmentInfo attachmentInfo;
-  attachmentInfo.setImageView(swapChainImageViews[currentFrameIndex])
+  attachmentInfo.setImageView(swapChainImageViews[imageIndex])
   .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
   .setLoadOp(vk::AttachmentLoadOp::eClear)
   .setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -627,9 +630,18 @@ void tz::render::vulkan::VulkanRenderer::recordDefaultCommandBuffer()
 
 void tz::render::vulkan::VulkanRenderer::createSyncObjects()
 {
-  presentCompleteSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo());
-  renderFinishedSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo());
-  drawFence = vk::raii::Fence(device, {.flags = vk::FenceCreateFlagBits::eSignaled});
+
+  for (size_t i = 0; i < swapChainImages.size(); i++)
+  {
+    renderFinishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+  }
+
+  for (size_t i = 0; i < maxFramesInFlight; i++)
+  {
+    presentCompleteSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
+    drawFences.emplace_back(device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
+
+  }
 
 }
 
@@ -765,6 +777,7 @@ void tz::render::vulkan::VulkanRenderer::beginCommandBuffer(tz::CommandBuffer *c
 {
 
   auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
+  currentFrameCommandBuffer.reset();
   currentFrameCommandBuffer.begin({});
 
   transitionImageLayout(
@@ -779,7 +792,7 @@ void tz::render::vulkan::VulkanRenderer::beginCommandBuffer(tz::CommandBuffer *c
 
   vk::ClearValue clearColor = vk::ClearColorValue(0, 0, 0, 1);
   vk::RenderingAttachmentInfo attachmentInfo;
-  attachmentInfo.setImageView(swapChainImageViews[currentFrameIndex])
+  attachmentInfo.setImageView(swapChainImageViews[imageIndex])
     .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
     .setLoadOp(vk::AttachmentLoadOp::eClear)
     .setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -842,6 +855,10 @@ void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz
   else if (auto c = dynamic_cast<CmdDraw*>(cmd))
   {
     currentFrameCommandBuffer.draw(static_cast<uint32_t>(c->vertexCount), c->instanceCount, c->firstVertex, c->firstInstance);
+  }
+  else if (auto c = dynamic_cast<CmdDrawIndexed*>(cmd))
+  {
+    currentFrameCommandBuffer.drawIndexed(c->indexCount, c->instanceCount, c->firstIndex, c->vertexOffset, c->firstInstance);
   }
 
   else if (auto c = dynamic_cast<CmdSetViewPorts*>(cmd))
@@ -1034,7 +1051,7 @@ void tz::render::vulkan::VulkanRenderer::endCommandBuffer(tz::CommandBuffer *cb)
     vk::ImageLayout::eColorAttachmentOptimal,
     vk::ImageLayout::ePresentSrcKHR,
     vk::AccessFlagBits2::eColorAttachmentWrite,
-    {},
+    vk::AccessFlagBits2::eNone,
     vk::PipelineStageFlagBits2::eColorAttachmentOutput,
     vk::PipelineStageFlagBits2::eBottomOfPipe
   );

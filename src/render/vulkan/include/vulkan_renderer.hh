@@ -334,11 +334,12 @@ class TZ_API VulkanRenderer : public Renderer
   vk::raii::CommandBuffer commandBuffer = nullptr;
 
   uint32_t currentFrameIndex = 0;
+  uint32_t imageIndex;
 
   // Synchronization primitives:
-  vk::raii::Semaphore presentCompleteSemaphore = nullptr;
-  vk::raii::Semaphore renderFinishedSemaphore = nullptr;
-  vk::raii::Fence drawFence = nullptr;
+  std::vector<vk::raii::Semaphore> presentCompleteSemaphores;
+  std::vector<vk::raii::Semaphore> renderFinishedSemaphores;
+  std::vector<vk::raii::Fence> drawFences;
 
   uint32_t graphicsQueueIndex = 0;
   std::vector<vk::Image> swapChainImages;
