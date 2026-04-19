@@ -1114,7 +1114,7 @@ tz::Buffer *tz::render::vulkan::VulkanRenderer::createMultiframeBuffer(void *ini
   {
     auto b = dynamic_cast<VulkanBuffer*>(createBuffer(initialData, sizeInBytes, bufferUsage));
     auto vulkanBuffer = vk::raii::Buffer(device, b->getBuffer());
-    auto vulkanMemory = vk::raii::DeviceMemory(device, b->getMemory());
+    auto vulkanMemory = vk::raii::DeviceMemory(device, b->getMemoryHandle());
     vulkanBuffers.push_back(std::move(vulkanBuffer));
     memories.push_back(std::move(vulkanMemory));
   }
@@ -1210,4 +1210,69 @@ tz::DescriptorSetLayout *tz::render::vulkan::VulkanRenderer::createDescriptorSet
 
   auto dsLayout = new tz::render::vulkan::VulkanDescriptorSetLayout(std::move(descriptorLayout));
   return dsLayout;
+}
+tz::Texture *tz::render::vulkan::VulkanRenderer::createTexture(tz::Image *image)
+{
+  // First we create an image view:
+  vk::ImageViewCreateInfo viewInfo;
+  viewInfo.image = reinterpret_cast<tz::render::vulkan::VulkanImage*>(image)->getImage();
+  viewInfo.format = vk::Format::eR8G8B8A8Srgb;
+  //viewInfo.
+  // TODO wip
+  return nullptr;
+}
+
+tz::render::vulkan::VulkanBuffer* tz::render::vulkan::VulkanRenderer::createStagingBuffer(size_t sizeInBytes)
+{
+  vk::BufferCreateInfo createInfo;
+  createInfo.setSize(sizeInBytes);
+  createInfo.setUsage(vk::BufferUsageFlagBits::eTransferSrc);
+  createInfo.setSharingMode(vk::SharingMode::eExclusive);
+  auto b = vk::raii::Buffer(device, createInfo);
+
+  // Allocating memory for the buffer and binding it to the buffer:
+  vk::MemoryRequirements memRequirements = b.getMemoryRequirements();
+  vk::MemoryAllocateInfo memoryAllocateInfo;
+  memoryAllocateInfo.allocationSize = memRequirements.size;
+  memoryAllocateInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits,
+                                      vk::MemoryPropertyFlagBits::eHostVisible |
+                                                vk::MemoryPropertyFlagBits::eHostCoherent);
+  vk::raii::DeviceMemory bufferMemory = vk::raii::DeviceMemory(device,memoryAllocateInfo);
+  b.bindMemory(*bufferMemory, 0);
+
+  return new VulkanBuffer(std::move(b), std::move(bufferMemory));
+}
+
+tz::Image *tz::render::vulkan::VulkanRenderer::createImage(tz::BitmapData bitmapData)
+{
+  vk::DeviceSize  imageSize = bitmapData.width * bitmapData.height * 4;
+  auto stagingBuffer = createStagingBuffer(imageSize);
+  void* targetData = stagingBuffer->getMemory().mapMemory(0, imageSize);
+  memcpy(targetData, bitmapData.pixels, imageSize);
+  stagingBuffer->getMemory().unmapMemory();
+  // TODO we may actually cleanup the pixel array now. otoh we should not do this here!
+
+  vk::raii::Image image = nullptr;
+  vk::raii::DeviceMemory imageMemory = nullptr;
+
+  vk::ImageCreateInfo imageInfo;
+  imageInfo.imageType = vk::ImageType::e2D;
+  imageInfo.format = vk::Format::eR8G8B8A8Srgb;
+  imageInfo.extent = {bitmapData.width, bitmapData.height, 1};
+  imageInfo.mipLevels = 1;
+  imageInfo.arrayLayers = 1;
+  imageInfo.samples = vk::SampleCountFlagBits::e1;
+  imageInfo.tiling = vk::ImageTiling::eOptimal;
+  imageInfo.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+  imageInfo.sharingMode = vk::SharingMode::eExclusive;
+  image = vk::raii::Image(device, imageInfo);
+
+  auto memReqs = image.getMemoryRequirements();
+  vk::MemoryAllocateInfo allocInfo;
+  allocInfo.allocationSize = memReqs.size;
+  allocInfo.memoryTypeIndex = findMemoryType(memReqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  imageMemory = vk::raii::DeviceMemory(device, allocInfo);
+  image.bindMemory(imageMemory, 0);
+  auto vulkanImage = new tz::render::vulkan::VulkanImage(std::move(image), std::move(imageMemory));
+  return vulkanImage;
 }

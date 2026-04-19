@@ -116,6 +116,26 @@ class VulkanDescriptorBinding : public tz::DescriptorBinding
   vk::DescriptorSetLayoutBinding descSetLayoutBinding;
 };
 
+class VulkanImage : public tz::Image
+{
+  public:
+      VulkanImage(vk::raii::Image&& image, vk::raii::DeviceMemory&& imageMemory)
+      : image(std::move(image)), imageMemory(std::move(imageMemory)){}
+
+      vk::Image getImage()
+      {
+        return *image;
+      }
+
+      vk::DeviceMemory getMemory()
+      {
+        return *imageMemory;
+      }
+
+  private:
+      vk::raii::Image image;
+      vk::raii::DeviceMemory imageMemory;
+};
 
 class VulkanBuffer : public tz::Buffer
 {
@@ -173,9 +193,14 @@ class VulkanBuffer : public tz::Buffer
     return multiMemories[index];
   }
 
-  vk::DeviceMemory getMemory()
+  vk::DeviceMemory getMemoryHandle()
   {
     return *memory;
+  }
+
+  vk::raii::DeviceMemory& getMemory()
+  {
+    return memory;
   }
 
   void bind() override
@@ -271,6 +296,8 @@ class TZ_API VulkanRenderer : public Renderer
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
   CommandBuffer * createCommandBuffer() override;
   DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout, Buffer* multiFrameBuffer) override;
+  Texture * createTexture(Image* image) override;
+  Image * createImage(tz::BitmapData bitmapData) override;
   void beginCommandBuffer(tz::CommandBuffer *cb) override;
   void endCommandBuffer(tz::CommandBuffer *cb) override;
   void recordCommand(tz::CommandBuffer* cb, tz::Command *cmd) override;
@@ -364,6 +391,7 @@ class TZ_API VulkanRenderer : public Renderer
                              vk::AccessFlags2 dstAccessMask,
                              vk::PipelineStageFlags2 srcStageMask,
                              vk::PipelineStageFlags2 dstStageMask);
+  VulkanBuffer *createStagingBuffer(size_t sizeInBytes);
 };
 
 vk::DescriptorType toVulkanDescriptorType(ResourceType resourceType);

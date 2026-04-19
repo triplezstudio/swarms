@@ -218,7 +218,8 @@ struct RenderState
 
 struct Image
 {
-
+  uint8_t* pixels;
+  size_t size = 0;
 };
 
 struct ImageView
@@ -235,7 +236,7 @@ struct Texture
 {
   Image image;
   ImageView imageView;
-  Sampler sampler;
+  Sampler* sampler;
 
 };
 
@@ -267,6 +268,7 @@ struct Scissor
   int width;
   int height;
 };
+
 
 /**
  * Represents a combination of different shader modules (or stages).
@@ -418,6 +420,15 @@ struct Mesh
   std::vector<uint32_t> indices;
 };
 
+struct BitmapData
+{
+  uint8_t* pixels;
+  uint32_t width;
+  uint32_t height;
+};
+
+BitmapData loadBitmapDataFromPath(const std::string & imagePath);
+
 template<typename T>
 class TZ_API BufferFactory
 {
@@ -441,6 +452,12 @@ class TZ_API Renderer
   virtual void endFrame() = 0;
   virtual void submitCommandBuffer(CommandBuffer* commandBuffer) = 0;
 
+  virtual Image* createImage(BitmapData bitmapData)
+  {
+    return nullptr;
+  };
+  virtual Sampler* createSampler() { return nullptr; }
+  virtual Texture* createTexture(Image* image) { return nullptr;}
   virtual CommandBuffer* createCommandBuffer() = 0;
   virtual Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) = 0;
   virtual Buffer* createMultiframeBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage)
@@ -502,5 +519,6 @@ class TZ_API Renderer
   }
 
 };
+
 
 }
