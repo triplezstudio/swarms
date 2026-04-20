@@ -1,29 +1,29 @@
 
 #include "MotionSystem.hh"
+#include "EntityRegistry.hh"
+#include "TransformComponent.hh"
 #include "VectorUtils.hh"
+#include "VelocityComponent.hh"
 
 namespace swarms::core {
-// namespace {
-// bool isEntityRelevant(const Entity &ent)
-// {
-//   return ent.exists<TransformComponent>() && ent.exists<VelocityComponent>();
-// }
-// } // namespace
-
-void MotionSystem::update(const time::TickData & /*data*/) const
+namespace {
+void simulate(TransformComponent &transform, VelocityComponent &velocity, const time::TickData &data)
 {
-  // auto &velocity  = entity.velocityComp();
-  // auto &transform = entity.transformComp();
+  velocity.simulate(data);
+  transform.simulate(data);
 
-  // velocity.update(data);
+  const Eigen::Vector3d speed = velocity.speed();
+  Eigen::Vector3d dv          = speed * data.elapsed;
+  transform.translate(dv);
+}
+} // namespace
 
-  // const Eigen::Vector3f speed = velocity.speed();
-  // Eigen::Vector3f dv          = speed * data.elapsed;
-  // transform.translate(dv);
-  // if (!speed.isZero())
-  // {
-  //   transform.setHeading(std::atan2(speed(0), speed(1)));
-  // }
+void MotionSystem::update(const time::TickData &data, EntityRegistry &registry) const
+{
+  registry.apply<TransformComponent, VelocityComponent>(
+    [&data](TransformComponent &transform, VelocityComponent &velocity) {
+      simulate(transform, velocity, data);
+    });
 }
 
 } // namespace swarms::core

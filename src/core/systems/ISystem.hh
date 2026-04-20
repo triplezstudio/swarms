@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "EntityRegistry.hh"
 #include "TickData.hh"
 #include <memory>
 
@@ -12,7 +13,7 @@ class ISystem
   ISystem()          = default;
   virtual ~ISystem() = default;
 
-  virtual void update(const time::TickData &data) const = 0;
+  virtual void update(const time::TickData &data, EntityRegistry &registry) const = 0;
 };
 
 using ISystemPtr = std::unique_ptr<ISystem>;

@@ -10,7 +10,7 @@ template<class Component, class... Args>
 inline void IEnvironment::addComponent(const Uuid entityId, Args &&...args)
 {
   Component component(std::forward<Args>(args)...);
-  attachComponent(entityId, std::move(component));
+  addComponent(entityId, std::move(component));
 }
 
 } // namespace swarms::core

@@ -26,7 +26,7 @@ void registerComponent(EntityRegistry &registry, const Uuid entityId, Component 
 }
 } // namespace
 
-void Environment::attachComponent(const Uuid entityId, IComponent &&component)
+void Environment::addComponent(const Uuid entityId, IComponent &&component)
 {
   switch (component.type())
   {
@@ -51,7 +51,12 @@ void Environment::computeAgentsStep(const time::TickData &data)
   }
 }
 
-void Environment::computePostAgentsStep(const time::TickData & /*data*/) {}
+void Environment::computePostAgentsStep(const time::TickData &data)
+{
+  std::for_each(m_systems.begin(), m_systems.end(), [this, &data](const ISystemPtr &systemPtr) {
+    systemPtr->update(data, m_registry);
+  });
+}
 
 void Environment::initialize()
 {
