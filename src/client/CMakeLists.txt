@@ -10,3 +10,5 @@ if(USE_VULKAN)
     target_compile_definitions(swarms_client PRIVATE USE_VULKAN)
 endif()
 
+add_dependencies(swarms_client copy_assets)
+

@@ -116,6 +116,46 @@ class VulkanDescriptorBinding : public tz::DescriptorBinding
   vk::DescriptorSetLayoutBinding descSetLayoutBinding;
 };
 
+class VulkanTexture : public tz::Texture
+{
+  public:
+      VulkanTexture(vk::raii::ImageView&& imageView, vk::raii::Sampler&& sampler)
+      : imageView(std::move(imageView)), sampler(std::move(sampler)) {}
+
+      vk::raii::ImageView& getImageView()
+      {
+        return imageView;
+      }
+
+      vk::raii::Sampler& getSampler()
+      {
+        return sampler;
+      }
+
+  private:
+      vk::raii::ImageView imageView;
+      vk::raii::Sampler sampler;
+};
+
+class VulkanSampler : public tz::Sampler
+{
+  public:
+      VulkanSampler(vk::raii::Sampler&& sampler) : sampler(std::move(sampler)) {}
+
+      vk::raii::Sampler& getSampler()
+      {
+        return sampler;
+      }
+
+      vk::raii::Sampler&& pullOutSampler()
+      {
+        return std::move(sampler);
+      }
+
+  private:
+      vk::raii::Sampler sampler;
+};
+
 class VulkanImage : public tz::Image
 {
   public:
@@ -309,6 +349,7 @@ class TZ_API VulkanRenderer : public Renderer
   DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout, Buffer* multiFrameBuffer) override;
   Texture * createTexture(Image* image) override;
   Image * createImage(tz::BitmapData bitmapData) override;
+  Sampler * createSampler() override;
   void beginCommandBuffer(tz::CommandBuffer *cb) override;
   void endCommandBuffer(tz::CommandBuffer *cb) override;
   void recordCommand(tz::CommandBuffer* cb, tz::Command *cmd) override;
@@ -325,6 +366,7 @@ class TZ_API VulkanRenderer : public Renderer
   void createLogicalDevice();
   void createSwapChain();
   void createImageViews();
+  vk::raii::ImageView createImageView(vk::raii::Image& image);
   void createGraphicsPipeline();
   void createCommandPool();
   void createDefaultCommandBuffer();

@@ -382,6 +382,15 @@ void tz::render::vulkan::VulkanRenderer::createImageViews()
   }
 }
 
+vk::raii::ImageView tz::render::vulkan::VulkanRenderer::createImageView(vk::raii::Image &image)
+{
+
+vk::ImageViewCreateInfo viewInfo{ .image = image, .viewType = vk::ImageViewType::e2D,
+        .format = vk::Format::eR8G8B8A8Srgb, .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } };
+    return vk::raii::ImageView( device, viewInfo );
+
+}
+
 vk::raii::ShaderModule tz::render::vulkan::VulkanRenderer::createSlangShaderModule(const std::string& shaderBinaryPath)
 {
   std::vector<char> buffer;
@@ -1317,9 +1326,12 @@ tz::Texture *tz::render::vulkan::VulkanRenderer::createTexture(tz::Image *image)
   copyBufferToImage(vImage->getStagingBuffer(), vImage->getRaiiImage(), vImage->width, vImage->height);
   transitionImageLayout(vImage->getRaiiImage(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-  //viewInfo.
-  // TODO wip
-  return nullptr;
+  auto imageView = createImageView(vImage->getRaiiImage());
+
+  vk::raii::Sampler sampler = reinterpret_cast<tz::render::vulkan::VulkanSampler*>(createSampler())->pullOutSampler();
+  
+  tz::render::vulkan::VulkanTexture* vulkanTexture = new tz::render::vulkan::VulkanTexture(std::move(imageView), std::move(sampler));
+  return vulkanTexture;
 }
 
 tz::render::vulkan::VulkanBuffer* tz::render::vulkan::VulkanRenderer::createStagingBuffer(size_t sizeInBytes)
@@ -1377,4 +1389,25 @@ tz::Image *tz::render::vulkan::VulkanRenderer::createImage(tz::BitmapData bitmap
   vulkanImage->width = bitmapData.width;
   vulkanImage->height = bitmapData.height;
   return vulkanImage;
+}
+
+tz::Sampler *tz::render::vulkan::VulkanRenderer::createSampler()
+{
+  vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
+		vk::SamplerCreateInfo        samplerInfo{
+		           .magFilter        = vk::Filter::eLinear,
+		           .minFilter        = vk::Filter::eLinear,
+		           .mipmapMode       = vk::SamplerMipmapMode::eLinear,
+		           .addressModeU     = vk::SamplerAddressMode::eRepeat,
+		           .addressModeV     = vk::SamplerAddressMode::eRepeat,
+		           .addressModeW     = vk::SamplerAddressMode::eRepeat,
+		           .mipLodBias       = 0.0f,
+		           .anisotropyEnable = vk::True,
+		           .maxAnisotropy    = properties.limits.maxSamplerAnisotropy,
+		           .compareEnable    = vk::False,
+		           .compareOp        = vk::CompareOp::eAlways};
+		auto sampler = vk::raii::Sampler(device, samplerInfo);
+
+    auto samplerWrapper = new tz::render::vulkan::VulkanSampler(std::move(sampler));
+    return samplerWrapper;
 }

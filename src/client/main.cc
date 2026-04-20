@@ -316,6 +316,8 @@ void runDemoVulkan()
                                                 indices.size() * sizeof(uint32_t),
                                                 tz::BufferUsage::Index);
 
+  auto textureImage = tz::loadBitmapDataFromPath("assets/uv_grid.png");
+
   // Descriptor layout and binding for the transformation matrix:
   // First we create the model, view, projection matrices:
   auto transform = Eigen::Affine3f::Identity();
@@ -331,7 +333,8 @@ void runDemoVulkan()
   // Next we store the matrices data into a buffer and setup the descriptor bindings, layouts and sets:
   auto transformBuffer = renderer->createMultiframeBuffer(&transformUBO, sizeof(transformUBO), tz::BufferUsage::Uniform);
   auto transformDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo, tz::ShaderType::Vertex, 1);
-  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding});
+  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler, tz::ShaderType::Fragment, 1);
+  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
   auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout, transformBuffer);
 
   // Prepare the pipeline state object
