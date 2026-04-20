@@ -316,7 +316,7 @@ void runDemoVulkan()
                                                 indices.size() * sizeof(uint32_t),
                                                 tz::BufferUsage::Index);
 
-  auto textureImage = tz::loadBitmapDataFromPath("assets/uv_grid.png");
+  auto textureImage = tz::loadBitmapDataFromPath("assets/test_image.png");
 
   // Descriptor layout and binding for the transformation matrix:
   // First we create the model, view, projection matrices:
