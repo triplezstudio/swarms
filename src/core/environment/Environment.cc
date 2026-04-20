@@ -1,10 +1,17 @@
 
 #include "Environment.hh"
+#include "MotionSystem.hh"
 #include "TransformComponent.hh"
 #include "VelocityComponent.hh"
 #include <utility>
 
 namespace swarms::core {
+
+Environment::Environment()
+  : AbstractEnvironment()
+{
+  initialize();
+}
 
 auto Environment::createEntity() -> Uuid
 {
@@ -19,7 +26,7 @@ void registerComponent(EntityRegistry &registry, const Uuid entityId, Component 
 }
 } // namespace
 
-void Environment::addComponent(const Uuid entityId, IComponent &&component)
+void Environment::attachComponent(const Uuid entityId, IComponent &&component)
 {
   switch (component.type())
   {
@@ -45,5 +52,10 @@ void Environment::computeAgentsStep(const time::TickData &data)
 }
 
 void Environment::computePostAgentsStep(const time::TickData & /*data*/) {}
+
+void Environment::initialize()
+{
+  m_systems.emplace_back(std::make_unique<MotionSystem>());
+}
 
 } // namespace swarms::core
