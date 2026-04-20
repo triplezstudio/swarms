@@ -19,6 +19,7 @@ This projects uses (among other things):
 - [google test](https://github.com/google/googletest) as a testing library
 - [rsync](https://linux.die.net/man/1/rsync) for file management
 - [sdl2](https://wiki.libsdl.org/SDL2/Installation) for window and input management
+- [vulkan] Modern graphics API, allows
 
 ## TL; DR
 
@@ -41,6 +42,11 @@ apt-get install -y --no-install-recommends \
   libgmock-dev \
   rsync \
   libsdl2-dev
+
+wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
+apt update
+apt install vulkan-sdk
 ```
 
 **Note:** this project uses `-fprofile-update=atomic` as a profiling option to handle concurrency during profiling. This requires ccache [4.10.0](https://ccache.dev/releasenotes.html#_ccache_4_10) at least. In case your system comes with an older version it means that you won't benefit from having `ccache`.

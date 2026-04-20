@@ -24,7 +24,7 @@ struct VSOutput
 };
 
 [shader("vertex")]
-VSOutput vertMain(VSInput input)
+VSOutput main(VSInput input)
 {
     VSOutput output;
     output.pos = mul(transformUBO.proj, mul(transformUBO.view, mul(transformUBO.model, float4(input.inPosition, 1.0))));
@@ -34,7 +34,7 @@ VSOutput vertMain(VSInput input)
 }
 
 [shader("fragment")]
-float4 fragMain(VSOutput vertIn) : SV_TARGET
+float4 main(VSOutput vertIn) : SV_TARGET
 {
     return float4(vertIn.color, 1.0);
 }

@@ -555,8 +555,8 @@ void tz::render::vulkan::VulkanRenderer::copyBufferToImage(const vk::raii::Buffe
   region.bufferRowLength = 0;
   region.bufferImageHeight = 0;
   region.imageSubresource = { vk::ImageAspectFlagBits::eColor, 0, 0, 1};
-  region.imageOffset = {0, 0, 0};
-  region.imageExtent = {width, height, 1};
+  region.imageOffset = vk::Offset3D {0, 0, 0};
+  region.imageExtent = vk::Extent3D {width, height, 1};
   cb.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, {region});
   endOneTimeCommandBuffer(cb);
 }
@@ -1358,7 +1358,7 @@ tz::Image *tz::render::vulkan::VulkanRenderer::createImage(tz::BitmapData bitmap
   vk::ImageCreateInfo imageInfo;
   imageInfo.imageType = vk::ImageType::e2D;
   imageInfo.format = vk::Format::eR8G8B8A8Srgb;
-  imageInfo.extent = {bitmapData.width, bitmapData.height, 1};
+  imageInfo.extent = vk::Extent3D {bitmapData.width, bitmapData.height, 1};
   imageInfo.mipLevels = 1;
   imageInfo.arrayLayers = 1;
   imageInfo.samples = vk::SampleCountFlagBits::e1;
