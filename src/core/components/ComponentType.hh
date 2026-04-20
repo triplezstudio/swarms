@@ -9,6 +9,7 @@ enum class ComponentType
 {
   ANIMAT,
   TRANSFORM,
+  VELOCITY,
 };
 
 auto str(const ComponentType &type) -> std::string;

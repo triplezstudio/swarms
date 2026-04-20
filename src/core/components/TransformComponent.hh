@@ -13,7 +13,7 @@ class TransformComponent : public AbstractComponent
   ~TransformComponent() override = default;
 
   auto position() const -> Eigen::Vector3d;
-  auto size() const -> float;
+  auto size() const -> double;
   bool contains(const Eigen::Vector3d &pos) const;
 
   void translate(const Eigen::Vector3d &delta);
@@ -32,7 +32,5 @@ class TransformComponent : public AbstractComponent
   private:
   IBoundingBoxShPtr m_bbox{};
 };
-
-using TransformComponentShPtr = std::shared_ptr<TransformComponent>;
 
 } // namespace swarms::core

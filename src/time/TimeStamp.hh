@@ -32,13 +32,13 @@ auto fromMilliseconds(const int ms) noexcept -> ClockDuration;
 /// point number of milliseconds.
 /// @param d - the duration to convert.
 /// @return - the number of milliseconds in the input duration.
-auto toMilliseconds(const ClockDuration &d) -> float;
+auto toMilliseconds(const ClockDuration &d) -> double;
 
 /// @brief - Used to convert the input duration to the corresponding floating
 /// point number of seconds.
 /// @param d - the duration to convert.
 /// @return - the number of seconds in the input duration.
-auto toSeconds(const ClockDuration &d) -> float;
+auto toSeconds(const ClockDuration &d) -> double;
 
 /// @brief - Converts a timestamp to a human readable string.
 /// @param t - the time to convert.
@@ -63,11 +63,11 @@ auto durationToPrettyString(ClockDuration d, const bool includeFractionalSeconds
   -> std::string;
 
 /// @brief - Return the difference in milliseconds between the two input
-/// timestamps using a float value.
+/// timestamps using a floating point value.
 /// @param start - the start of the time interval.
 /// @param end - the end of the time interval.
-/// @return - a float value for the interval in milliseconds.
-auto diffInMs(const TimeStamp &start, const TimeStamp &end) -> float;
+/// @return - a floating point value for the interval in milliseconds.
+auto diffInMs(const TimeStamp &start, const TimeStamp &end) -> double;
 
 } // namespace swarms::time
 

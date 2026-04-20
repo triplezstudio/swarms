@@ -1,6 +1,7 @@
 
 #include "Environment.hh"
 #include "TransformComponent.hh"
+#include "VelocityComponent.hh"
 #include <utility>
 
 namespace swarms::core {
@@ -24,6 +25,9 @@ void Environment::addComponent(const Uuid entityId, IComponent &&component)
   {
     case ComponentType::TRANSFORM:
       registerComponent(m_registry, entityId, std::move(component.as<TransformComponent>()));
+      break;
+    case ComponentType::VELOCITY:
+      registerComponent(m_registry, entityId, std::move(component.as<VelocityComponent>()));
       break;
     default:
       throw std::invalid_argument("Unuspported component type " + str(component.type()));

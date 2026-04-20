@@ -3,6 +3,7 @@
 #include "CircleBox.hh"
 #include "TransformComponent.hh"
 #include "VectorUtils.hh"
+#include "VelocityComponent.hh"
 
 namespace swarms::simulation {
 
@@ -38,6 +39,14 @@ void RandomInitializer::spawnAgent(core::IEnvironment &env, AgentProps config)
 
   auto box = std::make_shared<core::CircleBox>(config.position, config.radius);
   env.addComponent<core::TransformComponent>(entityId, std::move(box));
+
+  core::VelocityData data{
+    .maxAcceleration = 2.0,
+    .maxSpeed        = 3.0,
+    .initialSpeed    = {},
+    .speedMode       = core::SpeedMode::VARIABLE,
+  };
+  env.addComponent<core::VelocityComponent>(entityId, data);
 
   debug("Spawned entity " + core::str(entityId) + " at " + core::str(config.position));
 }
