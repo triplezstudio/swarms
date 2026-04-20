@@ -11,6 +11,8 @@ auto str(const ComponentType &type) -> std::string
       return "animat";
     case ComponentType::TRANSFORM:
       return "transform";
+    case ComponentType::VELOCITY:
+      return "velocity";
     default:
       return "unknown";
   }

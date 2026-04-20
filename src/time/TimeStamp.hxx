@@ -18,18 +18,18 @@ inline auto fromMilliseconds(const int ms) noexcept -> ClockDuration
   return Milliseconds(ms);
 }
 
-inline auto toMilliseconds(const ClockDuration &d) -> float
+inline auto toMilliseconds(const ClockDuration &d) -> double
 {
   const auto time = std::chrono::duration_cast<Milliseconds>(d);
   const auto ms   = time.count();
-  return 1.0f * ms;
+  return 1.0 * ms;
 }
 
-inline auto toSeconds(const ClockDuration &d) -> float
+inline auto toSeconds(const ClockDuration &d) -> double
 {
   const auto ms                       = toMilliseconds(d);
-  constexpr auto MILLIS_IN_ONE_SECOND = 1000.0f;
-  return 1.0f * ms / MILLIS_IN_ONE_SECOND;
+  constexpr auto MILLIS_IN_ONE_SECOND = 1000.0;
+  return 1.0 * ms / MILLIS_IN_ONE_SECOND;
 }
 
 inline auto timeToString(const TimeStamp &t) -> std::string
@@ -120,7 +120,7 @@ inline auto durationToPrettyString(ClockDuration d, const bool includeFractional
   return ss.str();
 }
 
-inline auto diffInMs(const TimeStamp &start, const TimeStamp &end) -> float
+inline auto diffInMs(const TimeStamp &start, const TimeStamp &end) -> double
 {
   const auto elapsed = end - start;
   const auto ms      = std::chrono::duration_cast<Milliseconds>(elapsed);

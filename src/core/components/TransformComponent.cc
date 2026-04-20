@@ -21,7 +21,7 @@ auto TransformComponent::position() const -> Eigen::Vector3d
   return m_bbox->position();
 }
 
-auto TransformComponent::size() const -> float
+auto TransformComponent::size() const -> double
 {
   if (const auto circleBox = std::dynamic_pointer_cast<CircleBox>(m_bbox); circleBox != nullptr)
   {

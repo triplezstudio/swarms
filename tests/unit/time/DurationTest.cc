@@ -11,7 +11,7 @@ struct TestCaseDurationConversion
 {
   Duration in{};
   Unit unit{};
-  float expected{};
+  double expected{};
 };
 
 using DurationTest = TestWithParam<TestCaseDurationConversion>;
