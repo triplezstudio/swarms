@@ -429,7 +429,8 @@ struct BitmapData
   uint32_t height;
 };
 
-BitmapData loadBitmapDataFromPath(const std::string & imagePath);
+BitmapData TZ_API loadBitmapDataFromPath(const std::string & imagePath);
+
 
 template<typename T>
 class TZ_API BufferFactory

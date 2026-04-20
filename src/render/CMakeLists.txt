@@ -1,9 +1,9 @@
 find_package(Eigen3 CONFIG REQUIRED)
 
-add_library(render_lib STATIC)
+add_library(render_lib SHARED renderer.cpp)
 
 target_include_directories(render_lib PUBLIC include)
-target_sources(render_lib PUBLIC renderer.cpp)
+#target_sources(render_lib PUBLIC renderer.cpp)
 
 target_link_libraries(render_lib PUBLIC window_lib Eigen3::Eigen)
 
