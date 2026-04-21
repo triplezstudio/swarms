@@ -356,7 +356,9 @@ void runDemoVulkan()
                                                 indices.size() * sizeof(uint32_t),
                                                 tz::BufferUsage::Index);
 
-  auto textureImage = tz::loadBitmapDataFromPath("assets/test_image.png");
+  auto textureBitmapData = tz::loadBitmapDataFromPath("assets/test_image.png");
+  auto textureImage = renderer->createImage(textureBitmapData);
+  auto textureImageView = renderer->createImageView(textureImage);
 
   // Descriptor layout and binding for the transformation matrix:
   // First we create the model, view, projection matrices:
@@ -373,7 +375,7 @@ void runDemoVulkan()
   // Next we store the matrices data into a buffer and setup the descriptor bindings, layouts and sets:
   auto transformBuffer = renderer->createMultiframeBuffer(&transformUBO, sizeof(transformUBO), tz::BufferUsage::Uniform);
   auto transformDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo, tz::ShaderType::Vertex, 1, transformBuffer);
-  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler, tz::ShaderType::Fragment, 1);
+  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler, tz::ShaderType::Fragment, 1, nullptr, textureImageView);
   auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
   auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout, transformBuffer);
 

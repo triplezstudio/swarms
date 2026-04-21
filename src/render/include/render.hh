@@ -466,6 +466,10 @@ class TZ_API Renderer
   {
     return nullptr;
   };
+  virtual ImageView* createImageView(Image* image)
+  {
+    return nullptr;
+  };
   virtual Sampler* createSampler() { return nullptr; }
   virtual Texture* createTexture(Image* image) { return nullptr;}
   virtual CommandBuffer* createCommandBuffer() = 0;

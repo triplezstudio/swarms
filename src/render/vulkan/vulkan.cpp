@@ -382,7 +382,7 @@ void tz::render::vulkan::VulkanRenderer::createImageViews()
   }
 }
 
-vk::raii::ImageView tz::render::vulkan::VulkanRenderer::createImageView(vk::raii::Image &image)
+vk::raii::ImageView tz::render::vulkan::VulkanRenderer::createVulkanImageView(vk::raii::Image &image)
 {
 
 vk::ImageViewCreateInfo viewInfo{ .image = image, .viewType = vk::ImageViewType::e2D,
@@ -1139,7 +1139,7 @@ vk::DescriptorType tz::render::vulkan::toVulkanDescriptorType(tz::ResourceType r
   {
     case tz::ResourceType::Ubo: return vk::DescriptorType::eUniformBuffer;
     case tz::ResourceType::Ssbo: return vk::DescriptorType::eStorageBuffer;
-    case tz::ResourceType::Sampler: return vk::DescriptorType::eSampler;
+    case tz::ResourceType::Sampler: return vk::DescriptorType::eCombinedImageSampler;
   }
 }
 
@@ -1216,16 +1216,20 @@ void tz::render::vulkan::VulkanRenderer::updateBuffer(tz::Buffer *buffer,
 
 void tz::render::vulkan::VulkanRenderer::createDescriptorPool()
 {
-  vk::DescriptorPoolSize poolSize;
-  poolSize.setType(vk::DescriptorType::eUniformBuffer)
-          .setDescriptorCount(maxFramesInFlight);
+  vk::DescriptorPoolSize poolSizes[3];
+  poolSizes[0].setType(vk::DescriptorType::eUniformBuffer)
+          .setDescriptorCount(100);
+  poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
+          .setDescriptorCount(500);
+  poolSizes[2].setType(vk::DescriptorType::eStorageImage)
+          .setDescriptorCount(50);
 
   vk::DescriptorPoolCreateInfo poolInfo;
-  poolInfo.setPoolSizes(poolSize)
-          .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
-          .setMaxSets(maxFramesInFlight);
+  poolInfo.poolSizeCount = 3;
+  poolInfo.pPoolSizes = poolSizes;
+  poolInfo.maxSets = 200;
 
-  uboDescriptorPool = vk::raii::DescriptorPool(device, poolInfo);
+  descriptorPool = vk::raii::DescriptorPool(device, poolInfo);
 }
 
 
@@ -1252,7 +1256,7 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
   }
 
   vk::DescriptorSetAllocateInfo allocateInfo;
-  allocateInfo.setDescriptorPool(uboDescriptorPool)
+  allocateInfo.setDescriptorPool(descriptorPool)
     .setDescriptorSetCount(maxFramesInFlight)
   .setSetLayouts(layouts);
 
@@ -1269,13 +1273,24 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
       // TODO we also need to handle image view bindings here, so we need to know the type of resource for each binding in the descriptor set layout, to create the correct WriteDescriptorSet definitions here. For now we just assume uniform buffer bindings for simplicity.
       if (binding->type == tz::ResourceType::Sampler)
       {
-        // TODO handle image view bindings here
+        vk::DescriptorImageInfo descImageInfo;
+        auto vImageView = reinterpret_cast<VulkanImageView*>(binding->imageView);
+        descImageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+        .setImageView(vImageView->getImageView())
+        .setSampler(VK_NULL_HANDLE); // TODO we also need to set the correct sampler here, for now we just set it to null for simplicity
+
+        vk::WriteDescriptorSet writeDescriptorSet;
+        writeDescriptorSet.setDstSet(descriptorSets[i])
+          .setDstBinding(binding->bindingIndex)
+          .setDstArrayElement(0)
+          .setDescriptorCount(1)
+          .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+          .setImageInfo(descImageInfo);
+        device.updateDescriptorSets(writeDescriptorSet, {});
       }
 
-      if (binding->type == tz::ResourceType::Ubo || binding->type == tz::ResourceType::Ssbo)
+      else if (binding->type == tz::ResourceType::Ubo || binding->type == tz::ResourceType::Ssbo)
       {
-        // TODO handle buffer bindings here
-
         vk::DescriptorBufferInfo descBufferInfo;
         auto vbuf = dynamic_cast<VulkanBuffer*>(binding->buffer);
         auto frameIndexBuffer = vbuf->getMultiBufferByIndex(i);
@@ -1365,7 +1380,7 @@ tz::Texture *tz::render::vulkan::VulkanRenderer::createTexture(tz::Image *image)
   copyBufferToImage(vImage->getStagingBuffer(), vImage->getRaiiImage(), vImage->width, vImage->height);
   transitionImageLayout(vImage->getRaiiImage(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-  auto imageView = createImageView(vImage->getRaiiImage());
+  auto imageView = createVulkanImageView(vImage->getRaiiImage());
 
   vk::raii::Sampler sampler = reinterpret_cast<tz::render::vulkan::VulkanSampler*>(createSampler())->pullOutSampler();
   
@@ -1428,6 +1443,14 @@ tz::Image *tz::render::vulkan::VulkanRenderer::createImage(tz::BitmapData bitmap
   vulkanImage->width = bitmapData.width;
   vulkanImage->height = bitmapData.height;
   return vulkanImage;
+}
+
+tz::ImageView *tz::render::vulkan::VulkanRenderer::createImageView(tz::Image *image)
+{
+  auto raiiVulkanImageView = createVulkanImageView(reinterpret_cast<VulkanImage*>(image)->getRaiiImage());
+  auto vulkanImageView = new tz::render::vulkan::VulkanImageView(std::move(raiiVulkanImageView));
+  return vulkanImageView;
+  
 }
 
 tz::Sampler *tz::render::vulkan::VulkanRenderer::createSampler()

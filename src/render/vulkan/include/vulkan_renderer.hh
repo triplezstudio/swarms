@@ -373,6 +373,7 @@ class TZ_API VulkanRenderer : public Renderer
   DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout, Buffer* multiFrameBuffer) override;
   Texture * createTexture(Image* image) override;
   Image * createImage(tz::BitmapData bitmapData) override;
+  ImageView * createImageView(Image* image) override;
   Sampler * createSampler() override;
   void beginCommandBuffer(tz::CommandBuffer *cb) override;
   void endCommandBuffer(tz::CommandBuffer *cb) override;
@@ -390,7 +391,7 @@ class TZ_API VulkanRenderer : public Renderer
   void createLogicalDevice();
   void createSwapChain();
   void createImageViews();
-  vk::raii::ImageView createImageView(vk::raii::Image& image);
+  vk::raii::ImageView createVulkanImageView(vk::raii::Image& image);
   void createGraphicsPipeline();
   void createCommandPool();
   void createDefaultCommandBuffer();
@@ -428,7 +429,7 @@ class TZ_API VulkanRenderer : public Renderer
   vk::raii::PhysicalDevice physicalDevice = nullptr;
   vk::raii::Device device = nullptr;
   vk::raii::Queue graphicsQueue = nullptr;
-  vk::raii::DescriptorPool uboDescriptorPool = nullptr;
+  vk::raii::DescriptorPool descriptorPool = nullptr;
   vk::Extent2D swapExtent;
   vk::SurfaceFormatKHR surfaceFormat;
   vk::raii::SwapchainKHR swapChain = nullptr;
