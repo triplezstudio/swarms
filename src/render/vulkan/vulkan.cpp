@@ -398,7 +398,7 @@ vk::raii::ShaderModule tz::render::vulkan::VulkanRenderer::createSlangShaderModu
     std::ifstream file(shaderBinaryPath, std::ios::ate | std::ios::binary);
     if (!file.is_open())
     {
-      throw std::runtime_error("failed to open file!");
+      throw std::runtime_error("failed to open file " + shaderBinaryPath);
     }
     buffer.resize(file.tellg());
     file.seekg(0, std::ios::beg);

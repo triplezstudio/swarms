@@ -207,13 +207,13 @@ enum class PrimitiveType {
 
 struct RenderState
 {
-  CullMode cullMode;
-  FillMode fillMode;
-  FrontFace frontFace;
-  bool depthTesting;
-  bool stencilTesting;
-  bool blending;
-  PrimitiveType primitiveType;
+  CullMode cullMode = CullMode::Back;
+  FillMode fillMode = FillMode::Solid;
+  FrontFace frontFace = FrontFace::CounterClockwise;
+  bool depthTesting = false;
+  bool stencilTesting = false;
+  bool blending = false;
+  PrimitiveType primitiveType = PrimitiveType::Triangles;
 };
 
 struct Image

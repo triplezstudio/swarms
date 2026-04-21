@@ -8,6 +8,64 @@
 #include <sdl2.hh>
 #include <cmath>
 
+/**
+ * Helper functions for creating some PipelineStateObjects with different render states and vertex layouts.
+ */
+
+ tz::PipelineStateObject* createColorOnlyPSO(tz::Renderer* renderer)
+ {
+
+  auto spvPath = "shader_binaries/default_shader_stage3.slang.spv";
+
+  auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
+  auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
+  auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
+
+  auto renderState = tz::RenderState {};
+  renderState.primitiveType = tz::PrimitiveType::Triangles;
+  renderState.cullMode = tz::CullMode::Back;
+  renderState.blending = false;
+  renderState.depthTesting = true;
+  renderState.fillMode = tz::FillMode::Solid;
+  renderState.frontFace = tz::FrontFace::CounterClockwise;
+  renderState.stencilTesting = false;
+  shaderPipeline = shaderPipeline;
+  
+  auto vertexLayout = tz::VertexLayout {}; 
+  vertexLayout.bindings =  {tz::VertexBinding {
+      .bufferSlot = 0,
+      .stride = sizeof(tz::Vertex),
+      .vertexInputRate=tz::VertexInputRate::PerVertex,
+    }};
+  vertexLayout.attributes = {
+                        tz::VertexAttribute {
+                          .shaderLocation = 0,
+                          .bufferSlot = 0,
+                          .dataType = tz::DataType::Float,
+                          .componentCount = 3,
+                          .offset = 0
+                      },
+                      {
+                        tz::VertexAttribute
+                        {
+                          .shaderLocation = 1,
+                          .bufferSlot = 0,
+                          .dataType = tz::DataType::Float,
+                          .componentCount = 3,
+                          .offset = sizeof(float) * 3
+                        }
+                      }
+                    };
+
+  // Descriptor layout and binding for the transformation matrix:
+  auto transformDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo, tz::ShaderType::Vertex, 1);
+  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler, tz::ShaderType::Fragment, 1);
+  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
+
+
+  return renderer->createPipelineStateObject(renderState, shaderPipeline, vertexLayout, {descriptorSetLayout});
+ }
+
 
 /**
  * This represents all the graphical resources we need for our game client:
@@ -30,35 +88,15 @@ struct GameGraphicsData
     // we need for a pipeline execution, i.e. a draw call.
     // Think of renderstate handling and description
     // of vertex attributes and uniform buffers etc.
-    auto pso = new tz::PipelineStateObject {};
-    pso->renderState.primitiveType = tz::PrimitiveType::Triangles;
-    pso->renderState.cullMode = tz::CullMode::Back;
-    pso->renderState.blending = false;
-    pso->renderState.depthTesting = true;
-    pso->renderState.fillMode = tz::FillMode::Solid;
-    pso->renderState.frontFace = tz::FrontFace::CounterClockwise;
-    pso->renderState.stencilTesting = false;
-    pso->shaderPipeline = shaderPipeline;
-    pso->vertexLayout.bindings =
-      {tz::VertexBinding {
-        .bufferSlot = 0,
-        .stride = sizeof(float) * 3,
-        .vertexInputRate=tz::VertexInputRate::PerVertex,
-      }};
-    pso->vertexLayout.attributes =
-      {
-        tz::VertexAttribute {
-          .shaderLocation = 0,
-          .bufferSlot = 0,
-          .dataType = tz::DataType::Float,
-          .componentCount = 3,
-          .offset = 0
-        }
-      };
-
-      defaultPSO = renderer->createPipelineStateObject(pso->renderState, pso->shaderPipeline,
-                                                     pso->vertexLayout, pso->descriptorSetLayouts);
-
+    // We must pre-create PSOs for all the different rendering configurations we need in our game.
+    // This pre-generation makes it more verbose upfront,
+    // but it allows us to avoid doing expensive state validation and setup during the game loop.
+    // It is advisble to order meshes by PSO to minimize state changes during rendering.
+    // In this demo setup we will create a few PSOs to accommodate a few different rendering 
+    // configurations.
+    auto defaultPSO = createColorOnlyPSO(renderer);
+      
+      
       tz::DescriptorBinding transformBinding;
       transformBinding.setIndex      = 0;
       transformBinding.bindingIndex  = 1;
@@ -89,6 +127,8 @@ struct GameGraphicsData
     // Currently, we only allow sequential execution though, multithreaded/parallel execution
     // is a future feature.
     commandBuffer = renderer->createCommandBuffer();
+
+    
 
   }
 
@@ -337,46 +377,13 @@ void runDemoVulkan()
   auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
   auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout, transformBuffer);
 
-  // Prepare the pipeline state object
-  tz::RenderState rs = {};
-  rs.primitiveType = tz::PrimitiveType::Triangles;
-  rs.cullMode = tz::CullMode::Back;
-  rs.blending = false;
-  rs.depthTesting = true;
-  rs.fillMode = tz::FillMode::Solid;
-  rs.frontFace = tz::FrontFace::CounterClockwise;
-  rs.stencilTesting = false;
-  tz::VertexLayout vertexLayout;
-  vertexLayout.bindings =
-    {tz::VertexBinding {
-      .bufferSlot = 0,
-      .stride = sizeof(tz::Vertex),
-      .vertexInputRate=tz::VertexInputRate::PerVertex,
-    }};
-  vertexLayout.attributes =
-    {
-      tz::VertexAttribute {
-        .shaderLocation = 0,
-        .bufferSlot = 0,
-        .dataType = tz::DataType::Float,
-        .componentCount = 3,
-        .offset = 0
-      }  ,
-      {
-        tz::VertexAttribute
-        {
-          .shaderLocation = 1,
-          .bufferSlot = 0,
-          .dataType = tz::DataType::Float,
-          .componentCount = 3,
-          .offset = sizeof(float) * 3
-        }
-      }
-    };
 
-  auto pso = renderer->createPipelineStateObject(rs, shaderPipeline,
-                                                   vertexLayout,
-                                                 {descriptorSetLayout});
+  // TODO question: how to handle the descriptorSets?
+  // One one hand they are totally part of the PSO, so we should probably store them with the PSO.
+  // OTOH the buffer and the descriptorSets are needed at command-record time and at least the buffers must be updated 
+  // regularly. So we may create them along the PSO but also provide accessors to use them after the initial creation
+  // for updates and binding during command recording.
+  auto pso = createColorOnlyPSO(renderer);
 
 
 
