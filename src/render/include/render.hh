@@ -82,11 +82,40 @@ enum class ShaderType {
   Tessellation
 };
 
+struct Image
+{
+  uint8_t* pixels;
+  size_t size = 0;
+  uint32_t width = 0;
+  uint32_t height = 0;
+};
+
+struct ImageView
+{
+
+};
+
+struct Sampler
+{
+
+};
+
+struct Texture
+{
+  Image image;
+  ImageView imageView;
+  Sampler* sampler;
+
+};
+
 
 /**
  * This is abstracted in GL, but maps almost 1:1
  * to a vk::DescriptorSetLayoutBinding.
  * It represents one specific resource binding in a shader.
+ * We also store an (optional) Buffer/ImageView associated with this binding. 
+ * This is useful when later creating the physical descriptor sets, 
+ * where we need to know which resources to bind to the descriptors.
  *
  */
 struct DescriptorBinding
@@ -96,6 +125,8 @@ struct DescriptorBinding
   ResourceType type;
   ShaderType shaderType;
   uint32_t count = 1;   // This is useful for arrays/instancing
+  Buffer* buffer = nullptr; // This is optional, but useful to store here for later descriptor set creation
+  ImageView* imageView = nullptr; // This is optional, but useful to store here for later descriptor set creation
 };
 
 
@@ -216,31 +247,7 @@ struct RenderState
   PrimitiveType primitiveType = PrimitiveType::Triangles;
 };
 
-struct Image
-{
-  uint8_t* pixels;
-  size_t size = 0;
-  uint32_t width = 0;
-  uint32_t height = 0;
-};
 
-struct ImageView
-{
-
-};
-
-struct Sampler
-{
-
-};
-
-struct Texture
-{
-  Image image;
-  ImageView imageView;
-  Sampler* sampler;
-
-};
 
 
 
@@ -471,7 +478,9 @@ class TZ_API Renderer
     uint8_t binding,
     tz::ResourceType resourceType,
     tz::ShaderType shaderType,
-    uint32_t count)
+    uint32_t count,
+    Buffer* buffer = nullptr,
+    ImageView* imageView = nullptr)
   {
     return nullptr;
   }

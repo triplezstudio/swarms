@@ -1157,7 +1157,9 @@ tz::DescriptorBinding *tz::render::vulkan::VulkanRenderer::createDescriptorBindi
   uint8_t binding,
   tz::ResourceType resourceType,
   tz::ShaderType shaderType,
-  uint32_t count
+  uint32_t count,
+  Buffer* buffer,
+  ImageView* imageView
   )
 {
 
@@ -1166,7 +1168,15 @@ tz::DescriptorBinding *tz::render::vulkan::VulkanRenderer::createDescriptorBindi
                                                count,
                                                toShaderStageFlags(shaderType),
                                                nullptr);
+    auto vulkanBuffer = dynamic_cast<VulkanBuffer*>(buffer);
+    auto vulkanImageView = reinterpret_cast<VulkanImageView*>(imageView);
     auto descriptorBinding = new VulkanDescriptorBinding(std::move(layoutBinding));
+    descriptorBinding->buffer = buffer;
+    descriptorBinding->imageView = vulkanImageView;
+    descriptorBinding->type = resourceType;
+    descriptorBinding->shaderType = shaderType;
+    descriptorBinding->count = count;
+    descriptorBinding->bindingIndex = binding;
     return descriptorBinding;
 }
 
@@ -1219,6 +1229,16 @@ void tz::render::vulkan::VulkanRenderer::createDescriptorPool()
 }
 
 
+
+/**
+ * TODO: the singular buffer here is wrong - it must actually be an array of buffers and potentially imageViews as well. 
+ * We need actually an association of a binding location with a "resource", which can be a buffer or an image view. So we need to pass in more information here, for example the actual descriptor set layout and the resources to bind. For now we just assume a single buffer for simplicity.
+ * And then per such binding, we need to create a WriteDescriptorSet for each frame-in-flight, which points to the correct buffer for that frame. So we need to pass in the "multiFrameBuffer" here, which internally holds the actual buffers for each frame-in-flight 
+ * and then we can create the correct WriteDescriptorSet for each frame.
+ * The number of writeDescriptorSet definitions is frames-in-flight X number of bindings in the descriptor set layout. 
+ * So we also need to pass in the descriptor set layout here, to know how many bindings we have and what types, 
+ * to create the correct WriteDescriptorSet definitions.
+ */
 tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout, tz::Buffer* multiFrameBuffer)
 {
 
@@ -1241,21 +1261,39 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
 
   for (uint32_t i = 0; i< maxFramesInFlight; i++)
   {
-    vk::DescriptorBufferInfo descBufferInfo;
-    auto vbuf = dynamic_cast<VulkanBuffer*>(multiFrameBuffer);
-    auto frameIndexBuffer = vbuf->getMultiBufferByIndex(i);
-    descBufferInfo.setBuffer(frameIndexBuffer)
-    .setOffset(0)
-    .setRange(VK_WHOLE_SIZE);
 
-    vk::WriteDescriptorSet writeDescriptorSet;
-    writeDescriptorSet.setDstSet(descriptorSets[i])
-    .setDstBinding(0) // TODO is this the "setIndex"?!
-    .setDstArrayElement(0)
-    .setDescriptorCount(1)
-      .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-    .setBufferInfo(descBufferInfo);
-    device.updateDescriptorSets(writeDescriptorSet, {});
+    // For each frame, we must prepare a WriteDescriptorSet that
+    // points to the correct buffer for that frame, which is stored in the multiFrameBuffer.
+    for (auto& binding : descriptorSetLayout->descriptorBindings) 
+    {
+      // TODO we also need to handle image view bindings here, so we need to know the type of resource for each binding in the descriptor set layout, to create the correct WriteDescriptorSet definitions here. For now we just assume uniform buffer bindings for simplicity.
+      if (binding->type == tz::ResourceType::Sampler)
+      {
+        // TODO handle image view bindings here
+      }
+
+      if (binding->type == tz::ResourceType::Ubo || binding->type == tz::ResourceType::Ssbo)
+      {
+        // TODO handle buffer bindings here
+
+        vk::DescriptorBufferInfo descBufferInfo;
+        auto vbuf = dynamic_cast<VulkanBuffer*>(binding->buffer);
+        auto frameIndexBuffer = vbuf->getMultiBufferByIndex(i);
+        descBufferInfo.setBuffer(frameIndexBuffer)
+        .setOffset(0)
+        .setRange(VK_WHOLE_SIZE);
+
+        vk::WriteDescriptorSet writeDescriptorSet;
+        writeDescriptorSet.setDstSet(descriptorSets[i])
+          .setDstBinding(binding->bindingIndex)
+          .setDstArrayElement(0)
+          .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+          .setBufferInfo(descBufferInfo);
+        device.updateDescriptorSets(writeDescriptorSet, {});
+      }
+    }
+   
   }
 
   auto vulkanDescriptorWrapper = new tz::render::vulkan::VulkanDescriptorSet(std::move(descriptorSets));
@@ -1277,6 +1315,7 @@ tz::DescriptorSetLayout *tz::render::vulkan::VulkanRenderer::createDescriptorSet
   auto descriptorLayout = vk::raii::DescriptorSetLayout(device, layoutInfo);
 
   auto dsLayout = new tz::render::vulkan::VulkanDescriptorSetLayout(std::move(descriptorLayout));
+  dsLayout->descriptorBindings = bindings;
   return dsLayout;
 }
 

@@ -102,6 +102,8 @@ class VulkanDescriptorSetLayout : public tz::DescriptorSetLayout
       vk::raii::DescriptorSetLayout dsLayout;
 };
 
+class VulkanBuffer;
+class VulkanImageView;
 class VulkanDescriptorBinding : public tz::DescriptorBinding
 {
   public:
@@ -154,6 +156,26 @@ class VulkanSampler : public tz::Sampler
 
   private:
       vk::raii::Sampler sampler;
+};
+
+class VulkanImageView : public tz::ImageView
+{
+
+  public:
+      VulkanImageView(vk::raii::ImageView&& imageView) : imageView(std::move(imageView)) {}
+
+      vk::raii::ImageView& getImageView()
+      {
+        return imageView;
+      }
+
+      vk::raii::ImageView&& pullOutImageView()
+      {
+        return std::move(imageView);
+      }
+
+  private:
+      vk::raii::ImageView imageView;
 };
 
 class VulkanImage : public tz::Image
@@ -341,7 +363,9 @@ class TZ_API VulkanRenderer : public Renderer
   DescriptorBinding * createDescriptorBinding(uint8_t binding,
                                              tz::ResourceType resourceType,
                                              tz::ShaderType shaderType,
-                                             uint32_t count) override;
+                                             uint32_t count,
+                                             Buffer* buffer = nullptr,
+                                             ImageView* imageView = nullptr) override;
   DescriptorSetLayout * createDescriptorSetLayout(const std::vector<DescriptorBinding *> &bindings) override;
   ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
