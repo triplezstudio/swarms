@@ -1159,7 +1159,8 @@ tz::DescriptorBinding *tz::render::vulkan::VulkanRenderer::createDescriptorBindi
   tz::ShaderType shaderType,
   uint32_t count,
   Buffer* buffer,
-  ImageView* imageView
+  ImageView* imageView,
+  Sampler* sampler
   )
 {
 
@@ -1172,7 +1173,8 @@ tz::DescriptorBinding *tz::render::vulkan::VulkanRenderer::createDescriptorBindi
     auto vulkanImageView = reinterpret_cast<VulkanImageView*>(imageView);
     auto descriptorBinding = new VulkanDescriptorBinding(std::move(layoutBinding));
     descriptorBinding->buffer = buffer;
-    descriptorBinding->imageView = vulkanImageView;
+    descriptorBinding->imageView = imageView;
+    descriptorBinding->sampler = sampler;
     descriptorBinding->type = resourceType;
     descriptorBinding->shaderType = shaderType;
     descriptorBinding->count = count;
@@ -1227,6 +1229,7 @@ void tz::render::vulkan::VulkanRenderer::createDescriptorPool()
   vk::DescriptorPoolCreateInfo poolInfo;
   poolInfo.poolSizeCount = 3;
   poolInfo.pPoolSizes = poolSizes;
+  poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
   poolInfo.maxSets = 200;
 
   descriptorPool = vk::raii::DescriptorPool(device, poolInfo);
@@ -1270,14 +1273,15 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
     // points to the correct buffer for that frame, which is stored in the multiFrameBuffer.
     for (auto& binding : descriptorSetLayout->descriptorBindings) 
     {
-      // TODO we also need to handle image view bindings here, so we need to know the type of resource for each binding in the descriptor set layout, to create the correct WriteDescriptorSet definitions here. For now we just assume uniform buffer bindings for simplicity.
       if (binding->type == tz::ResourceType::Sampler)
       {
+        auto& raiiSampler = reinterpret_cast<VulkanSampler*>(binding->sampler)->getSampler();
         vk::DescriptorImageInfo descImageInfo;
         auto vImageView = reinterpret_cast<VulkanImageView*>(binding->imageView);
         descImageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
         .setImageView(vImageView->getImageView())
-        .setSampler(VK_NULL_HANDLE); // TODO we also need to set the correct sampler here, for now we just set it to null for simplicity
+        .setSampler(raiiSampler);
+
 
         vk::WriteDescriptorSet writeDescriptorSet;
         writeDescriptorSet.setDstSet(descriptorSets[i])

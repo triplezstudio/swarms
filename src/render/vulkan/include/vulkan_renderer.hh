@@ -365,7 +365,8 @@ class TZ_API VulkanRenderer : public Renderer
                                              tz::ShaderType shaderType,
                                              uint32_t count,
                                              Buffer* buffer = nullptr,
-                                             ImageView* imageView = nullptr) override;
+                                             ImageView* imageView = nullptr,
+                                             Sampler* sampler = nullptr) override;
   DescriptorSetLayout * createDescriptorSetLayout(const std::vector<DescriptorBinding *> &bindings) override;
   ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;

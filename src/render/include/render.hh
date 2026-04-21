@@ -127,6 +127,7 @@ struct DescriptorBinding
   uint32_t count = 1;   // This is useful for arrays/instancing
   Buffer* buffer = nullptr; // This is optional, but useful to store here for later descriptor set creation
   ImageView* imageView = nullptr; // This is optional, but useful to store here for later descriptor set creation
+  Sampler* sampler = nullptr; // Needed when an imageView is given.
 };
 
 
@@ -484,7 +485,8 @@ class TZ_API Renderer
     tz::ShaderType shaderType,
     uint32_t count,
     Buffer* buffer = nullptr,
-    ImageView* imageView = nullptr)
+    ImageView* imageView = nullptr,
+    Sampler* sampler = nullptr)
   {
     return nullptr;
   }
