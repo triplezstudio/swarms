@@ -423,10 +423,10 @@ void runDemoVulkan()
 
   std::vector<tz::VertexPosTexCoords> verticesPosTexCoord =
     {
-      {{-0.4, 0.5, 0.5}, {1, 1}},
-      {{-0.4, -0.5, 0.5}, {1, 0}},
-      {{0.4, -0.5, 0.5},  {0, 0}},
-      {{0.4, 0.5, 0.5}, {0, 1}}
+      {{-0.8, 0.5, 0.5}, {1, 1}},
+      {{-0.8, -0.5, 0.5}, {1, 0}},
+      {{-0.4, -0.5, 0.5},  {0, 0}},
+      {{-0.4, 0.5, 0.5}, {0, 1}}
     };
   std::vector<uint32_t> indices =
     {
@@ -446,7 +446,7 @@ void runDemoVulkan()
   // Descriptor layout and binding for the transformation matrix:
   // First we create the model, view, projection matrices:
   auto transform = Eigen::Affine3f::Identity();
-  transform.translate(Eigen::Vector3f(-0.08, -0.08, 0));
+  transform.translate(Eigen::Vector3f(0, 0, 0));
   Eigen::Matrix4f tm = transform.matrix();
   Eigen::Matrix4f m = Eigen::Matrix4f::Identity();
   std::vector<Eigen::Matrix4f> vm = {m};
@@ -493,7 +493,7 @@ void runDemoVulkan()
     // TODO: actual transformation
     {
 
-      //renderer->updateBuffer(colorOnlyPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
+      renderer->updateBuffer(colorOnlyPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
       renderer->updateBuffer(texturedPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
     }
 
