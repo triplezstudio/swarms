@@ -446,14 +446,16 @@ void runDemoVulkan()
   // Descriptor layout and binding for the transformation matrix:
   // First we create the model, view, projection matrices:
   auto transform = Eigen::Affine3f::Identity();
-  transform.translate(Eigen::Vector3f(0, 0, 0));
+  transform.translate(Eigen::Vector3f(0.5, 0, 0));
   Eigen::Matrix4f tm = transform.matrix();
   Eigen::Matrix4f m = Eigen::Matrix4f::Identity();
   std::vector<Eigen::Matrix4f> vm = {m};
   tz::TransformUniformBufferObject transformUBO;
   transformUBO.model = tm;
-  transformUBO.view = lookAt({0, 0, -1.17}, {0, 0, 0}, {0, 1,0});
+  transformUBO.view = lookAt({0, 0, 2.17}, {0, 0, 0}, {0, 1,0});
   transformUBO.proj = perspective(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
+  transformUBO.proj(0,0) *= -1.0f;
+  //transformUBO.proj = Eigen::Matrix4f::Identity();
 
   // Next we store the matrices data into a buffer and setup the descriptor bindings, layouts and sets:
 //  auto transformBuffer = renderer->createMultiframeBuffer(&transformUBO, sizeof(transformUBO), tz::BufferUsage::Uniform);
