@@ -51,7 +51,7 @@ tz::PipelineStateObject* createTexturedPSO(tz::Renderer* renderer)
         .bufferSlot = 0,
         .dataType = tz::DataType::Float,
         .componentCount = 2,
-        .offset = sizeof(float) * 2
+        .offset = sizeof(float) * 3
       }
     }
   };
@@ -423,10 +423,10 @@ void runDemoVulkan()
 
   std::vector<tz::VertexPosTexCoords> verticesPosTexCoord =
     {
-      {{0.2, 0.5, 0.5}, {0, 1}},
-      {{0.2, -0.5, 0.5}, {0, 0}},
-      {{0.4, -0.5, 0.5},  {1, 0}},
-      {{0.4, 0.5, 0.5}, {1, 1}}
+      {{-0.4, 0.5, 0.5}, {1, 1}},
+      {{-0.4, -0.5, 0.5}, {1, 0}},
+      {{0.4, -0.5, 0.5},  {0, 0}},
+      {{0.4, 0.5, 0.5}, {0, 1}}
     };
   std::vector<uint32_t> indices =
     {
@@ -434,7 +434,7 @@ void runDemoVulkan()
       0, 2, 3
     };
   auto quadVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
-                                                 verticesPosTexCoord.size() * sizeof (tz::VertexPosColor),
+                                                 verticesPosTexCoord.size() * sizeof (tz::VertexPosTexCoords),
                                                  tz::BufferUsage::Vertex);
 
   auto quadIndexBuffer = renderer->createBuffer(indices.data(),
@@ -493,7 +493,7 @@ void runDemoVulkan()
     // TODO: actual transformation
     {
 
-      renderer->updateBuffer(colorOnlyPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
+      //renderer->updateBuffer(colorOnlyPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
       renderer->updateBuffer(texturedPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
     }
 
