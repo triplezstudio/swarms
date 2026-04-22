@@ -68,7 +68,9 @@ void tz::render::vulkan::VulkanRenderer::beginFrame()
   }
   device.resetFences(*drawFences[currentFrameIndex]);
 
-  auto [result, nextImageIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[currentFrameIndex], nullptr);
+  // Use the semaphore indexed by the currently held image index (from previous frame)
+  // This avoids reusing a semaphore that might still be in use by the swapchain
+  auto [result, nextImageIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[imageIndex], nullptr);
 
   imageIndex = nextImageIndex;
 }
@@ -82,18 +84,18 @@ void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* cb)
   auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
   vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
   const vk::SubmitInfo submitInfo {.waitSemaphoreCount = 1,
-                                    .pWaitSemaphores = &*presentCompleteSemaphores[currentFrameIndex],
+                                    .pWaitSemaphores = &*presentCompleteSemaphores[imageIndex],
                                     .pWaitDstStageMask = &waitDestinationStageMask,
                                     .commandBufferCount = 1,
                                     .pCommandBuffers = &*currentFrameCommandBuffer,
                                     .signalSemaphoreCount = 1,
-                                    .pSignalSemaphores = &*renderFinishedSemaphores[currentFrameIndex]};
+                                    .pSignalSemaphores = &*renderFinishedSemaphores[imageIndex]};
 
   graphicsQueue.submit(submitInfo, *drawFences[currentFrameIndex]);
 
   const vk::PresentInfoKHR presentInfoKhr {
     .waitSemaphoreCount = 1,
-    .pWaitSemaphores = &*renderFinishedSemaphores[currentFrameIndex],
+    .pWaitSemaphores = &*renderFinishedSemaphores[imageIndex],
     .swapchainCount = 1,
     .pSwapchains = &*swapChain,
     .pImageIndices = &imageIndex};
@@ -211,7 +213,8 @@ void tz::render::vulkan::VulkanRenderer::createLogicalDevice()
   queueCreateInfo.setQueuePriorities(queuePrio);
 
   std::vector<const char*> requiredDeviceExtension = {
-    vk::KHRSwapchainExtensionName};
+    vk::KHRSwapchainExtensionName,
+    vk::KHRShaderDrawParametersExtensionName};
 
   vk::DeviceCreateInfo deviceCreateInfo;
   deviceCreateInfo.setPNext(&deviceFeatures.get<vk::PhysicalDeviceFeatures2>())
@@ -228,7 +231,7 @@ bool tz::render::vulkan::VulkanRenderer::isDeviceSuitable(const vk::raii::Physic
 {
   auto deviceProperties = physicalDevice.getProperties();
   auto queueFamilies = physicalDevice.getQueueFamilyProperties();
-  deviceFeatures = physicalDevice.template getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+  deviceFeatures = physicalDevice.template getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT, vk::PhysicalDeviceShaderDrawParameterFeatures>();
 
 
   // We want a discrete GPU with version >= 1.3:
@@ -457,6 +460,7 @@ void tz::render::vulkan::VulkanRenderer::createGraphicsPipeline()
   vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
   colorBlendStateCreateInfo.setLogicOpEnable(vk::False)
   .setLogicOp(vk::LogicOp::eCopy)
+  .setAttachmentCount(1)
   .setPAttachments(&colorBlendAttachmentState);
 
   vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
@@ -481,7 +485,7 @@ void tz::render::vulkan::VulkanRenderer::createGraphicsPipeline()
     .setRenderPass(nullptr);
 
   // TODO is this equvivalent with the one below?
-  //pipelineCreateInfoChain.assign(pipelineRenderingCreateInfo);
+  pipelineCreateInfoChain.assign(pipelineRenderingCreateInfo);
 
   pipelineCreateInfoChain.get<vk::PipelineRenderingCreateInfo>()
     .setPColorAttachmentFormats(&surfaceFormat.format);
@@ -698,15 +702,16 @@ void tz::render::vulkan::VulkanRenderer::recordDefaultCommandBuffer()
 
 void tz::render::vulkan::VulkanRenderer::createSyncObjects()
 {
-
+  // Create semaphores per swapchain image to avoid reuse issues
   for (size_t i = 0; i < swapChainImages.size(); i++)
   {
+    presentCompleteSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
     renderFinishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
   }
 
+  // Create fences per frame for CPU-GPU synchronization
   for (size_t i = 0; i < maxFramesInFlight; i++)
   {
-    presentCompleteSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
     drawFences.emplace_back(device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
 
   }
@@ -1080,6 +1085,7 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
   vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
   colorBlendStateCreateInfo.setLogicOpEnable(vk::False)
     .setLogicOp(vk::LogicOp::eCopy)
+    .setAttachmentCount(1)
     .setPAttachments(&colorBlendAttachmentState);
 
   vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
@@ -1112,6 +1118,8 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
     .setPDynamicState(&dsCreateInfo)
     .setLayout(customPipelineLayout)
     .setRenderPass(nullptr);
+
+    pipelineCreateInfoChain.assign(pipelineRenderingCreateInfo);
 
   pipelineCreateInfoChain.get<vk::PipelineRenderingCreateInfo>()
     .setPColorAttachmentFormats(&surfaceFormat.format);

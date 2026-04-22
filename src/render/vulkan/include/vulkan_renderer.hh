@@ -455,7 +455,7 @@ class TZ_API VulkanRenderer : public Renderer
   VulkanInitData vulkanInitData;
   std::vector<char const*> requiredLayers;
   vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
-  vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> deviceFeatures;
+  vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT, vk::PhysicalDeviceShaderDrawParametersFeatures> deviceFeatures;
   std::map<CommandBuffer*, vk::raii::CommandBuffers*> customCommandBuffers;
 
   std::vector<vk::VertexInputAttributeDescription> toVulkanAttributeDescriptions(
