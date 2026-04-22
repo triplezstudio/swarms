@@ -122,11 +122,11 @@ class VulkanTexture : public tz::Texture
 {
   public:
       VulkanTexture(vk::raii::ImageView&& imageView, vk::raii::Sampler&& sampler)
-      : imageView(std::move(imageView)), sampler(std::move(sampler)) {}
+      : raiiImageView(std::move(imageView)), sampler(std::move(sampler)) {}
 
       vk::raii::ImageView& getImageView()
       {
-        return imageView;
+        return raiiImageView;
       }
 
       vk::raii::Sampler& getSampler()
@@ -135,7 +135,7 @@ class VulkanTexture : public tz::Texture
       }
 
   private:
-      vk::raii::ImageView imageView;
+      vk::raii::ImageView raiiImageView;
       vk::raii::Sampler sampler;
 };
 
@@ -365,8 +365,7 @@ class TZ_API VulkanRenderer : public Renderer
                                              tz::ShaderType shaderType,
                                              uint32_t count,
                                              Buffer* buffer = nullptr,
-                                             ImageView* imageView = nullptr,
-                                             Sampler* sampler = nullptr) override;
+                                             Texture* texture = nullptr) override;
   DescriptorSetLayout * createDescriptorSetLayout(const std::vector<DescriptorBinding *> &bindings) override;
   ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;

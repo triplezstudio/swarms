@@ -60,6 +60,7 @@ tz::PipelineStateObject* createTexturedPSO(tz::Renderer* renderer)
   auto textureImage = renderer->createImage(textureBitmapData);
   auto sampler = renderer->createSampler();
   auto textureImageView = renderer->createImageView(textureImage);
+  auto texture = renderer->createTexture(textureImage);
 
   // Descriptor layout and binding for the transformation matrix:
   auto transformBuffer = renderer->createMultiframeBuffer(nullptr,
@@ -72,7 +73,7 @@ tz::PipelineStateObject* createTexturedPSO(tz::Renderer* renderer)
                                                                 1,
                                                                 transformBuffer);
   auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler,
-                                                              tz::ShaderType::Fragment, 1, nullptr, textureImageView, sampler);
+                                                              tz::ShaderType::Fragment, 1, nullptr, texture);
 
   auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
   auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout);
@@ -516,7 +517,6 @@ void runDemoVulkan()
     renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
     renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(texturedPso->descriptorSets, texturedPso));
     renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(indices.size(), 1, 0, 0, 0));
-
 
     renderer->endCommandBuffer(commandBuffer);
     renderer->submitCommandBuffer(commandBuffer);

@@ -70,7 +70,7 @@ void tz::render::vulkan::VulkanRenderer::beginFrame()
 
   // Use the semaphore indexed by the currently held image index (from previous frame)
   // This avoids reusing a semaphore that might still be in use by the swapchain
-  auto [result, nextImageIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[imageIndex], nullptr);
+  auto [result, nextImageIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[currentFrameIndex], nullptr);
 
   imageIndex = nextImageIndex;
 }
@@ -84,18 +84,18 @@ void tz::render::vulkan::VulkanRenderer::submitCommandBuffer(CommandBuffer* cb)
   auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
   vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
   const vk::SubmitInfo submitInfo {.waitSemaphoreCount = 1,
-                                    .pWaitSemaphores = &*presentCompleteSemaphores[imageIndex],
+                                    .pWaitSemaphores = &*presentCompleteSemaphores[currentFrameIndex],
                                     .pWaitDstStageMask = &waitDestinationStageMask,
                                     .commandBufferCount = 1,
                                     .pCommandBuffers = &*currentFrameCommandBuffer,
                                     .signalSemaphoreCount = 1,
-                                    .pSignalSemaphores = &*renderFinishedSemaphores[imageIndex]};
+                                    .pSignalSemaphores = &*renderFinishedSemaphores[currentFrameIndex]};
 
   graphicsQueue.submit(submitInfo, *drawFences[currentFrameIndex]);
 
   const vk::PresentInfoKHR presentInfoKhr {
     .waitSemaphoreCount = 1,
-    .pWaitSemaphores = &*renderFinishedSemaphores[imageIndex],
+    .pWaitSemaphores = &*renderFinishedSemaphores[currentFrameIndex],
     .swapchainCount = 1,
     .pSwapchains = &*swapChain,
     .pImageIndices = &imageIndex};
@@ -1171,8 +1171,7 @@ tz::DescriptorBinding *tz::render::vulkan::VulkanRenderer::createDescriptorBindi
   tz::ShaderType shaderType,
   uint32_t count,
   Buffer* buffer,
-  ImageView* imageView,
-  Sampler* sampler
+  Texture* texture
   )
 {
 
@@ -1182,11 +1181,9 @@ tz::DescriptorBinding *tz::render::vulkan::VulkanRenderer::createDescriptorBindi
                                                toShaderStageFlags(shaderType),
                                                nullptr);
     auto vulkanBuffer = dynamic_cast<VulkanBuffer*>(buffer);
-    auto vulkanImageView = reinterpret_cast<VulkanImageView*>(imageView);
     auto descriptorBinding = new VulkanDescriptorBinding(std::move(layoutBinding));
     descriptorBinding->buffer = buffer;
-    descriptorBinding->imageView = imageView;
-    descriptorBinding->sampler = sampler;
+    descriptorBinding->texture = texture;
     descriptorBinding->type = resourceType;
     descriptorBinding->shaderType = shaderType;
     descriptorBinding->count = count;
@@ -1287,11 +1284,11 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
     {
       if (binding->type == tz::ResourceType::Sampler)
       {
-        auto& raiiSampler = reinterpret_cast<VulkanSampler*>(binding->sampler)->getSampler();
+        auto vulkanTexture = reinterpret_cast<VulkanTexture*>(binding->texture);
+        auto& raiiSampler = vulkanTexture->getSampler();
         vk::DescriptorImageInfo descImageInfo;
-        auto vImageView = reinterpret_cast<VulkanImageView*>(binding->imageView);
         descImageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-        .setImageView(vImageView->getImageView())
+        .setImageView(vulkanTexture->getImageView())
         .setSampler(raiiSampler);
 
 
