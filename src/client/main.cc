@@ -492,14 +492,9 @@ void runDemoVulkan()
 
     // TODO: actual transformation
     {
-      static Eigen::Vector3f posOffset = {0, 0,0};
-      posOffset += Eigen::Vector3f {0.000, -0.000, 0};
-      auto transform = Eigen::Affine3f::Identity();
-      transform.translate(posOffset);
-      static float angle = 0.0f;
-      angle += 0.0001f;
-      transform.rotate(Eigen::AngleAxis(angle, Eigen::Vector3f::UnitZ()));
-      //gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
+
+      renderer->updateBuffer(colorOnlyPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
+      renderer->updateBuffer(texturedPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
     }
 
     renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPso) );

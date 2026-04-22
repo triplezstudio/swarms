@@ -1325,6 +1325,7 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
   }
 
   auto vulkanDescriptorWrapper = new tz::render::vulkan::VulkanDescriptorSet(std::move(descriptorSets));
+  vulkanDescriptorWrapper->layout = descriptorSetLayout;
   return vulkanDescriptorWrapper;
 
 }

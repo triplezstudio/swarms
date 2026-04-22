@@ -157,8 +157,7 @@ struct DescriptorSetLayout
  */
 struct DescriptorSet
 {
-  Buffer* buffer;
-  DescriptorBinding* binding;
+  DescriptorSetLayout* layout;
 
 };
 
