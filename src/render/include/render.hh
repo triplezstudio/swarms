@@ -16,10 +16,16 @@
  */
 namespace tz {
 
-struct Vertex
+struct VertexPosColor
 {
   Eigen::Vector3f pos;
   Eigen::Vector3f color;
+};
+
+struct VertexPosTexCoords
+{
+  Eigen::Vector3f pos;
+  Eigen::Vector2f texCoords;
 };
 
 struct TransformUniformBufferObject
@@ -299,6 +305,8 @@ struct PipelineStateObject
   VertexLayout vertexLayout;
   std::vector<DescriptorBinding*> descriptorBindings;
   std::vector<DescriptorSetLayout*> descriptorSetLayouts;
+  std::vector<DescriptorSet*> descriptorSets;
+
 
 };
 
@@ -530,7 +538,7 @@ class TZ_API Renderer
   }
 
 
-  virtual tz::DescriptorSet *createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout, tz::Buffer* multiFrameBuffer)
+  virtual tz::DescriptorSet *createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout)
   {
     // provide dummy impl. for GL
     return nullptr;

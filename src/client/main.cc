@@ -11,6 +11,79 @@
 /**
  * Helper functions for creating some PipelineStateObjects with different render states and vertex layouts.
  */
+tz::PipelineStateObject* createTexturedPSO(tz::Renderer* renderer)
+{
+
+  auto spvPath = "shader_binaries/default_shader_stage4.slang.spv";
+
+  auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
+  auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
+  auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
+
+  auto renderState = tz::RenderState {};
+  renderState.primitiveType = tz::PrimitiveType::Triangles;
+  renderState.cullMode = tz::CullMode::Back;
+  renderState.blending = false;
+  renderState.depthTesting = true;
+  renderState.fillMode = tz::FillMode::Solid;
+  renderState.frontFace = tz::FrontFace::CounterClockwise;
+  renderState.stencilTesting = false;
+  shaderPipeline = shaderPipeline;
+
+  auto vertexLayout = tz::VertexLayout {};
+  vertexLayout.bindings =  {tz::VertexBinding {
+      .bufferSlot = 0,
+      .stride = sizeof(tz::VertexPosTexCoords),
+      .vertexInputRate=tz::VertexInputRate::PerVertex,
+  }};
+  vertexLayout.attributes = {
+    tz::VertexAttribute {
+      .shaderLocation = 0,
+      .bufferSlot = 0,
+      .dataType = tz::DataType::Float,
+      .componentCount = 3,
+      .offset = 0
+    },
+    {
+      tz::VertexAttribute
+      {
+        .shaderLocation = 1,
+        .bufferSlot = 0,
+        .dataType = tz::DataType::Float,
+        .componentCount = 2,
+        .offset = sizeof(float) * 2
+      }
+    }
+  };
+
+  auto textureBitmapData = tz::loadBitmapDataFromPath("assets/test_image.png");
+  auto textureImage = renderer->createImage(textureBitmapData);
+  auto sampler = renderer->createSampler();
+  auto textureImageView = renderer->createImageView(textureImage);
+
+  // Descriptor layout and binding for the transformation matrix:
+  auto transformBuffer = renderer->createMultiframeBuffer(nullptr,
+                                                          sizeof(tz::TransformUniformBufferObject),
+                                                          tz::BufferUsage::Uniform);
+
+  auto transformDescBinding = renderer->createDescriptorBinding(0,
+                                                                tz::ResourceType::Ubo,
+                                                                tz::ShaderType::Vertex,
+                                                                1,
+                                                                transformBuffer);
+  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler,
+                                                              tz::ShaderType::Fragment, 1, nullptr, textureImageView, sampler);
+
+  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
+  auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout);
+
+  auto pso = renderer->createPipelineStateObject(renderState,
+                                                 shaderPipeline,
+                                                 vertexLayout,
+                                                            {descriptorSetLayout});
+  pso->descriptorSets = {descriptorSet};
+  return pso;
+}
 
  tz::PipelineStateObject* createColorOnlyPSO(tz::Renderer* renderer)
  {
@@ -34,7 +107,7 @@
   auto vertexLayout = tz::VertexLayout {}; 
   vertexLayout.bindings =  {tz::VertexBinding {
       .bufferSlot = 0,
-      .stride = sizeof(tz::Vertex),
+      .stride = sizeof(tz::VertexPosColor),
       .vertexInputRate=tz::VertexInputRate::PerVertex,
     }};
   vertexLayout.attributes = {
@@ -58,12 +131,23 @@
                     };
 
   // Descriptor layout and binding for the transformation matrix:
-  auto transformDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo, tz::ShaderType::Vertex, 1);
-  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler, tz::ShaderType::Fragment, 1);
-  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
+  auto transformBuffer = renderer->createMultiframeBuffer(nullptr,
+                                                          sizeof(tz::TransformUniformBufferObject),
+                                                          tz::BufferUsage::Uniform);
+  auto transformDescBinding = renderer->createDescriptorBinding(0,
+                                                                tz::ResourceType::Ubo,
+                                                                tz::ShaderType::Vertex,
+                                                                1,
+                                                                transformBuffer);
+  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding});
+  auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout);
 
-
-  return renderer->createPipelineStateObject(renderState, shaderPipeline, vertexLayout, {descriptorSetLayout});
+  auto pso = renderer->createPipelineStateObject(renderState,
+                                                             shaderPipeline,
+                                                          vertexLayout,
+                                                            {descriptorSetLayout});
+  pso->descriptorSets = {descriptorSet};
+  return pso;
  }
 
 
@@ -326,40 +410,37 @@ void runDemoVulkan()
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
 
-  std::vector<tz::Vertex> vertices =
+  std::vector<tz::VertexPosColor> vertices =
   {
     {{-0.2, 0.2, 0.5}, {1, 1, 0}},
     {{-0.2, -0.2, 0.5}, {0, 1, 1}},
     {{0.2, -0.2, 0.5}, {0, 1, 1}}
   };
   auto triVertexBuffer = renderer->createBuffer(vertices.data(),
-                                                vertices.size() * sizeof(tz::Vertex),
+                                                vertices.size() * sizeof(tz::VertexPosColor),
                                                 tz::BufferUsage::Vertex);
 
-  std::vector<tz::Vertex> vertices2 =
+  std::vector<tz::VertexPosTexCoords> verticesPosTexCoord =
     {
-      {{0.2, 0.5, 0.5}, {1, 0.5, 0}},
-      {{0.2, -0.5, 0.5}, {0.3, 1, 1}},
-      {{0.4, -0.5, 0.5}, {0.8, 1, 1}},
-      {{0.4, 0.5, 0.5}, {0.3, 0.3, 0.5}}
+      {{0.2, 0.5, 0.5}, {0, 1}},
+      {{0.2, -0.5, 0.5}, {0, 0}},
+      {{0.4, -0.5, 0.5},  {1, 0}},
+      {{0.4, 0.5, 0.5}, {1, 1}}
     };
   std::vector<uint32_t> indices =
     {
       0, 1, 2,
       0, 2, 3
     };
-  auto triVertexBuffer2 = renderer->createBuffer(vertices2.data(),
-                                                 vertices2.size() * sizeof (tz::Vertex),
+  auto quadVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
+                                                 verticesPosTexCoord.size() * sizeof (tz::VertexPosColor),
                                                  tz::BufferUsage::Vertex);
 
   auto quadIndexBuffer = renderer->createBuffer(indices.data(),
                                                 indices.size() * sizeof(uint32_t),
                                                 tz::BufferUsage::Index);
 
-  auto textureBitmapData = tz::loadBitmapDataFromPath("assets/test_image.png");
-  auto textureImage = renderer->createImage(textureBitmapData);
-  auto sampler = renderer->createSampler();
-  auto textureImageView = renderer->createImageView(textureImage);
+
 
   // Descriptor layout and binding for the transformation matrix:
   // First we create the model, view, projection matrices:
@@ -374,21 +455,20 @@ void runDemoVulkan()
   transformUBO.proj = perspective(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
 
   // Next we store the matrices data into a buffer and setup the descriptor bindings, layouts and sets:
-  auto transformBuffer = renderer->createMultiframeBuffer(&transformUBO, sizeof(transformUBO), tz::BufferUsage::Uniform);
-  auto transformDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo, tz::ShaderType::Vertex, 1, transformBuffer);
-  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler, tz::ShaderType::Fragment, 1, nullptr, textureImageView, sampler);
-  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
-  auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout, transformBuffer);
+//  auto transformBuffer = renderer->createMultiframeBuffer(&transformUBO, sizeof(transformUBO), tz::BufferUsage::Uniform);
+//  auto transformDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo, tz::ShaderType::Vertex, 1, transformBuffer);
+//  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler, tz::ShaderType::Fragment, 1, nullptr, textureImageView, sampler);
+//  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
+//  auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout, transformBuffer);
 
 
   // TODO question: how to handle the descriptorSets?
   // One one hand they are totally part of the PSO, so we should probably store them with the PSO.
-  // OTOH the buffer and the descriptorSets are needed at command-record time and at least the buffers must be updated 
+  // OTOH the buffer and the descriptorSets are needed at command-record time and at least the buffers must be updated
   // regularly. So we may create them along the PSO but also provide accessors to use them after the initial creation
   // for updates and binding during command recording.
-  auto pso = createColorOnlyPSO(renderer);
-
-
+  auto colorOnlyPso = createColorOnlyPSO(renderer);
+  auto texturedPso  = createTexturedPSO(renderer);
 
   // We create the commandbuffer once and record into it every frame:
   auto commandBuffer = renderer->createCommandBuffer();
@@ -421,19 +501,20 @@ void runDemoVulkan()
       //gameGraphicsData.transformBuffer->updateData(transform.matrix().data(), sizeof(Eigen::Matrix4f));
     }
 
-    renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (pso ) );
+    renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPso) );
     renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
     renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
 
-    // triangle:
+    // colored triangle:
     renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer}));
-    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({descriptorSet}, pso));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPso->descriptorSets, colorOnlyPso));
     renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
 
-    // quad::
-    renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer2}));
+    // textured quad::
+    renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (texturedPso) );
+    renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadVertexBuffer}));
     renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
-    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({descriptorSet}, pso));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(texturedPso->descriptorSets, texturedPso));
     renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(indices.size(), 1, 0, 0, 0));
 
 

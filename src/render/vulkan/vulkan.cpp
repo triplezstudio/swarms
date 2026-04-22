@@ -768,9 +768,13 @@ tz::Buffer* tz::render::vulkan::VulkanRenderer::createBuffer(void* initialData, 
   b.bindMemory(*bufferMemory, 0);
 
   // Filling the data into the memory:
-  void* targetDataPtr = bufferMemory.mapMemory(0, memRequirements.size);
-  memcpy(targetDataPtr, initialData, sizeInBytes);
-  bufferMemory.unmapMemory();
+  if (initialData)
+  {
+    void* targetDataPtr = bufferMemory.mapMemory(0, memRequirements.size);
+    memcpy(targetDataPtr, initialData, sizeInBytes);
+    bufferMemory.unmapMemory();
+  }
+
 
   return new VulkanBuffer(std::move(b), std::move(bufferMemory));
 }
@@ -1246,7 +1250,7 @@ void tz::render::vulkan::VulkanRenderer::createDescriptorPool()
  * So we also need to pass in the descriptor set layout here, to know how many bindings we have and what types, 
  * to create the correct WriteDescriptorSet definitions.
  */
-tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout, tz::Buffer* multiFrameBuffer)
+tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout)
 {
 
   auto vdb = reinterpret_cast<VulkanDescriptorSetLayout*>(descriptorSetLayout);

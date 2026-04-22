@@ -371,7 +371,7 @@ class TZ_API VulkanRenderer : public Renderer
   ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
   CommandBuffer * createCommandBuffer() override;
-  DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout, Buffer* multiFrameBuffer) override;
+  DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout) override;
   Texture * createTexture(Image* image) override;
   Image * createImage(tz::BitmapData bitmapData) override;
   ImageView * createImageView(Image* image) override;
