@@ -15,12 +15,6 @@ class IComponent
 
   virtual auto type() const -> ComponentType = 0;
 
-  /// @brief - Updates the internal data of the component based on the elapsed
-  /// time since the last frame. A typical example of the use of this behavior
-  /// include depleting a stock of a resource that gets used over time.
-  /// @param data - the elapsed time since the last call to this method
-  virtual void simulate(const time::TickData &data) = 0;
-
   /// @brief - Attempts to cast this component to the specified derived
   /// type. If the component is not an instance of the derived type, an
   /// error will be raised.

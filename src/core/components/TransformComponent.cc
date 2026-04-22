@@ -54,11 +54,6 @@ void TransformComponent::overridePosition(const Eigen::Vector3d &position)
   m_bbox->moveTo(position);
 }
 
-void TransformComponent::simulate(const time::TickData & /*data*/)
-{
-  // Voluntarily empty.
-}
-
 namespace {
 const Eigen::Vector3d Z_AXIS(0.0, 0.0, 1.0);
 }
