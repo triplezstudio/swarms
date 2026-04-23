@@ -152,7 +152,7 @@ vk::Extent2D tz::render::vulkan::VulkanRenderer::selectSwapExtent(vk::SurfaceCap
     return capabilities.currentExtent;
   }
   int width, height;
-  vulkanInitData.displaySizeFunc(&width, &height);
+  window->displaySizeFunc(&width, &height);
 
   return {
     std::clamp<uint32_t>(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),

@@ -46,6 +46,7 @@ struct Window
   int width;
   int height;
   std::function<GraphicsSurface (GraphicsInstance&, WindowDesc windowDesc)> surfaceCreationFunc;
+  std::function<void(int* width, int* height)> displaySizeFunc;
 };
 
 

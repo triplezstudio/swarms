@@ -60,41 +60,22 @@ void SDL2WindowSystem::init()
 tz::Window* tz::SDL2WindowSystem::createWindow(tz::WindowDesc desc)
 {
   this->windowDesc = desc;
-  int windowFlags = SDL_WINDOW_SHOWN;
-  if (desc.api == tz::WindowDesc::GraphicsAPI::OpenGL)
-  {
-     windowFlags |= SDL_WINDOW_OPENGL;
+  int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN;
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  window = SDL_CreateWindow("swarms v0.0.1",
+                            SDL_WINDOWPOS_UNDEFINED,
+                            SDL_WINDOWPOS_UNDEFINED,
+                            640,
+                            480,
+                          windowFlags);
+  
 
-    window = SDL_CreateWindow("swarms v0.0.1",
-                              SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED,
-                              640,
-                              480,
-                              windowFlags);
-
-    SDL_GL_CreateContext(window);
-    SDL_GL_SetSwapInterval(0);
-
-  }
-  else if (desc.api == WindowDesc::GraphicsAPI::Vulkan)
-  {
-    windowFlags |= SDL_WINDOW_VULKAN;
-
-    window = SDL_CreateWindow("swarms v0.0.1",
-                              SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED,
-                              640,
-                              480,
-                              windowFlags);
-  }
-
-
-  return new tz::Window { getNativeHandles().window, 640, 480, [this](GraphicsInstance& inst, WindowDesc desc) -> GraphicsSurface {
+  return new tz::Window { getNativeHandles().window, 640, 480, 
+    [this](GraphicsInstance& inst, WindowDesc desc) -> GraphicsSurface {
       return createSurface(inst, desc);
+    }, 
+    [this](int *width, int *height) {
+      SDL_Vulkan_GetDrawableSize(this->window, width, height);
     }};
 
 }
