@@ -46,6 +46,9 @@ namespace tz {
 
       std::vector<FrameListener> frameListeners;
 
+      std::vector<uint32_t> quadIndices;
+      Buffer* quadVertexBuffer = nullptr;
+      Buffer* quadIndexBuffer = nullptr;
       PipelineStateObject* colorOnlyPSO = nullptr;
       CommandBuffer* commandBuffer = nullptr;
       std::vector<PrimitiveRenderData> framePrimitives;

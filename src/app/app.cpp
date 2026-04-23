@@ -40,17 +40,19 @@ void App::prepareRenderPrimitives()
       {{-0.4, -0.5, 0.5},  {1, 1,1}},
       {{-0.4, 0.5, 0.5}, {1, 1,1}}
     };
-  std::vector<uint32_t> indices =
+
+  quadIndices =
     {
       0, 1, 2,
       0, 2, 3
     };
-  auto quadVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
+
+  quadVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
                                                  verticesPosTexCoord.size() * sizeof (tz::VertexPosTexCoords),
                                                  tz::BufferUsage::Vertex);
 
-  auto quadIndexBuffer = renderer->createBuffer(indices.data(),
-                                                indices.size() * sizeof(uint32_t),
+  quadIndexBuffer = renderer->createBuffer(quadIndices.data(),
+                                                quadIndices.size() * sizeof(uint32_t),
                                                 tz::BufferUsage::Index);
 
   colorOnlyPSO = createColorOnlyPSO();
@@ -169,9 +171,18 @@ void App::updateFrameListeners(float frameTime)
   {
     if (prd.type == PrimitiveRenderType::Quad)
     {
-        // TODO record commands to render the quad.
+        renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPSO) );
+        renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
+        renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
+        renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadVertexBuffer}));
+        renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
+        renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPSO->descriptorSets, colorOnlyPSO));
+        renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
     }
   }
+  renderer->endCommandBuffer(commandBuffer);
+  renderer->submitCommandBuffer(commandBuffer);
+
 
 }
 float App::getLastFrameTime()
@@ -185,6 +196,7 @@ void App::renderColoredQuad(Eigen::Vector3f position)
 {
   PrimitiveRenderData prd;
   prd.position = position;
+  prd.type = PrimitiveRenderType::Quad;
   framePrimitives.push_back(prd);
 }
 

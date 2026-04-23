@@ -336,7 +336,7 @@ void runDemo()
 void doFrame(tz::App* app)
 {
   auto lastFrameTime = app->getLastFrameTime();
-  app->renderCube(Eigen::Vector3f(0, 0, 0));
+  app->renderColoredQuad(Eigen::Vector3f(0, 0, 0));
 }
 
 void runApp()
