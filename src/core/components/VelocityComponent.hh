@@ -29,8 +29,10 @@ class VelocityComponent : public AbstractComponent
   VelocityComponent(const VelocityData &data);
   ~VelocityComponent() override = default;
 
-  auto acceleration() const noexcept -> Eigen::Vector3d;
-  auto speed() const noexcept -> Eigen::Vector3d;
+  auto speedMode() const -> SpeedMode;
+  auto acceleration() const -> Eigen::Vector3d;
+  auto speed() const -> Eigen::Vector3d;
+  auto maxSpeed() const -> double;
 
   /// @brief - Set the acceleration to its maximum allowed value in a direction
   /// equal to the input argument.
@@ -54,8 +56,6 @@ class VelocityComponent : public AbstractComponent
 
   void immobilize();
 
-  void simulate(const time::TickData &data) override;
-
   private:
   SpeedMode m_speedMode{SpeedMode::VARIABLE};
   double m_maxAcceleration{1.0};
@@ -63,9 +63,6 @@ class VelocityComponent : public AbstractComponent
 
   Eigen::Vector3d m_acceleration{Eigen::Vector3d::Zero()};
   Eigen::Vector3d m_speed{Eigen::Vector3d::Zero()};
-
-  void updateFixedSpeed(const time::TickData &data);
-  void updateVariableSpeed(const time::TickData &data);
 };
 
 } // namespace swarms::core

@@ -7,11 +7,6 @@ AnimatComponent::AnimatComponent()
   : AbstractComponent(ComponentType::ANIMAT)
 {}
 
-void AnimatComponent::simulate(const time::TickData & /*manager*/)
-{
-  // TODO: Update the agent
-}
-
 void AnimatComponent::plug(IAgentShPtr agent)
 {
   m_agent = std::move(agent);

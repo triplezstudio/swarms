@@ -15,8 +15,6 @@ class AnimatComponent : public AbstractComponent
   AnimatComponent();
   ~AnimatComponent() override = default;
 
-  void simulate(const time::TickData &data) override;
-
   /// @brief - Assigns the provided agent as the brain of the animat. This means that
   /// any decision taken by the agent will be received by the animat and exposed to
   /// the environment so that it can be applied.

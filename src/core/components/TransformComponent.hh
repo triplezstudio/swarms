@@ -19,8 +19,6 @@ class TransformComponent : public AbstractComponent
   void translate(const Eigen::Vector3d &delta);
   void overridePosition(const Eigen::Vector3d &position);
 
-  void simulate(const time::TickData &data) override;
-
   /// @brief - Transforms the position provided in local coordinate space to a
   /// position in the global coordinate frame by applying the transform defined
   /// by this component to it.
