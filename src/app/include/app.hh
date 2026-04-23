@@ -6,6 +6,23 @@
 
 namespace tz {
 
+  enum class PrimitiveRenderType
+  {
+    Line,
+    Quad,
+    Cube,
+    Sphere,
+    Mesh
+  };
+
+  struct PrimitiveRenderData
+  {
+    PrimitiveRenderType type;
+    Eigen::Vector3f position;
+    Eigen::Vector3f scale;
+    Eigen::Quaternionf orientation;
+  };
+
   class App;
   using FrameListener = std::function< void(App* app)>;
 
@@ -24,18 +41,26 @@ namespace tz {
 
 
   private:
-      tz::WindowSystem* windowSystem = nullptr;
-      tz::Renderer* renderer = nullptr;
+      WindowSystem* windowSystem = nullptr;
+      Renderer* renderer = nullptr;
 
       std::vector<FrameListener> frameListeners;
 
-      tz::PipelineStateObject* colorOnlyPSO = nullptr;
+      PipelineStateObject* colorOnlyPSO = nullptr;
+      CommandBuffer* commandBuffer = nullptr;
+      std::vector<PrimitiveRenderData> framePrimitives;
+
 
       void updateFrameListeners(float frameTime);
       void prepareRenderPrimitives();
-      tz::PipelineStateObject* createColorOnlyPSO();
-
-
+      PipelineStateObject* createColorOnlyPSO();
+      Eigen::Matrix4f createPerspectiveProjectionMatrix(float fovY,
+                                                        float aspect,
+                                                        float zNear,
+                                                        float zFar);
+      Eigen::Matrix4f createLookAtMatrix(const Eigen::Vector3f &eye,
+                                         const Eigen::Vector3f &center,
+                                         const Eigen::Vector3f &up);
   };
 
 

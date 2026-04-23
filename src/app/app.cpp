@@ -55,6 +55,20 @@ void App::prepareRenderPrimitives()
 
   colorOnlyPSO = createColorOnlyPSO();
 
+  auto transform = Eigen::Affine3f::Identity();
+  transform.translate(Eigen::Vector3f(0.5, 0, 0));
+  Eigen::Matrix4f tm = transform.matrix();
+  Eigen::Matrix4f m = Eigen::Matrix4f::Identity();
+  std::vector<Eigen::Matrix4f> vm = {m};
+  tz::TransformUniformBufferObject transformUBO;
+  transformUBO.model = tm;
+  transformUBO.view = createLookAtMatrix({0, 0, 2.17}, {0, 0, 0}, {0, 1,0});
+  transformUBO.proj = createPerspectiveProjectionMatrix(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
+  transformUBO.proj(0,0) *= -1.0f;
+  renderer->updateBuffer(colorOnlyPSO->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
+
+  commandBuffer = renderer->createCommandBuffer();
+
 }
 
 tz::PipelineStateObject* App::createColorOnlyPSO()
@@ -147,6 +161,18 @@ void App::updateFrameListeners(float frameTime)
     frameListenerFunc(this);
   }
 
+  renderer->beginFrame();
+  renderer->beginCommandBuffer(commandBuffer);
+
+  // Render everything submitted during this frame:
+  for (auto& prd : framePrimitives)
+  {
+    if (prd.type == PrimitiveRenderType::Quad)
+    {
+        // TODO record commands to render the quad.
+    }
+  }
+
 }
 float App::getLastFrameTime()
 {
@@ -157,8 +183,63 @@ void App::renderCube(Eigen::Vector3f position) {
 }
 void App::renderColoredQuad(Eigen::Vector3f position)
 {
-
+  PrimitiveRenderData prd;
+  prd.position = position;
+  framePrimitives.push_back(prd);
 }
+
+
+// TODO move into math or other helper library (might even already exist!?)
+Eigen::Matrix4f App::createLookAtMatrix(const Eigen::Vector3f& eye,
+                       const Eigen::Vector3f& center,
+                       const Eigen::Vector3f& up)
+{
+  Eigen::Vector3f f = (center - eye).normalized();
+  Eigen::Vector3f s = f.cross(up).normalized();
+  Eigen::Vector3f u = s.cross(f);
+
+  Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
+
+  // Rotation part (Indices are mat(row, col))
+  mat(0,0) =  s.x();
+  mat(0,1) =  s.y(); // Changed from (1,0)
+  mat(0,2) =  s.z(); // Changed from (2,0)
+
+  mat(1,0) =  u.x();
+  mat(1,1) =  u.y();
+  mat(1,2) =  u.z();
+
+  mat(2,0) = -f.x();
+  mat(2,1) = -f.y();
+  mat(2,2) = -f.z();
+
+  // Translation part (Now in the 4th Column)
+  mat(0,3) = -s.dot(eye);
+  mat(1,3) = -u.dot(eye);
+  mat(2,3) =  f.dot(eye);
+
+  return mat;
+}
+
+Eigen::Matrix4f App::createPerspectiveProjectionMatrix(float fovY, float aspect, float zNear, float zFar)
+{
+  float tanHalfFovy = std::tan(fovY * 0.5f);
+  Eigen::Matrix4f m = Eigen::Matrix4f::Zero();
+
+  m(0,0) = 1.0f / (aspect * tanHalfFovy);
+  m(1,1) = 1.0f / (tanHalfFovy);
+
+  // Vulkan Depth [0, 1]
+  m(2,2) = zFar / (zNear - zFar);
+  m(2,3) = (zNear * zFar) / (zNear - zFar); // Translation moved to Col 3
+
+  // Perspective Divide
+  m(3,2) = -1.0f; // Moved from (2,3) to (3,2) for Column-Major
+
+  return m;
+}
+
+
 
 }
 
