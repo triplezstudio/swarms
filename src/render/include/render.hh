@@ -544,9 +544,4 @@ class TZ_API Renderer
 
 };
 
-
-namespace render {
-  void renderCube(Eigen::Vector3f position, Eigen::Vector3f scale, Eigen::Vector3f orientation);
-}
-
 }

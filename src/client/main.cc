@@ -4,6 +4,7 @@
 #include <vulkan_renderer.hh>
 #include <sdl2.hh>
 #include <cmath>
+#include <app.hh>
 
 /**
  * Helper functions for creating some PipelineStateObjects with different render states and vertex layouts.
@@ -332,11 +333,23 @@ void runDemo()
   }
 }
 
+void doFrame(tz::App* app)
+{
+  auto lastFrameTime = app->getLastFrameTime();
+  app->renderCube(Eigen::Vector3f(0, 0, 0));
+}
+
+void runApp()
+{
+  auto app = tz::App();
+  app.setUpdateFunction(doFrame);
+  app.run();
+}
+
 
 int main(int argc, char* argv[])
 {
-  runDemo();
-
+  runApp();
 
   return 0;
 }

@@ -3,15 +3,21 @@
 #include <functional>
 
 #include "app.hh"
-#include "window_system.hh"
-#include "render.hh"
+#include <render.hh>
+#include <vulkan_renderer.hh>
+#include <window_system.hh>
+#include <sdl2.hh>
 
 namespace tz
 {
 
-  App::App(tz::WindowSystem* windowSystem, tz::Renderer* renderer) : windowSystem(windowSystem),
-  renderer(renderer)
+  App::App()
 {
+  renderer = reinterpret_cast<tz::Renderer *>(new tz::render::vulkan::VulkanRenderer());
+  windowSystem = new tz::SDL2WindowSystem();
+  auto winDesc = renderer->getRequiredWindowDesc();
+  auto window = windowSystem->createWindow(winDesc);
+  renderer->init(window);
 
 }
 
@@ -25,16 +31,25 @@ void tz::App::run()
 
 }
 
-void App::addFrameListener(tz::FrameListener frameListenerFunction)
+void App::setUpdateFunction(tz::FrameListener frameListener)
 {
-  frameListeners.push_back(frameListenerFunction);
+  frameListeners.push_back(frameListener);
 }
 
 void App::updateFrameListeners(float frameTime)
 {
+  windowSystem->pollEvents();
   for (auto& frameListenerFunc : frameListeners) {
-    frameListenerFunc(frameTime);
+    frameListenerFunc(this);
   }
+  windowSystem->present();
+}
+float App::getLastFrameTime()
+{
+  return 16.667f;
+}
+void App::renderCube(Eigen::Vector3f position) {
+
 }
 
 }

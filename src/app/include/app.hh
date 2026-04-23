@@ -6,14 +6,21 @@
 
 namespace tz {
 
-  using FrameListener = std::function< void(float frameTime)>;
+  class App;
+  using FrameListener = std::function< void(App* app)>;
 
   class TZ_API App
   {
+
+
     public:
-      App(tz::WindowSystem* windowSystem, tz::Renderer* renderer);
+      App();
       virtual void run();
-      virtual void addFrameListener(FrameListener frameListener);
+      virtual void setUpdateFunction(FrameListener frameListener);
+      virtual float getLastFrameTime();
+
+      virtual void renderCube(Eigen::Vector3f position);
+
 
   private:
       tz::WindowSystem* windowSystem = nullptr;
