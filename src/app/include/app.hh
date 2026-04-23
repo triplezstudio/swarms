@@ -19,6 +19,7 @@ namespace tz {
       virtual void setUpdateFunction(FrameListener frameListener);
       virtual float getLastFrameTime();
 
+      virtual void renderColoredQuad(Eigen::Vector3f position);
       virtual void renderCube(Eigen::Vector3f position);
 
 
@@ -28,7 +29,11 @@ namespace tz {
 
       std::vector<FrameListener> frameListeners;
 
+      tz::PipelineStateObject* colorOnlyPSO = nullptr;
+
       void updateFrameListeners(float frameTime);
+      void prepareRenderPrimitives();
+      tz::PipelineStateObject* createColorOnlyPSO();
 
 
   };
