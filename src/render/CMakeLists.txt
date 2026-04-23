@@ -6,6 +6,7 @@ target_include_directories(render_lib PUBLIC include)
 #target_sources(render_lib PUBLIC renderer.cpp)
 
 target_link_libraries(render_lib PUBLIC window_lib Eigen3::Eigen)
+target_compile_definitions(render_lib PRIVATE EXPORT_TZ_LIB)
 
 # --------------------------------------------------------------------------
 # Assets copying

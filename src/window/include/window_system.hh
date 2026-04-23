@@ -21,17 +21,8 @@ struct WindowDesc {
   std::string title;
 
   enum class GraphicsAPI {
-    OpenGL,
     Vulkan,
-    DX11,
-    DX12
   } api;
-
-  struct {
-    int major;
-    int minor;
-    bool coreProfile;
-  } gl;
 
   struct {
     bool enableValidation;

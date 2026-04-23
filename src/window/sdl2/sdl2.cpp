@@ -1,6 +1,3 @@
-
-#include <GL/glew.h>
-
 #include <SDL2/SDL.h>
 #include <SDL_syswm.h>
 
@@ -34,10 +31,6 @@ void SDL2WindowSystem::pollEvents()
 
 void SDL2WindowSystem::present()
 {
-  if (windowDesc.api == WindowDesc::GraphicsAPI::OpenGL)
-  {
-    SDL_GL_SwapWindow(window);
-  }
 
 }
 

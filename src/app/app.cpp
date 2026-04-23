@@ -25,8 +25,11 @@ void tz::App::run()
 {
   while (true)
   {
-    //windowSystem->doFrame();
+
+    windowSystem->pollEvents();
     updateFrameListeners(16.66f);
+    windowSystem->present();
+
   }
 
 }
@@ -38,11 +41,11 @@ void App::setUpdateFunction(tz::FrameListener frameListener)
 
 void App::updateFrameListeners(float frameTime)
 {
-  windowSystem->pollEvents();
+
   for (auto& frameListenerFunc : frameListeners) {
     frameListenerFunc(this);
   }
-  windowSystem->present();
+
 }
 float App::getLastFrameTime()
 {
