@@ -166,6 +166,7 @@ void App::updateFrameListeners(float frameTime)
   renderer->beginFrame();
   renderer->beginCommandBuffer(commandBuffer);
 
+
   // Render everything submitted during this frame:
   for (auto& prd : framePrimitives)
   {
@@ -180,6 +181,8 @@ void App::updateFrameListeners(float frameTime)
         renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
     }
   }
+
+  framePrimitives.clear();
   renderer->endCommandBuffer(commandBuffer);
   renderer->submitCommandBuffer(commandBuffer);
 
