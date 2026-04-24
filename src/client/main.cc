@@ -336,8 +336,8 @@ void runDemo()
 void doFrame(tz::App* app)
 {
   auto lastFrameTime = app->getLastFrameTime();
-  for (int i = 0; i < 25; i++) {
-    app->renderColoredQuad(Eigen::Vector3f(-10 + i * 1.1, 0, 0));
+  for (int i = 0; i < 20; i++) {
+    app->renderColoredQuad(Eigen::Vector3f(-10 + i * 1.2, 0, 0));
 
   }
 
