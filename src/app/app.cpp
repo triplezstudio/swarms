@@ -23,6 +23,9 @@ App::App()
   // for rendering cubes, spheres, meshes etc.
   prepareRenderPrimitives();
 
+  default3DCamera = new Camera({0, 2, 3}, {0, 0, 0 }, CameraType::Perspective);
+  defaultUICamera = new Camera({0, 0, 1}, {0, 0, 0}, CameraType::Ortho);
+
 }
 
 void App::prepareRenderPrimitives()
@@ -166,11 +169,14 @@ void App::updateFrameListeners(float frameTime)
     {
         auto transform = Eigen::Affine3f::Identity();
         transform.translate(prd.position);
+        transform.scale(prd.scale);
         Eigen::Matrix4f tm = transform.matrix();
         tz::TransformUniformBufferObject transformUBO;
         transformUBO.model = tm;
-        transformUBO.view = createLookAtMatrix({0, 0, 15}, {0, 0, 0}, {0, 1,0});
-        transformUBO.proj = createPerspectiveProjectionMatrix(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
+        //transformUBO.view = createLookAtMatrix({0, 0, 15}, {0, 0, 0}, {0, 1,0});
+        transformUBO.view = prd.associatedCamera->getViewMatrix();
+        //transformUBO.proj = createPerspectiveProjectionMatrix(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
+        transformUBO.proj = prd.associatedCamera->getProjectionMatrix(640, 480);
         renderer->updateBuffer(colorOnlyPSO->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject), counter);
 
         renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPSO) );
@@ -201,11 +207,13 @@ float App::getLastFrameTime()
 void App::renderCube(Eigen::Vector3f position) {
 
 }
-void App::renderColoredQuad(Eigen::Vector3f position)
+void App::renderColoredQuad(Eigen::Vector3f position, Eigen::Vector3f scale)
 {
   PrimitiveRenderData prd;
   prd.position = position;
+  prd.scale = scale;
   prd.type = PrimitiveRenderType::Quad;
+  prd.associatedCamera = activeRenderCamera;
   framePrimitives.push_back(prd);
 }
 Eigen::Matrix4f App::createLookAtMatrix(const Eigen::Vector3f& eye,
@@ -246,6 +254,27 @@ Eigen::Matrix4f App::createPerspectiveProjectionMatrix(float fovY, float aspect,
 }
 
 
+
+void App::activate3DCamera(Eigen::Vector3f position, Eigen::Vector3f lookAt)
+{
+  default3DCamera->pos = position;
+  default3DCamera->lookAt = lookAt;
+  activeRenderCamera = default3DCamera;
+}
+void App::activate3DCamera()
+{
+  activeRenderCamera = default3DCamera;
+}
+void App::activateUICamera()
+{
+  activeRenderCamera = defaultUICamera;
+}
+void App::activateUICamera(Eigen::Vector3f position)
+{
+  activeRenderCamera = defaultUICamera;
+  defaultUICamera->pos = position;
+  defaultUICamera->lookAt = Eigen::Vector3f (position.x(), position.y(), -position.z());
+}
 
 }
 

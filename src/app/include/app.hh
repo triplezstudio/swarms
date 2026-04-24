@@ -21,6 +21,7 @@ namespace tz {
     Eigen::Vector3f position;
     Eigen::Vector3f scale;
     Eigen::Quaternionf orientation;
+    Camera* associatedCamera = nullptr;
   };
 
   class App;
@@ -36,7 +37,12 @@ namespace tz {
       virtual void setUpdateFunction(FrameListener frameListener);
       virtual float getLastFrameTime();
 
-      virtual void renderColoredQuad(Eigen::Vector3f position);
+      virtual void activate3DCamera();
+      virtual void activate3DCamera(Eigen::Vector3f position, Eigen::Vector3f lookAt);
+      virtual void activateUICamera();
+      virtual void activateUICamera(Eigen::Vector3f position);
+
+      virtual void renderColoredQuad(Eigen::Vector3f position, Eigen::Vector3f scale = {1, 1,1});
       virtual void renderCube(Eigen::Vector3f position);
 
 
@@ -53,6 +59,9 @@ namespace tz {
       CommandBuffer* commandBuffer = nullptr;
       std::vector<PrimitiveRenderData> framePrimitives;
 
+      Camera* default3DCamera = nullptr;
+      Camera* defaultUICamera = nullptr;
+      Camera* activeRenderCamera = nullptr;
 
       void updateFrameListeners(float frameTime);
       void prepareRenderPrimitives();

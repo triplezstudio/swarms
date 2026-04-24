@@ -1048,6 +1048,26 @@ std::vector<vk::VertexInputBindingDescription>
 
 }
 
+vk::CullModeFlags tz::render::vulkan::VulkanRenderer::toVulkanCullMode(tz::CullMode cullMode)
+{
+  switch (cullMode)
+  {
+    case tz::CullMode::None: return vk::CullModeFlagBits::eNone;
+    case tz::CullMode::Front: return vk::CullModeFlagBits::eFront;
+    case tz::CullMode::Back: return vk::CullModeFlagBits::eBack;
+  }
+}
+
+vk::FrontFace tz::render::vulkan::VulkanRenderer::toVulkanFrontFace(tz::FrontFace frontFace)
+{
+    switch(frontFace)
+    {
+      case tz::FrontFace::Clockwise: return vk::FrontFace::eClockwise;
+      case tz::FrontFace::CounterClockwise: return vk::FrontFace::eCounterClockwise;
+    }
+
+}
+
 // TODO : WIP - implement the creation of the pipeline based on the actual incoming parameters,
 // currently the implementation is based on the default graphics pipeline creation.
 tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineStateObject(
@@ -1083,8 +1103,8 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
   rasterizationStateCreateInfo.setDepthClampEnable(vk::False)
     .setRasterizerDiscardEnable(vk::False)
     .setPolygonMode(vk::PolygonMode::eFill)
-    .setCullMode(vk::CullModeFlagBits::eBack)
-    .setFrontFace(vk::FrontFace::eClockwise)
+    .setCullMode(toVulkanCullMode(renderState.cullMode))
+    .setFrontFace(toVulkanFrontFace(renderState.frontFace))
     .setDepthBiasEnable(vk::False)
     .setLineWidth(1.0f);
 

@@ -484,6 +484,8 @@ class TZ_API VulkanRenderer : public Renderer
                          uint32_t width,
                          uint32_t height);
   uint32_t getAlignedStride(size_t size, uint32_t minAlignment);
+  vk::FrontFace toVulkanFrontFace(FrontFace frontFace);
+  vk::CullModeFlags toVulkanCullMode(CullMode cullMode);
 };
 
 vk::DescriptorType toVulkanDescriptorType(ResourceType resourceType);

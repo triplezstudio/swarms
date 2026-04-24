@@ -17,6 +17,97 @@
  */
 namespace tz {
 
+enum class CameraType
+{
+  Ortho,
+  Perspective
+};
+
+class Camera
+{
+  public:
+  Camera(Eigen::Vector3f pos, Eigen::Vector3f lookAt, CameraType type) : pos(pos), lookAt(lookAt), type(type)
+  {
+
+  }
+
+  Eigen::Matrix4f getViewMatrix()
+  {
+    Eigen::Vector3f up = {0, 1, 0};
+    Eigen::Vector3f f = (lookAt - pos).normalized();
+    Eigen::Vector3f s = f.cross(up).normalized();
+    Eigen::Vector3f u = s.cross(f);
+
+    Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
+
+    // Set Columns (Eigen is Column-Major)
+    mat.col(0).head<3>() = s;
+    mat.col(1).head<3>() = u;
+    mat.col(2).head<3>() = -f;
+
+    // Translation part
+    mat(0,3) = -s.dot(pos);
+    mat(1,3) = -u.dot(pos);
+    mat(2,3) =  f.dot(pos);
+
+    return mat;
+  }
+
+  Eigen::Matrix4f getProjectionMatrix(float width, float height)
+  {
+    if (type == CameraType::Perspective)
+    {
+      float fovY = 0.5236; // around 30 degress vertical fov
+      float aspect = width / height;
+      float tanHalfFovy = std::tan(fovY * 0.5f);
+      Eigen::Matrix4f m = Eigen::Matrix4f::Zero();
+
+      // TODO customizable:
+
+      float zFar = 1000;
+      float zNear = 0.1;
+
+      m(0,0) = 1.0f / (aspect * tanHalfFovy);
+      m(1,1) = 1.0f / (tanHalfFovy); // Negated for Vulkan Y-down
+      m(2,2) = zFar / (zNear - zFar);
+      m(2,3) = (zNear * zFar) / (zNear - zFar);
+      m(3,2) = -1.0f; // This must be at (3,2) for Eigen's Col-Major layout
+
+      return m;
+    }
+    else if (type == CameraType::Ortho)
+    {
+      float left = 0;
+      float right = width;
+      float top = height;
+      float bottom = 0;
+
+      // TODO customizable:
+      float zFar = 100;
+      float zNear = 0.1;
+
+      Eigen::Matrix4f m = Eigen::Matrix4f::Zero();
+
+      m(0,0) = 2.0f / (right - left);
+      m(1,1) = 2.0f / (top - bottom);
+      m(2,2) = 1.0f / (zNear - zFar);   // Vulkan: [0,1] depth
+      m(3,3) = 1.0f;
+
+      m(0,3) = -(right + left) / (right - left);
+      m(1,3) = -(top + bottom) / (top - bottom);
+      m(2,3) = zNear / (zNear - zFar);
+
+      return m;
+    }
+  }
+
+
+  public:
+  Eigen::Vector3f pos;
+  Eigen::Vector3f lookAt;
+  CameraType type;
+
+};
 
 struct VertexPosColor
 {
