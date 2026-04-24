@@ -272,6 +272,9 @@ void tz::render::vulkan::VulkanRenderer::pickPhysicalDevice()
       break;
     }
   }
+
+  vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
+  minUniformBufferOffsetAlignment = properties.limits.minUniformBufferOffsetAlignment;
 }
 
 void tz::render::vulkan::VulkanRenderer::setupDebugMessenger()
@@ -903,16 +906,28 @@ void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz
     // TODO: this command must have a reference to the current pipeline layout
     auto& pipelineLayout = dynamic_cast<VulkanPSO*>(c->pso)->getPipelineLayout();
     std::vector<vk::DescriptorSet> descriptorSets;
+    std::vector<uint32_t> alignedOffsets;
+    uint32_t counter = 0;
     for (auto& ds : c->descriptorSets)
     {
       auto vds = reinterpret_cast<VulkanDescriptorSet*>(ds);
       auto& vulkanDS = vds->descSets[currentFrameIndex];
       descriptorSets.push_back(*vulkanDS);
+
+      // Build correct offsets per bindin
+      for (auto& db : ds->layout->descriptorBindings)
+      {
+        if (db->type == tz::ResourceType::Ubo)
+        {
+          auto alignedStride = getAlignedStride(db->buffer->unitSize, minUniformBufferOffsetAlignment);
+          alignedOffsets.push_back(c->offsets[counter++] * alignedStride);
+        }
+      }
     }
 
     currentFrameCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout,
                                                  0, descriptorSets,
-                                                 nullptr);
+                                                 alignedOffsets);
   }
 
   else if (auto c = dynamic_cast<CmdBindIndexBuffer*>(cmd))
@@ -1149,7 +1164,7 @@ vk::DescriptorType tz::render::vulkan::toVulkanDescriptorType(tz::ResourceType r
 {
   switch (resourceType)
   {
-    case tz::ResourceType::Ubo: return vk::DescriptorType::eUniformBuffer;
+    case tz::ResourceType::Ubo: return vk::DescriptorType::eUniformBufferDynamic;
     case tz::ResourceType::Ssbo: return vk::DescriptorType::eStorageBuffer;
     case tz::ResourceType::Sampler: return vk::DescriptorType::eCombinedImageSampler;
   }
@@ -1210,13 +1225,32 @@ tz::Buffer *tz::render::vulkan::VulkanRenderer::createMultiframeBuffer(void *ini
   auto buffer = new VulkanBuffer(std::move(vulkanBuffers), std::move(memories));
   return buffer;
 }
+
+uint32_t tz::render::vulkan::VulkanRenderer::getAlignedStride(size_t size, uint32_t minAlignment)
+{
+  size_t alignedStride = (size + minAlignment - 1) & ~(minAlignment - 1);
+  return alignedStride;
+}
+
+/**
+ *
+ * @param buffer
+ * @param data
+ * @param sizeInBytes
+ * @param offset            This is a logical offset (effectively an index; multiplicator) into the buffer which is then transformed into
+ *                          a correctly aligned offset as: alignedStride * offset.
+ *                          The aligned stride is the next boundary keeping the minAlignment properties
+ *                          of the GPU and the actual sizeInBytes. e.g. if the minAlignment is 128
+ *                          and the size is 192, the alignedStride would be 256.
+ */
 void tz::render::vulkan::VulkanRenderer::updateBuffer(tz::Buffer *buffer,
                                                       void *data,
-                                                      size_t sizeInBytes)
+                                                      size_t sizeInBytes, uint32_t offset)
 {
+  size_t alignedStride = getAlignedStride(sizeInBytes, minUniformBufferOffsetAlignment);
   auto currentFrameBuffer = dynamic_cast<VulkanBuffer*>(buffer)->getMultiBufferByIndex(currentFrameIndex);
   auto& currentFrameBufferMem = dynamic_cast<VulkanBuffer*>(buffer)->getMultiMemoryByIndex(currentFrameIndex);
-  auto targetMemory = currentFrameBufferMem.mapMemory(0, sizeInBytes);
+  auto targetMemory = currentFrameBufferMem.mapMemory(alignedStride * offset, sizeInBytes);
   memcpy(targetMemory, data, sizeInBytes);
   currentFrameBufferMem.unmapMemory();
   // TODo we should maybe better permanently map certain buffers (via flag) but for now
@@ -1228,7 +1262,7 @@ void tz::render::vulkan::VulkanRenderer::updateBuffer(tz::Buffer *buffer,
 void tz::render::vulkan::VulkanRenderer::createDescriptorPool()
 {
   vk::DescriptorPoolSize poolSizes[3];
-  poolSizes[0].setType(vk::DescriptorType::eUniformBuffer)
+  poolSizes[0].setType(vk::DescriptorType::eUniformBufferDynamic)
           .setDescriptorCount(100);
   poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
           .setDescriptorCount(500);
@@ -1309,14 +1343,14 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
         auto frameIndexBuffer = vbuf->getMultiBufferByIndex(i);
         descBufferInfo.setBuffer(frameIndexBuffer)
         .setOffset(0)
-        .setRange(VK_WHOLE_SIZE);
+        .setRange(sizeof(TransformUniformBufferObject));
 
         vk::WriteDescriptorSet writeDescriptorSet;
         writeDescriptorSet.setDstSet(descriptorSets[i])
           .setDstBinding(binding->bindingIndex)
           .setDstArrayElement(0)
           .setDescriptorCount(1)
-            .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+            .setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
           .setBufferInfo(descBufferInfo);
         device.updateDescriptorSets(writeDescriptorSet, {});
       }
@@ -1486,4 +1520,22 @@ tz::Sampler *tz::render::vulkan::VulkanRenderer::createSampler()
 
     auto samplerWrapper = new tz::render::vulkan::VulkanSampler(std::move(sampler));
     return samplerWrapper;
+}
+tz::Buffer *tz::render::vulkan::VulkanRenderer::createMultiframeUniformBuffer(
+  uint32_t numberOfPlannedObjects, size_t objectSize)
+{
+  size_t alignedStride = (objectSize + minUniformBufferOffsetAlignment -1) & ~(minUniformBufferOffsetAlignment - 1);
+  std::vector<vk::raii::Buffer> vulkanBuffers;
+  std::vector<vk::raii::DeviceMemory> memories;
+  for (size_t i = 0; i < maxFramesInFlight; i++)
+  {
+    auto b = dynamic_cast<VulkanBuffer*>(createBuffer(nullptr, numberOfPlannedObjects * alignedStride, tz::BufferUsage::Uniform));
+    auto vulkanBuffer = vk::raii::Buffer(device, b->getBuffer());
+    auto vulkanMemory = vk::raii::DeviceMemory(device, b->getMemoryHandle());
+    vulkanBuffers.push_back(std::move(vulkanBuffer));
+    memories.push_back(std::move(vulkanMemory));
+  }
+  auto buffer = new VulkanBuffer(std::move(vulkanBuffers), std::move(memories));
+  buffer->unitSize = objectSize;
+  return buffer;
 }

@@ -300,8 +300,8 @@ void runDemo()
     // TODO: actual transformation
     {
 
-      renderer->updateBuffer(colorOnlyPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
-      renderer->updateBuffer(texturedPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
+      renderer->updateBuffer(colorOnlyPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject), 0);
+      renderer->updateBuffer(texturedPso->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject), 0);
     }
 
     renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPso) );
@@ -310,14 +310,14 @@ void runDemo()
 
     // colored triangle:
     renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({triVertexBuffer}));
-    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPso->descriptorSets, colorOnlyPso));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPso->descriptorSets, colorOnlyPso, {0}));
     renderer->recordCommand(commandBuffer, new tz::CmdDraw(3, 1, 0, 0));
 
     // textured quad::
     renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (texturedPso) );
     renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadVertexBuffer}));
     renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
-    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(texturedPso->descriptorSets, texturedPso));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(texturedPso->descriptorSets, texturedPso, {0}));
     renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(indices.size(), 1, 0, 0, 0));
 
     renderer->endCommandBuffer(commandBuffer);
@@ -336,7 +336,11 @@ void runDemo()
 void doFrame(tz::App* app)
 {
   auto lastFrameTime = app->getLastFrameTime();
-  app->renderColoredQuad(Eigen::Vector3f(0, 0, 0));
+  for (int i = 0; i < 25; i++) {
+    app->renderColoredQuad(Eigen::Vector3f(-10 + i * 1.1, 0, 0));
+
+  }
+
 }
 
 void runApp()
@@ -349,6 +353,7 @@ void runApp()
 
 int main(int argc, char* argv[])
 {
+  //runDemo();
   runApp();
 
   return 0;

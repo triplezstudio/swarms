@@ -3,6 +3,7 @@
 #include <defines.h>
 #include <Eigen/Dense>
 #include <window_system.hh>
+#include <array>
 
 
 /**
@@ -57,6 +58,10 @@ struct Buffer
   virtual void unbind() = 0;
   virtual void map() = 0;
   virtual void unmap() = 0;
+
+  size_t unitSize = 0;
+  size_t overallSize = 0;
+
 };
 
 enum class VertexInputRate
@@ -329,11 +334,12 @@ class CmdBindPipeline : public Command
 class CmdBindDescriptors : public Command
 {
   public:
-      CmdBindDescriptors(std::vector<DescriptorSet*> descriptorSets, PipelineStateObject* pso)
-        : descriptorSets(descriptorSets), pso(pso) {}
+      CmdBindDescriptors(std::vector<DescriptorSet*> descriptorSets, PipelineStateObject* pso, std::vector<uint32_t> offsets)
+        : descriptorSets(descriptorSets), pso(pso), offsets(offsets) {}
 
       std::vector<DescriptorSet*> descriptorSets;
       PipelineStateObject* pso;
+      std::vector<uint32_t> offsets;
 };
 
 class CmdSetViewPorts : public Command
@@ -482,65 +488,34 @@ class TZ_API Renderer
   virtual Texture* createTexture(Image* image) { return nullptr;}
   virtual CommandBuffer* createCommandBuffer() = 0;
   virtual Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) = 0;
-  virtual Buffer* createMultiframeBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage)
-  {
-    return nullptr;
-  }
+  virtual Buffer* createMultiframeBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) = 0;
+  virtual Buffer* createMultiframeUniformBuffer(uint32_t numberOfPlannedObjects, size_t objectSize) = 0;
   virtual DescriptorBinding* createDescriptorBinding(
     uint8_t binding,
     tz::ResourceType resourceType,
     tz::ShaderType shaderType,
     uint32_t count,
     Buffer* buffer = nullptr,
-    Texture* texture = nullptr)
-  {
-    return nullptr;
-  }
-  virtual DescriptorSetLayout* createDescriptorSetLayout(const std::vector<DescriptorBinding*>& bindings)
-  {
-    return nullptr;
-  }
+    Texture* texture = nullptr) = 0;
+  virtual DescriptorSetLayout* createDescriptorSetLayout(const std::vector<DescriptorBinding*>& bindings) = 0;
   virtual ShaderModule* createShaderModule(ShaderType types, const std::string& source) = 0;
   virtual ShaderPipeline* createShaderPipeline(const std::vector<ShaderModule*>& modules) = 0;
   virtual PipelineStateObject* createPipelineStateObject(RenderState& renderState,
-                                             ShaderPipeline* shaderPipeline,
-              VertexLayout& vertexLayout,
-              const std::vector<DescriptorSetLayout*>&descriptorSetLayouts)
-  {
-    auto pso =  new PipelineStateObject();
-    pso->renderState = renderState;
-    pso->shaderPipeline = shaderPipeline;
-    pso->vertexLayout = vertexLayout;
-    pso->descriptorSetLayouts = descriptorSetLayouts;
-    return pso;
-  };
+                                              ShaderPipeline* shaderPipeline, VertexLayout& vertexLayout,
+                                              const std::vector<DescriptorSetLayout*>&descriptorSetLayouts) = 0;
 
-  virtual void beginCommandBuffer(CommandBuffer* cb)
-  {
+  virtual void beginCommandBuffer(CommandBuffer* cb) = 0;
 
-  }
-
-  virtual void endCommandBuffer(CommandBuffer* cb)
-  {
-
-  }
+  virtual void endCommandBuffer(CommandBuffer* cb) = 0;
 
   virtual void recordCommand(CommandBuffer* cb, Command* cmd)
   {
     cb->recordCommand(cmd);
   }
 
-  virtual void updateBuffer(Buffer* buffer, void* data, size_t sizeInBytes)
-  {
-    // noop to avoid impl for GL
-  }
+  virtual void updateBuffer(Buffer* buffer, void* data, size_t sizeInBytes, uint32_t objectIndex) = 0;
 
-
-  virtual tz::DescriptorSet *createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout)
-  {
-    // provide dummy impl. for GL
-    return nullptr;
-  }
+  virtual tz::DescriptorSet *createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout)  = 0;
 
 };
 

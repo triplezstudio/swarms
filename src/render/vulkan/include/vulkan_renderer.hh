@@ -360,6 +360,7 @@ class TZ_API VulkanRenderer : public Renderer
 
   Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
   Buffer * createMultiframeBuffer(void *initialData, size_t sizeInBytes, tz::BufferUsage bufferUsage) override;
+  Buffer * createMultiframeUniformBuffer(uint32_t numberOfPlannedObjects, size_t objectSize) override;
   DescriptorBinding * createDescriptorBinding(uint8_t binding,
                                              tz::ResourceType resourceType,
                                              tz::ShaderType shaderType,
@@ -418,7 +419,7 @@ class TZ_API VulkanRenderer : public Renderer
                                                         vk::DebugUtilsMessageTypeFlagsEXT              type,
                                                         const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
                                                         void *                                         pUserData);
-  void updateBuffer(tz::Buffer *buffer, void *data, size_t sizeInBytes) override;
+  void updateBuffer(tz::Buffer *buffer, void *data, size_t sizeInBytes, uint32_t offset) override;
 
   private:
   const uint32_t maxFramesInFlight = 2;
@@ -437,6 +438,8 @@ class TZ_API VulkanRenderer : public Renderer
   vk::raii::Pipeline graphicsPipeline = nullptr;
   vk::raii::CommandPool commandPool = nullptr;
   vk::raii::CommandBuffer commandBuffer = nullptr;
+
+  size_t minUniformBufferOffsetAlignment = 0;
 
   uint32_t currentFrameIndex = 0;
   uint32_t imageIndex;
@@ -480,6 +483,7 @@ class TZ_API VulkanRenderer : public Renderer
                          vk::raii::Image &image,
                          uint32_t width,
                          uint32_t height);
+  uint32_t getAlignedStride(size_t size, uint32_t minAlignment);
 };
 
 vk::DescriptorType toVulkanDescriptorType(ResourceType resourceType);

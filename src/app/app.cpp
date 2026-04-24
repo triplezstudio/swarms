@@ -33,12 +33,12 @@ void App::prepareRenderPrimitives()
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
 
-  std::vector<tz::VertexPosColor> verticesPosTexCoord =
+  std::vector<tz::VertexPosColor> verticesPosColor =
     {
-      {{-0.8, 0.5, 0.5}, {1, 1,1}},
-      {{-0.8, -0.5, 0.5}, {1, 1,1,}},
-      {{-0.4, -0.5, 0.5},  {1, 1,1}},
-      {{-0.4, 0.5, 0.5}, {1, 1,1}}
+      {{-0.5, 0.5, 0.5}, {1, 1,1}},
+      {{-0.5, -0.5, 0.5}, {1, 1,1,}},
+      {{0.5, -0.5, 0.5},  {1, 1,1}},
+      {{0.5, 0.5, 0.5}, {1, 1,1}}
     };
 
   quadIndices =
@@ -47,8 +47,8 @@ void App::prepareRenderPrimitives()
       0, 2, 3
     };
 
-  quadVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
-                                                 verticesPosTexCoord.size() * sizeof (tz::VertexPosTexCoords),
+  quadVertexBuffer = renderer->createBuffer(verticesPosColor.data(),
+                                                 verticesPosColor.size() * sizeof (tz::VertexPosColor),
                                                  tz::BufferUsage::Vertex);
 
   quadIndexBuffer = renderer->createBuffer(quadIndices.data(),
@@ -57,18 +57,6 @@ void App::prepareRenderPrimitives()
 
   colorOnlyPSO = createColorOnlyPSO();
 
-  auto transform = Eigen::Affine3f::Identity();
-  transform.translate(Eigen::Vector3f(0.5, 0, 0));
-  Eigen::Matrix4f tm = transform.matrix();
-  Eigen::Matrix4f m = Eigen::Matrix4f::Identity();
-  std::vector<Eigen::Matrix4f> vm = {m};
-  tz::TransformUniformBufferObject transformUBO;
-  transformUBO.model = tm;
-  transformUBO.view = createLookAtMatrix({0, 0, 2.17}, {0, 0, 0}, {0, 1,0});
-  transformUBO.proj = createPerspectiveProjectionMatrix(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
-  transformUBO.proj(0,0) *= -1.0f;
-  renderer->updateBuffer(colorOnlyPSO->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject));
-
   commandBuffer = renderer->createCommandBuffer();
 
 }
@@ -76,7 +64,7 @@ void App::prepareRenderPrimitives()
 tz::PipelineStateObject* App::createColorOnlyPSO()
 {
 
-  auto spvPath = "shader_binaries/default_shader_stage3.slang.spv";
+  auto spvPath = "shader_binaries/colored_transform.slang.spv";
 
   auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
@@ -118,10 +106,12 @@ tz::PipelineStateObject* App::createColorOnlyPSO()
     }
   };
 
-  // Descriptor layout and binding for the transformation matrix:
-  auto transformBuffer = renderer->createMultiframeBuffer(nullptr,
-                                                          sizeof(tz::TransformUniformBufferObject),
-                                                          tz::BufferUsage::Uniform);
+  // Descriptor layout and binding for the transformation matrix
+
+  // TODO: we should have the client of the app make this configurable, though a sensible default value makes sense.
+  // In this case 100 * 192 bytes = 188KB of memory, seems ok even for smaller GPUs.
+  int maxNumberOfObjects = 1000;
+  auto transformBuffer = renderer->createMultiframeUniformBuffer(maxNumberOfObjects, sizeof(TransformUniformBufferObject));
   auto transformDescBinding = renderer->createDescriptorBinding(0,
                                                                 tz::ResourceType::Ubo,
                                                                 tz::ShaderType::Vertex,
@@ -145,7 +135,7 @@ void tz::App::run()
 
     windowSystem->pollEvents();
     updateFrameListeners(16.66f);
-    windowSystem->present();
+    //windowSystem->present();
 
   }
 
@@ -168,23 +158,39 @@ void App::updateFrameListeners(float frameTime)
 
 
   // Render everything submitted during this frame:
+  uint32_t counter = 0;
   for (auto& prd : framePrimitives)
   {
+
     if (prd.type == PrimitiveRenderType::Quad)
     {
+        auto transform = Eigen::Affine3f::Identity();
+        transform.translate(prd.position);
+        Eigen::Matrix4f tm = transform.matrix();
+        tz::TransformUniformBufferObject transformUBO;
+        transformUBO.model = tm;
+        transformUBO.view = createLookAtMatrix({0, 0, 15}, {0, 0, 0}, {0, 1,0});
+        transformUBO.proj = createPerspectiveProjectionMatrix(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
+        renderer->updateBuffer(colorOnlyPSO->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject), counter);
+
         renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPSO) );
         renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
         renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
         renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadVertexBuffer}));
         renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
-        renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPSO->descriptorSets, colorOnlyPSO));
+        renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPSO->descriptorSets, colorOnlyPSO, {counter}));
         renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
+
     }
+    counter++;
   }
 
-  framePrimitives.clear();
+
   renderer->endCommandBuffer(commandBuffer);
   renderer->submitCommandBuffer(commandBuffer);
+  renderer->endFrame();
+
+  framePrimitives.clear();
 
 
 }
@@ -202,12 +208,9 @@ void App::renderColoredQuad(Eigen::Vector3f position)
   prd.type = PrimitiveRenderType::Quad;
   framePrimitives.push_back(prd);
 }
-
-
-// TODO move into math or other helper library (might even already exist!?)
 Eigen::Matrix4f App::createLookAtMatrix(const Eigen::Vector3f& eye,
-                       const Eigen::Vector3f& center,
-                       const Eigen::Vector3f& up)
+                                        const Eigen::Vector3f& center,
+                                        const Eigen::Vector3f& up)
 {
   Eigen::Vector3f f = (center - eye).normalized();
   Eigen::Vector3f s = f.cross(up).normalized();
@@ -215,20 +218,12 @@ Eigen::Matrix4f App::createLookAtMatrix(const Eigen::Vector3f& eye,
 
   Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
 
-  // Rotation part (Indices are mat(row, col))
-  mat(0,0) =  s.x();
-  mat(0,1) =  s.y(); // Changed from (1,0)
-  mat(0,2) =  s.z(); // Changed from (2,0)
+  // Set Columns (Eigen is Column-Major)
+  mat.col(0).head<3>() = s;
+  mat.col(1).head<3>() = u;
+  mat.col(2).head<3>() = -f;
 
-  mat(1,0) =  u.x();
-  mat(1,1) =  u.y();
-  mat(1,2) =  u.z();
-
-  mat(2,0) = -f.x();
-  mat(2,1) = -f.y();
-  mat(2,2) = -f.z();
-
-  // Translation part (Now in the 4th Column)
+  // Translation part
   mat(0,3) = -s.dot(eye);
   mat(1,3) = -u.dot(eye);
   mat(2,3) =  f.dot(eye);
@@ -242,14 +237,10 @@ Eigen::Matrix4f App::createPerspectiveProjectionMatrix(float fovY, float aspect,
   Eigen::Matrix4f m = Eigen::Matrix4f::Zero();
 
   m(0,0) = 1.0f / (aspect * tanHalfFovy);
-  m(1,1) = 1.0f / (tanHalfFovy);
-
-  // Vulkan Depth [0, 1]
+  m(1,1) = -1.0f / (tanHalfFovy); // Negated for Vulkan Y-down
   m(2,2) = zFar / (zNear - zFar);
-  m(2,3) = (zNear * zFar) / (zNear - zFar); // Translation moved to Col 3
-
-  // Perspective Divide
-  m(3,2) = -1.0f; // Moved from (2,3) to (3,2) for Column-Major
+  m(2,3) = (zNear * zFar) / (zNear - zFar);
+  m(3,2) = -1.0f; // This must be at (3,2) for Eigen's Col-Major layout
 
   return m;
 }
