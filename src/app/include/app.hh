@@ -6,8 +6,8 @@
 
 namespace tz {
 
-  enum class PrimitiveRenderType
-  {
+  enum class PrimitiveGeometryType
+{
     Line,
     Quad,
     Cube,
@@ -15,11 +15,21 @@ namespace tz {
     Mesh
   };
 
+  enum class PrimitiveMaterialType
+  {
+    SingleColor,
+    DiffuseTexture,
+    PBR,
+
+  };
+
   struct PrimitiveRenderData
   {
-    PrimitiveRenderType type;
+    PrimitiveGeometryType geometryType;
+    PrimitiveMaterialType materialType;
     Eigen::Vector3f position;
     Eigen::Vector3f scale;
+    Eigen::Vector3f color;
     Eigen::Quaternionf orientation;
     Camera* associatedCamera = nullptr;
   };
@@ -42,7 +52,7 @@ namespace tz {
       virtual void activateUICamera();
       virtual void activateUICamera(Eigen::Vector3f position);
 
-      virtual void renderColoredQuad(Eigen::Vector3f position, Eigen::Vector3f scale = {1, 1,1});
+      virtual void renderColoredQuad(Eigen::Vector3f position, Eigen::Vector3f scale = {1, 1,1}, Eigen::Vector3f color = {1, 1,1});
       virtual void renderCube(Eigen::Vector3f position);
 
 

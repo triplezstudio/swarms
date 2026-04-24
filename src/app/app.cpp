@@ -36,12 +36,12 @@ void App::prepareRenderPrimitives()
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
 
-  std::vector<tz::VertexPosColor> verticesPosColor =
+  std::vector<tz::VertexPos> verticesPos =
     {
-      {{-0.5, 0.5, 0.5}, {1, 1,1}},
-      {{-0.5, -0.5, 0.5}, {1, 1,1,}},
-      {{0.5, -0.5, 0.5},  {1, 1,1}},
-      {{0.5, 0.5, 0.5}, {1, 1,1}}
+      {{-0.5, 0.5, 0.5}},
+      {{-0.5, -0.5, 0.5}},
+      {{0.5, -0.5, 0.5}},
+      {{0.5, 0.5, 0.5}}
     };
 
   quadIndices =
@@ -50,8 +50,8 @@ void App::prepareRenderPrimitives()
       0, 2, 3
     };
 
-  quadVertexBuffer = renderer->createBuffer(verticesPosColor.data(),
-                                                 verticesPosColor.size() * sizeof (tz::VertexPosColor),
+  quadVertexBuffer = renderer->createBuffer(verticesPos.data(),
+                                                 verticesPos.size() * sizeof (tz::VertexPos),
                                                  tz::BufferUsage::Vertex);
 
   quadIndexBuffer = renderer->createBuffer(quadIndices.data(),
@@ -67,7 +67,7 @@ void App::prepareRenderPrimitives()
 tz::PipelineStateObject* App::createColorOnlyPSO()
 {
 
-  auto spvPath = "shader_binaries/colored_transform.slang.spv";
+  auto spvPath = "shader_binaries/default_colored_transform.slang.spv";
 
   auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
   auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
@@ -86,7 +86,7 @@ tz::PipelineStateObject* App::createColorOnlyPSO()
   auto vertexLayout = tz::VertexLayout {};
   vertexLayout.bindings =  {tz::VertexBinding {
       .bufferSlot = 0,
-      .stride = sizeof(tz::VertexPosColor),
+      .stride = sizeof(tz::VertexPos),
       .vertexInputRate=tz::VertexInputRate::PerVertex,
   }};
   vertexLayout.attributes = {
@@ -96,16 +96,6 @@ tz::PipelineStateObject* App::createColorOnlyPSO()
       .dataType = tz::DataType::Float,
       .componentCount = 3,
       .offset = 0
-    },
-    {
-      tz::VertexAttribute
-      {
-        .shaderLocation = 1,
-        .bufferSlot = 0,
-        .dataType = tz::DataType::Float,
-        .componentCount = 3,
-        .offset = sizeof(float) * 3
-      }
     }
   };
 
@@ -159,13 +149,12 @@ void App::updateFrameListeners(float frameTime)
   renderer->beginFrame();
   renderer->beginCommandBuffer(commandBuffer);
 
-
   // Render everything submitted during this frame:
   uint32_t counter = 0;
   for (auto& prd : framePrimitives)
   {
 
-    if (prd.type == PrimitiveRenderType::Quad)
+    if (prd.geometryType == PrimitiveGeometryType::Quad)
     {
         auto transform = Eigen::Affine3f::Identity();
         transform.translate(prd.position);
@@ -179,12 +168,16 @@ void App::updateFrameListeners(float frameTime)
         transformUBO.proj = prd.associatedCamera->getProjectionMatrix(640, 480);
         renderer->updateBuffer(colorOnlyPSO->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject), counter);
 
-        renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPSO) );
+        // Decide based on the material subtype which pipeline we should use:
+        if (prd.materialType == PrimitiveMaterialType::SingleColor) {
+          renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPSO));
+          renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPSO->descriptorSets, colorOnlyPSO, {counter}));
+        }
+
         renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
         renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
         renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadVertexBuffer}));
         renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
-        renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPSO->descriptorSets, colorOnlyPSO, {counter}));
         renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
 
     }
@@ -207,12 +200,14 @@ float App::getLastFrameTime()
 void App::renderCube(Eigen::Vector3f position) {
 
 }
-void App::renderColoredQuad(Eigen::Vector3f position, Eigen::Vector3f scale)
+void App::renderColoredQuad(Eigen::Vector3f position, Eigen::Vector3f scale, Eigen::Vector3f color)
 {
   PrimitiveRenderData prd;
   prd.position = position;
   prd.scale = scale;
-  prd.type = PrimitiveRenderType::Quad;
+  prd.geometryType     = PrimitiveGeometryType::Quad;
+  prd.color = color;
+  prd.materialType = PrimitiveMaterialType::SingleColor;
   prd.associatedCamera = activeRenderCamera;
   framePrimitives.push_back(prd);
 }

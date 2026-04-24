@@ -109,6 +109,11 @@ class Camera
 
 };
 
+struct VertexPos
+{
+  Eigen::Vector3f pos;
+};
+
 struct VertexPosColor
 {
   Eigen::Vector3f pos;
