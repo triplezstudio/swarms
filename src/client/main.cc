@@ -28,10 +28,12 @@ void doFrame(tz::App* app)
   }
   // This allows us to "see" our scene through a camera in a 3d world
   // and place objects in world coordinates.
-  app->activate3DCamera(Eigen::Vector3f(0, 0, 25), Eigen::Vector3f(0, 0, 0));
+  app->activate3DCamera(Eigen::Vector3f(0,-10, 25), Eigen::Vector3f(0, 0, 0));
   for (int i = 0; i < 3; i++) {
     app->renderQuad({Eigen::Vector3f(0 + i * 1.2, 0, 0)});
   }
+
+  app->renderCube({Eigen::Vector3f(-2, 0, -3)});
 
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.

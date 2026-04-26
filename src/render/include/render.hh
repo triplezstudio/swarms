@@ -715,6 +715,9 @@ struct PrimitiveRenderData
   RenderHints renderHints;
   Transform transform;
   Camera* associatedCamera = nullptr;
+  Buffer* vertexBuffer = nullptr;
+  Buffer* indexBuffer = nullptr;
+  uint32_t indexCount = 0;
 };
 
 

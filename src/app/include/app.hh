@@ -42,15 +42,20 @@ namespace tz {
       std::vector<FrameListener> frameListeners;
 
       std::vector<uint32_t> quadIndices;
+      std::vector<uint32_t> cubeIndices;
+      std::vector<uint32_t> cubeIndicesPosTex;
       Buffer* quadPosVertexBuffer       = nullptr;
+      Buffer* cubePosVertexBuffer = nullptr;
+      Buffer* cubePosTexCoordVertexBuffer = nullptr;
       Buffer* quadPosTexCoordVertexBuffer = nullptr;
       Buffer* quadIndexBuffer = nullptr;
+      Buffer* cubeIndexBuffer = nullptr;
+      Buffer* cubeTexIndexBuffer = nullptr;
       PipelineStateObject* colorOnlyPSO = nullptr;
       CommandBuffer* commandBuffer = nullptr;
       std::vector<PrimitiveRenderData> framePrimitives;
 
       tz::DescriptorSet* cameraDescriptorSet = nullptr;
-      tz::DescriptorSet* transformDescriptorSet = nullptr;
       tz::DescriptorSet* perObjectDescriptorSet = nullptr;
       tz::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
       tz::PipelineLayout* masterPipelineLayout = nullptr;

@@ -93,6 +93,43 @@ void App::prepareRenderPrimitives()
       {{0.5, 0.5, 0.5}, {1, 1}}
     };
 
+  std::vector<tz::VertexPos> cubeVerticesPos = {
+    {{-1.0f, -1.0f,  1.0f}}, // 0: Front-Bottom-Left
+    {{ 1.0f, -1.0f,  1.0f}}, // 1: Front-Bottom-Right
+    {{ 1.0f,  1.0f,  1.0f}}, // 2: Front-Top-Right
+    {{-1.0f,  1.0f,  1.0f}}, // 3: Front-Top-Left
+    {{-1.0f, -1.0f, -1.0f}}, // 4: Back-Bottom-Left
+    {{ 1.0f, -1.0f, -1.0f}}, // 5: Back-Bottom-Right
+    {{ 1.0f,  1.0f, -1.0f}}, // 6: Back-Top-Right
+    {{-1.0f,  1.0f, -1.0f}}  // 7: Back-Top-Left
+  };
+
+  std::vector<tz::VertexPosTexCoords> cubeVerticesPosTex = {
+    // Front face (Z = 1.0f)
+    {{-1.0f, -1.0f,  1.0f}, {0.0f, 0.0f}}, {{ 1.0f, -1.0f,  1.0f}, {1.0f, 0.0f}},
+    {{ 1.0f,  1.0f,  1.0f}, {1.0f, 1.0f}}, {{-1.0f,  1.0f,  1.0f}, {0.0f, 1.0f}},
+
+    // Back face (Z = -1.0f)
+    {{ 1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}}, {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
+    {{-1.0f,  1.0f, -1.0f}, {1.0f, 1.0f}}, {{ 1.0f,  1.0f, -1.0f}, {0.0f, 1.0f}},
+
+    // Left face (X = -1.0f)
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}}, {{-1.0f, -1.0f,  1.0f}, {1.0f, 0.0f}},
+    {{-1.0f,  1.0f,  1.0f}, {1.0f, 1.0f}}, {{-1.0f,  1.0f, -1.0f}, {0.0f, 1.0f}},
+
+    // Right face (X = 1.0f)
+    {{ 1.0f, -1.0f,  1.0f}, {0.0f, 0.0f}}, {{ 1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
+    {{ 1.0f,  1.0f, -1.0f}, {1.0f, 1.0f}}, {{ 1.0f,  1.0f,  1.0f}, {0.0f, 1.0f}},
+
+    // Top face (Y = 1.0f)
+    {{-1.0f,  1.0f,  1.0f}, {0.0f, 0.0f}}, {{ 1.0f,  1.0f,  1.0f}, {1.0f, 0.0f}},
+    {{ 1.0f,  1.0f, -1.0f}, {1.0f, 1.0f}}, {{-1.0f,  1.0f, -1.0f}, {0.0f, 1.0f}},
+
+    // Bottom face (Y = -1.0f)
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}}, {{ 1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
+    {{ 1.0f, -1.0f,  1.0f}, {1.0f, 1.0f}}, {{-1.0f, -1.0f,  1.0f}, {0.0f, 1.0f}}
+  };
+
 
   quadIndices =
     {
@@ -100,9 +137,43 @@ void App::prepareRenderPrimitives()
       0, 2, 3
     };
 
+  cubeIndices = {
+    // Front face
+    0, 1, 2,  2, 3, 0,
+    // Right face
+    1, 5, 6,  6, 2, 1,
+    // Back face
+    5, 4, 7,  7, 6, 5,
+    // Left face
+    4, 0, 3,  3, 7, 4,
+    // Bottom face
+    4, 5, 1,  1, 0, 4,
+    // Top face
+    3, 2, 6,  6, 7, 3
+  };
+
+  cubeIndicesPosTex = {
+    0,  1,  2,   2,  3,  0, // Front
+    4,  5,  6,   6,  7,  4, // Back
+    8,  9, 10,  10, 11,  8, // Left
+    12, 13, 14,  14, 15, 12, // Right
+    16, 17, 18,  18, 19, 16, // Top
+    20, 21, 22,  22, 23, 20  // Bottom
+  };
+
   quadPosVertexBuffer = renderer->createBuffer(verticesPos.data(),
                                                  verticesPos.size() * sizeof (tz::VertexPos),
                                                  tz::BufferUsage::Vertex);
+
+  cubePosVertexBuffer = renderer->createBuffer(cubeVerticesPos.data(),
+                                               cubeVerticesPos.size() * sizeof (tz::VertexPos),
+                                               tz::BufferUsage::Vertex);
+
+  cubePosTexCoordVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
+                                                       verticesPosTexCoord.size() * sizeof (tz::VertexPosTexCoords),
+                                                       tz::BufferUsage::Vertex);
+
+
 
   quadPosTexCoordVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
                                             verticesPosTexCoord.size() * sizeof (tz::VertexPosTexCoords),
@@ -112,8 +183,13 @@ void App::prepareRenderPrimitives()
                                                 quadIndices.size() * sizeof(uint32_t),
                                                 tz::BufferUsage::Index);
 
+  cubeIndexBuffer = renderer->createBuffer(cubeIndices.data(),
+                                           cubeIndices.size() * sizeof(uint32_t),
+                                           tz::BufferUsage::Index);
 
-
+  cubeTexIndexBuffer = renderer->createBuffer(cubeIndicesPosTex.data(),
+                                           cubeIndicesPosTex.size() * sizeof(uint32_t),
+                                           tz::BufferUsage::Index);
 }
 
 tz::render::vulkan::VulkanRenderer* App::vulkanRenderer()
@@ -291,19 +367,35 @@ void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, u
     renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
     renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
 
+    renderer->recordCommand(commandBuffer,new tz::CmdBindVertexBuffers({prd.vertexBuffer}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(prd.indexBuffer, 0));
+    renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(prd.indexCount, 1,0, 0, 0));
 
-    if (prd.renderHints.materialType == MaterialType::DiffuseNormal)
+    /*if (prd.renderHints.materialType == MaterialType::DiffuseNormal)
     {
-
-      renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadPosTexCoordVertexBuffer}));
+      switch (prd.geometryType)
+      {
+        case PrimitiveGeometryType::Quad: renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadPosTexCoordVertexBuffer})); break;
+        //case PrimitiveGeometryType::Cube: renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({cubePosTexCoordVertexBuffer})); break;
+      }
     }
     else
     {
-      renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadPosVertexBuffer}));
-    }
+      switch (prd.geometryType)
+      {
+        case PrimitiveGeometryType::Quad:
+          renderer->recordCommand(commandBuffer,new tz::CmdBindVertexBuffers({quadPosVertexBuffer}));
+          renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
+          renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
+          break;
 
-    renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
-    renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
+        case PrimitiveGeometryType::Cube:
+          renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({cubePosVertexBuffer})); break;
+          renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(cubeIndexBuffer, 0));
+          renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(cubeIndices.size(), 1,0, 0, 0));
+          break;
+      }
+    }*/
 
     primitiveCounter++;
   }
@@ -374,6 +466,15 @@ float App::getLastFrameTime()
 }
 void App::renderCube(Transform transform, RenderHints renderHints)
 {
+  PrimitiveRenderData prd;
+  prd.transform = transform;
+  prd.geometryType = PrimitiveGeometryType::Cube;
+  prd.renderHints = renderHints;
+  prd.associatedCamera = activeRenderCamera;
+  prd.vertexBuffer = renderHints.materialType == MaterialType::SingleColor ? cubePosVertexBuffer : cubePosTexCoordVertexBuffer;
+  prd.indexBuffer = renderHints.materialType == MaterialType::SingleColor ? cubeIndexBuffer : cubeTexIndexBuffer;
+  prd.indexCount = renderHints.materialType == MaterialType::SingleColor ? cubeIndices.size() : cubeIndicesPosTex.size();
+  framePrimitives.push_back(prd);
 
 }
 void App::renderQuad(Transform transform, RenderHints renderHints)
@@ -383,6 +484,9 @@ void App::renderQuad(Transform transform, RenderHints renderHints)
   prd.geometryType     = PrimitiveGeometryType::Quad;
   prd.renderHints = renderHints;
   prd.associatedCamera = activeRenderCamera;
+  prd.vertexBuffer = renderHints.materialType == MaterialType::SingleColor ? quadPosVertexBuffer : quadPosTexCoordVertexBuffer;
+  prd.indexBuffer = quadIndexBuffer;
+  prd.indexCount = quadIndices.size();
   framePrimitives.push_back(prd);
 }
 Eigen::Matrix4f App::createLookAtMatrix(const Eigen::Vector3f& eye,
