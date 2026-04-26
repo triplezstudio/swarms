@@ -17,6 +17,8 @@
  */
 namespace tz {
 
+
+
 enum class CameraType
 {
   Ortho,
@@ -109,6 +111,25 @@ class Camera
 
 };
 
+
+enum class PrimitiveGeometryType
+{
+  Line,
+  Quad,
+  Cube,
+  Sphere,
+  Mesh
+};
+
+enum class PrimitiveMaterialType
+{
+  SingleColor,
+  DiffuseTexture,
+  PBR,
+
+};
+
+
 struct VertexPos
 {
   Eigen::Vector3f pos;
@@ -126,11 +147,23 @@ struct VertexPosTexCoords
   Eigen::Vector2f texCoords;
 };
 
-struct TransformUniformBufferObject
+struct CameraUniformBufferObject
 {
-  Eigen::Matrix4f model;
   Eigen::Matrix4f view;
   Eigen::Matrix4f proj;
+};
+
+struct alignas(16) TransformUniformBufferObject
+{
+  Eigen::Matrix4f model;
+
+};
+
+struct Transform
+{
+  Eigen::Vector3f position = {0, 0, 0};
+  Eigen::Vector3f scale = {1, 1, 1};
+  Eigen::Quaternionf orientation;
 };
 
 enum class BufferUsage
@@ -396,6 +429,12 @@ class ShaderPipeline {
       virtual void* getHandle() = 0;
 };
 
+struct PipelineLayout
+{
+  virtual ~PipelineLayout() = default;
+  std::vector<tz::DescriptorSetLayout*> descriptorSetLayouts;
+};
+
 struct PipelineStateObject
 {
 
@@ -430,12 +469,13 @@ class CmdBindPipeline : public Command
 class CmdBindDescriptors : public Command
 {
   public:
-      CmdBindDescriptors(std::vector<DescriptorSet*> descriptorSets, PipelineStateObject* pso, std::vector<uint32_t> offsets)
-        : descriptorSets(descriptorSets), pso(pso), offsets(offsets) {}
+      CmdBindDescriptors(std::vector<DescriptorSet*> descriptorSets, PipelineLayout* pl, std::vector<uint32_t> offsets, uint32_t setIndex)
+        : descriptorSets(descriptorSets), pipelineLayout(pl), offsets(offsets), setIndex(setIndex) {}
 
       std::vector<DescriptorSet*> descriptorSets;
-      PipelineStateObject* pso;
+      PipelineLayout* pipelineLayout;
       std::vector<uint32_t> offsets;
+      uint32_t setIndex;
 };
 
 class CmdSetViewPorts : public Command
@@ -594,11 +634,11 @@ class TZ_API Renderer
     Buffer* buffer = nullptr,
     Texture* texture = nullptr) = 0;
   virtual DescriptorSetLayout* createDescriptorSetLayout(const std::vector<DescriptorBinding*>& bindings) = 0;
+  virtual PipelineLayout* createPipelineLayout(std::vector<tz::DescriptorSetLayout*> descriptorSetLayouts) = 0;
   virtual ShaderModule* createShaderModule(ShaderType types, const std::string& source) = 0;
   virtual ShaderPipeline* createShaderPipeline(const std::vector<ShaderModule*>& modules) = 0;
-  virtual PipelineStateObject* createPipelineStateObject(RenderState& renderState,
-                                              ShaderPipeline* shaderPipeline, VertexLayout& vertexLayout,
-                                              const std::vector<DescriptorSetLayout*>&descriptorSetLayouts) = 0;
+  virtual PipelineStateObject* createPipelineStateObject(RenderState& renderState, ShaderPipeline* shaderPipeline,
+                                                         VertexLayout& vertexLayout,  PipelineLayout* providedPipelineLayout) = 0;
 
   virtual void beginCommandBuffer(CommandBuffer* cb) = 0;
 
@@ -614,5 +654,58 @@ class TZ_API Renderer
   virtual tz::DescriptorSet *createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout)  = 0;
 
 };
+
+enum class VertexShaderType : int
+{
+  Static,
+  Skeletal
+};
+
+enum class MaterialType
+{
+  SingleColor,
+  DiffuseNormal,
+  PBR,
+};
+
+/**
+ * Intended use is for selecting PSOs efficiently.
+ * Can be used to form a hashkey to select into an
+ * unordered map of PSOs.
+ *
+ */
+struct RenderHints
+{
+  MaterialType materialType = MaterialType::SingleColor;
+  VertexShaderType vertexShaderType = VertexShaderType::Static;
+  bool wireframe = false;
+  bool depthTest = true;
+  bool blending = true;
+  CullMode cullMode = CullMode::Back;
+
+  uint64_t getHash() const
+  {
+    uint64_t key = 0;
+    key |= (static_cast<int>(materialType) & 0xFF);
+    key |= (static_cast<int>(vertexShaderType) & 0xFF) << 8;
+    key |= (wireframe? 1 : 0) << 16;
+    key |= (depthTest? 1 : 0) << 17;
+    key |= (blending? 1: 0)  << 18;
+    key |= (static_cast<int>(cullMode) & 0xFF) << 19;
+
+    return key;
+
+
+  }
+};
+
+struct PrimitiveRenderData
+{
+  PrimitiveGeometryType geometryType;
+  RenderHints renderHints;
+  Transform transform;
+  Camera* associatedCamera = nullptr;
+};
+
 
 }

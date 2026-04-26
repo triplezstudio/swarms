@@ -3,36 +3,12 @@
 
 #include <window_system.hh>
 #include <render.hh>
+#include <vulkan_renderer.hh>
+
 
 namespace tz {
 
-  enum class PrimitiveGeometryType
-{
-    Line,
-    Quad,
-    Cube,
-    Sphere,
-    Mesh
-  };
 
-  enum class PrimitiveMaterialType
-  {
-    SingleColor,
-    DiffuseTexture,
-    PBR,
-
-  };
-
-  struct PrimitiveRenderData
-  {
-    PrimitiveGeometryType geometryType;
-    PrimitiveMaterialType materialType;
-    Eigen::Vector3f position;
-    Eigen::Vector3f scale;
-    Eigen::Vector3f color;
-    Eigen::Quaternionf orientation;
-    Camera* associatedCamera = nullptr;
-  };
 
   class App;
   using FrameListener = std::function< void(App* app)>;
@@ -52,8 +28,10 @@ namespace tz {
       virtual void activateUICamera();
       virtual void activateUICamera(Eigen::Vector3f position);
 
-      virtual void renderColoredQuad(Eigen::Vector3f position, Eigen::Vector3f scale = {1, 1,1}, Eigen::Vector3f color = {1, 1,1});
-      virtual void renderCube(Eigen::Vector3f position);
+      virtual void renderQuad(Transform transform, RenderHints renderHints = {});
+      virtual void renderCube(Transform transform, RenderHints renderHints = {});
+      virtual void renderSphere(Transform transform, RenderHints renderHints = {});
+      virtual void renderCylinder(Transform transform, RenderHints renderHints = {});
 
 
   private:
@@ -69,6 +47,11 @@ namespace tz {
       CommandBuffer* commandBuffer = nullptr;
       std::vector<PrimitiveRenderData> framePrimitives;
 
+      tz::DescriptorSet* cameraDescriptorSet = nullptr;
+      tz::DescriptorSet* transformDescriptorSet = nullptr;
+      tz::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
+      tz::PipelineLayout* masterPipelineLayout = nullptr;
+
       Camera* default3DCamera = nullptr;
       Camera* defaultUICamera = nullptr;
       Camera* activeRenderCamera = nullptr;
@@ -83,6 +66,14 @@ namespace tz {
       Eigen::Matrix4f createLookAtMatrix(const Eigen::Vector3f &eye,
                                          const Eigen::Vector3f &center,
                                          const Eigen::Vector3f &up);
+
+      std::unordered_map<uint64_t, PipelineStateObject*> psoCache;
+      void buildPSOCache();
+      PipelineStateObject *createTexturedPSO();
+      void renderFrame();
+      std::vector<PrimitiveRenderData> getRenderPrimitivesByCamera(Camera *camera);
+      render::vulkan::VulkanRenderer *vulkanRenderer();
+      void createMasterPipelineLayout();
   };
 
 

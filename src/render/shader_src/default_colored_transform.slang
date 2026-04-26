@@ -6,15 +6,26 @@ struct VSInput
 
 };
 
-[[vk::binding(0,0)]]
-struct TransformData
+
+struct CameraData
 {
-     float4x4 model;
+
      float4x4 view;
      float4x4 proj;
 
 };
+[[vk::binding(0,0)]]
+ConstantBuffer<CameraData> cameraUBO;
+
+
+struct TransformData
+{
+     float4x4 model;
+};
+[[vk::binding(0,1)]]
 ConstantBuffer<TransformData> transformUBO;
+
+
 
 struct VSOutput
 {
@@ -25,7 +36,7 @@ struct VSOutput
 VSOutput main(VSInput input)
 {
     VSOutput output;
-    output.pos = mul(transformUBO.proj, mul(transformUBO.view, mul(transformUBO.model, float4(input.inPosition, 1.0))));
+    output.pos = mul(cameraUBO.proj, mul(cameraUBO.view, mul(transformUBO.model, float4(input.inPosition, 1.0))));
     return output;
 }
 

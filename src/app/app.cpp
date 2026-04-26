@@ -19,12 +19,53 @@ App::App()
   auto window = windowSystem->createWindow(winDesc);
   renderer->init(window);
 
-  // Prepare so we can implement the convenience functions
-  // for rendering cubes, spheres, meshes etc.
+  createMasterPipelineLayout();
   prepareRenderPrimitives();
+  buildPSOCache();
+  commandBuffer = renderer->createCommandBuffer();
 
   default3DCamera = new Camera({0, 2, 3}, {0, 0, 0 }, CameraType::Perspective);
   defaultUICamera = new Camera({0, 0, 1}, {0, 0, 0}, CameraType::Ortho);
+
+}
+
+void App::createMasterPipelineLayout()
+{
+
+  // Camera is set0, binding0
+  auto cameraBuffer = renderer->createMultiframeUniformBuffer(2, sizeof(tz::CameraUniformBufferObject));
+  auto cameraUBOBinding = vulkanRenderer()->createDescriptorBinding(0,
+                                                                    tz::ResourceType::Ubo,
+                                                                    tz::ShaderType::Vertex, 1,
+                                                                    cameraBuffer);
+  auto cameraDescriptorSetLayout =  (vulkanRenderer()->createDescriptorSetLayout({cameraUBOBinding}));
+  cameraDescriptorSet = vulkanRenderer()->createMultiframeDescriptorSet(cameraDescriptorSetLayout);
+
+
+
+  // Transform is set1, binding0
+  auto transformBuffer = renderer->createMultiframeUniformBuffer(100, sizeof(tz::TransformUniformBufferObject));
+  auto transformUBOBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo,
+                                                               tz::ShaderType::Vertex, 1,
+                                                               transformBuffer);
+  auto transformDescriptorSetLayout = renderer->createDescriptorSetLayout({transformUBOBinding});
+  transformDescriptorSet = renderer->createMultiframeDescriptorSet(transformDescriptorSetLayout);
+
+  // Diffuse texture at set2, binding0
+  auto textureBitmapData = tz::loadBitmapDataFromPath("assets/test_image.png");
+  auto textureImage = renderer->createImage(textureBitmapData);
+  //auto sampler = renderer->createSampler();
+  //auto textureImageView = renderer->createImageView(textureImage);
+  auto texture = renderer->createTexture(textureImage);
+
+  auto textureDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Sampler,
+                                                              tz::ShaderType::Fragment, 1, nullptr, texture);
+
+  auto diffuseTextureDescriptorSetLayout = renderer->createDescriptorSetLayout({textureDescBinding});
+  diffuseTextureDescriptorSet = renderer->createMultiframeDescriptorSet(diffuseTextureDescriptorSetLayout);
+
+
+  masterPipelineLayout = renderer->createPipelineLayout({cameraDescriptorSetLayout, transformDescriptorSetLayout, diffuseTextureDescriptorSetLayout});
 
 }
 
@@ -58,9 +99,33 @@ void App::prepareRenderPrimitives()
                                                 quadIndices.size() * sizeof(uint32_t),
                                                 tz::BufferUsage::Index);
 
-  colorOnlyPSO = createColorOnlyPSO();
 
-  commandBuffer = renderer->createCommandBuffer();
+
+}
+
+tz::render::vulkan::VulkanRenderer* App::vulkanRenderer()
+{
+  return dynamic_cast<tz::render::vulkan::VulkanRenderer*>(renderer);
+}
+
+/**
+ * Here we create all needed PSO variants.
+ * We store them in a map which understands
+ * RenderingHints hashed keys.
+ */
+void App::buildPSOCache()
+{
+  colorOnlyPSO = createColorOnlyPSO();
+  RenderHints colorOnlyHints;
+  colorOnlyHints.materialType = MaterialType::SingleColor;
+  colorOnlyHints.vertexShaderType = VertexShaderType::Static;
+  psoCache[colorOnlyHints.getHash()] = colorOnlyPSO;
+
+  auto texturedPSO = createTexturedPSO();
+  RenderHints texturedHints;
+  texturedHints.materialType = MaterialType::DiffuseNormal;
+  texturedHints.vertexShaderType = VertexShaderType::Static;
+  psoCache[texturedHints.getHash()] = texturedPSO;
 
 }
 
@@ -115,23 +180,196 @@ tz::PipelineStateObject* App::createColorOnlyPSO()
 
   auto pso = renderer->createPipelineStateObject(renderState,
                                                  shaderPipeline,
-                                                 vertexLayout,
-                                                            {descriptorSetLayout});
+                                              vertexLayout,
+                                                 masterPipelineLayout);
   pso->descriptorSets = {descriptorSet};
   return pso;
 }
+
+PipelineStateObject* App::createTexturedPSO()
+{
+
+  auto spvPath = "shader_binaries/default_textured.slang.spv";
+
+  auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
+  auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
+  auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
+
+  auto renderState = tz::RenderState {};
+  renderState.primitiveType = tz::PrimitiveType::Triangles;
+  renderState.cullMode = tz::CullMode::Back;
+  renderState.blending = true;
+  renderState.depthTesting = true;
+  renderState.fillMode = tz::FillMode::Solid;
+  renderState.frontFace = tz::FrontFace::CounterClockwise;
+  renderState.stencilTesting = false;
+  shaderPipeline = shaderPipeline;
+
+  auto vertexLayout = tz::VertexLayout {};
+  vertexLayout.bindings =  {tz::VertexBinding {
+      .bufferSlot = 0,
+      .stride = sizeof(tz::VertexPosTexCoords),
+      .vertexInputRate=tz::VertexInputRate::PerVertex,
+  }};
+  vertexLayout.attributes = {
+    tz::VertexAttribute {
+      .shaderLocation = 0,
+      .bufferSlot = 0,
+      .dataType = tz::DataType::Float,
+      .componentCount = 3,
+      .offset = 0
+    },
+    {
+      tz::VertexAttribute
+      {
+        .shaderLocation = 1,
+        .bufferSlot = 0,
+        .dataType = tz::DataType::Float,
+        .componentCount = 2,
+        .offset = sizeof(float) * 3
+      }
+    }
+  };
+
+  auto textureBitmapData = tz::loadBitmapDataFromPath("assets/test_image.png");
+  auto textureImage = renderer->createImage(textureBitmapData);
+  auto sampler = renderer->createSampler();
+  auto textureImageView = renderer->createImageView(textureImage);
+  auto texture = renderer->createTexture(textureImage);
+
+  // Descriptor layout and binding for the transformation matrix:
+  auto transformBuffer = renderer->createMultiframeUniformBuffer(500,
+                                                          sizeof(tz::TransformUniformBufferObject));
+
+  auto transformDescBinding = renderer->createDescriptorBinding(0,
+                                                                tz::ResourceType::Ubo,
+                                                                tz::ShaderType::Vertex,
+                                                                1,
+                                                                transformBuffer);
+  auto textureDescBinding = renderer->createDescriptorBinding(1, tz::ResourceType::Sampler,
+                                                              tz::ShaderType::Fragment, 1, nullptr, texture);
+
+  auto descriptorSetLayout = renderer->createDescriptorSetLayout({transformDescBinding, textureDescBinding});
+  auto descriptorSet = renderer->createMultiframeDescriptorSet(descriptorSetLayout);
+
+  auto pso = renderer->createPipelineStateObject(renderState,
+                                                 shaderPipeline,
+                                                 vertexLayout,
+                                                 masterPipelineLayout);
+  pso->descriptorSets = {descriptorSet};
+  return pso;
+}
+
 
 void tz::App::run()
 {
   while (true)
   {
-
     windowSystem->pollEvents();
     updateFrameListeners(16.66f);
-    //windowSystem->present();
-
+    renderFrame();
   }
 
+}
+
+std::vector<tz::PrimitiveRenderData> App::getRenderPrimitivesByCamera(Camera* camera)
+{
+  std::vector<PrimitiveRenderData> filteredPrimitiveData;
+  for (auto& rp : framePrimitives)
+  {
+    if (rp.associatedCamera == camera)
+    {
+      filteredPrimitiveData.push_back(rp);
+    }
+  }
+
+  return filteredPrimitiveData;
+
+}
+
+void App::renderFrame()
+{
+  renderer->beginFrame();
+  renderer->beginCommandBuffer(commandBuffer);
+
+  // We are rendering the scene ordered by "camera".
+  // First everything which has the 3d scene camera,
+  // then the 2d ui camera.
+  // This is more efficient in terms of pipeline-binding and alos
+  // makes sure, UI always renders on top of everything else.
+  auto camera3DPrimitives = getRenderPrimitivesByCamera(default3DCamera);
+  tz::CameraUniformBufferObject cameraUBO;
+  cameraUBO.view = default3DCamera->getViewMatrix();
+  cameraUBO.proj = default3DCamera->getProjectionMatrix(640, 480);
+  renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {0}, 0));
+  renderer->updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(tz::CameraUniformBufferObject),
+                         0);
+  uint32_t primitiveCounter = 0;
+  for (auto& prd : camera3DPrimitives)
+  {
+    auto pso = psoCache[prd.renderHints.getHash()];
+    renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (pso));
+
+    auto transform = Eigen::Affine3f::Identity();
+    transform.translate(prd.transform.position);
+    transform.scale(prd.transform.scale);
+    Eigen::Matrix4f tm = transform.matrix();
+    tz::TransformUniformBufferObject transformUBO;
+    transformUBO.model = tm;
+    renderer->updateBuffer(transformDescriptorSet->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject),
+                           primitiveCounter);
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({transformDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
+    renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadVertexBuffer}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
+    renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
+
+    primitiveCounter++;
+  }
+
+  // Next UI:
+  auto cameraUIPrimitives = getRenderPrimitivesByCamera(defaultUICamera);
+  cameraUBO.view = defaultUICamera->getViewMatrix();
+  cameraUBO.proj = defaultUICamera->getProjectionMatrix(640, 480);
+  renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {1}, 0));
+
+  renderer->updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO,
+                         sizeof(tz::CameraUniformBufferObject),
+                         1);
+
+  // The following core render functions are currently completely identical.
+  // TODO refactor into common helper, if really the same!
+  for (auto& prd : cameraUIPrimitives)
+  {
+    auto pso = psoCache[prd.renderHints.getHash()];
+    renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (pso));
+
+    auto transform = Eigen::Affine3f::Identity();
+    transform.translate(prd.transform.position);
+    transform.scale(prd.transform.scale);
+    Eigen::Matrix4f tm = transform.matrix();
+    tz::TransformUniformBufferObject transformUBO;
+    transformUBO.model = tm;
+
+    renderer->updateBuffer(transformDescriptorSet->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject),
+                           primitiveCounter);
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({transformDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
+    renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadVertexBuffer}));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
+    renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
+
+    primitiveCounter++;
+  }
+
+
+  renderer->endCommandBuffer(commandBuffer);
+  renderer->submitCommandBuffer(commandBuffer);
+  renderer->endFrame();
+
+  framePrimitives.clear();
 }
 
 void App::setUpdateFunction(tz::FrameListener frameListener)
@@ -146,50 +384,6 @@ void App::updateFrameListeners(float frameTime)
     frameListenerFunc(this);
   }
 
-  renderer->beginFrame();
-  renderer->beginCommandBuffer(commandBuffer);
-
-  // Render everything submitted during this frame:
-  uint32_t counter = 0;
-  for (auto& prd : framePrimitives)
-  {
-
-    if (prd.geometryType == PrimitiveGeometryType::Quad)
-    {
-        auto transform = Eigen::Affine3f::Identity();
-        transform.translate(prd.position);
-        transform.scale(prd.scale);
-        Eigen::Matrix4f tm = transform.matrix();
-        tz::TransformUniformBufferObject transformUBO;
-        transformUBO.model = tm;
-        //transformUBO.view = createLookAtMatrix({0, 0, 15}, {0, 0, 0}, {0, 1,0});
-        transformUBO.view = prd.associatedCamera->getViewMatrix();
-        //transformUBO.proj = createPerspectiveProjectionMatrix(1.04f, 640.0f / 480.0f, 0.1f, 100.0f);
-        transformUBO.proj = prd.associatedCamera->getProjectionMatrix(640, 480);
-        renderer->updateBuffer(colorOnlyPSO->descriptorSets[0]->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject), counter);
-
-        // Decide based on the material subtype which pipeline we should use:
-        if (prd.materialType == PrimitiveMaterialType::SingleColor) {
-          renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (colorOnlyPSO));
-          renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors(colorOnlyPSO->descriptorSets, colorOnlyPSO, {counter}));
-        }
-
-        renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
-        renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
-        renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadVertexBuffer}));
-        renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
-        renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
-
-    }
-    counter++;
-  }
-
-
-  renderer->endCommandBuffer(commandBuffer);
-  renderer->submitCommandBuffer(commandBuffer);
-  renderer->endFrame();
-
-  framePrimitives.clear();
 
 
 }
@@ -197,17 +391,16 @@ float App::getLastFrameTime()
 {
   return 16.667f;
 }
-void App::renderCube(Eigen::Vector3f position) {
+void App::renderCube(Transform transform, RenderHints renderHints)
+{
 
 }
-void App::renderColoredQuad(Eigen::Vector3f position, Eigen::Vector3f scale, Eigen::Vector3f color)
+void App::renderQuad(Transform transform, RenderHints renderHints)
 {
   PrimitiveRenderData prd;
-  prd.position = position;
-  prd.scale = scale;
+  prd.transform = transform;;
   prd.geometryType     = PrimitiveGeometryType::Quad;
-  prd.color = color;
-  prd.materialType = PrimitiveMaterialType::SingleColor;
+  prd.renderHints = renderHints;
   prd.associatedCamera = activeRenderCamera;
   framePrimitives.push_back(prd);
 }
@@ -269,6 +462,15 @@ void App::activateUICamera(Eigen::Vector3f position)
   activeRenderCamera = defaultUICamera;
   defaultUICamera->pos = position;
   defaultUICamera->lookAt = Eigen::Vector3f (position.x(), position.y(), -position.z());
+}
+void App::renderSphere(Transform transform, RenderHints renderHints)
+{
+  throw std::runtime_error("not yet implemented: renderSphere!");
+}
+
+void App::renderCylinder(Transform transform, RenderHints renderHints)
+{
+  throw std::runtime_error("not yet implemented: renderCylinder!");
 }
 
 }

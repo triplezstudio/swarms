@@ -904,7 +904,7 @@ void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz
   else if (auto c = dynamic_cast<CmdBindDescriptors*>(cmd))
   {
     // TODO: this command must have a reference to the current pipeline layout
-    auto& pipelineLayout = dynamic_cast<VulkanPSO*>(c->pso)->getPipelineLayout();
+    auto& pipelineLayout = reinterpret_cast<VulkanPipelineLayout*>(c->pipelineLayout)->pipelineLayout;
     std::vector<vk::DescriptorSet> descriptorSets;
     std::vector<uint32_t> alignedOffsets;
     uint32_t counter = 0;
@@ -914,7 +914,7 @@ void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz
       auto& vulkanDS = vds->descSets[currentFrameIndex];
       descriptorSets.push_back(*vulkanDS);
 
-      // Build correct offsets per bindin
+      // Build correct offsets per binding
       for (auto& db : ds->layout->descriptorBindings)
       {
         if (db->type == tz::ResourceType::Ubo)
@@ -926,7 +926,7 @@ void tz::render::vulkan::VulkanRenderer::recordCommand(tz::CommandBuffer* cb, tz
     }
 
     currentFrameCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *pipelineLayout,
-                                                 0, descriptorSets,
+                                                 c->setIndex, descriptorSets,
                                                  alignedOffsets);
   }
 
@@ -1074,7 +1074,7 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
   tz::RenderState &renderState,
   tz::ShaderPipeline *shaderPipeline,
   tz::VertexLayout &vertexLayout,
-  const std::vector<DescriptorSetLayout*> &descriptorSetLayouts)
+  PipelineLayout* providedPipelineLayout)
 {
   auto vsp = reinterpret_cast<tz::render::vulkan::VulkanShaderPipeline*>(shaderPipeline);
   auto shaderModules = *reinterpret_cast<std::vector<ShaderModule*>*>(vsp->getHandle());
@@ -1123,18 +1123,27 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
     .setAttachmentCount(1)
     .setPAttachments(&colorBlendAttachmentState);
 
-  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
-
-  std::vector<vk::DescriptorSetLayout> descSetLayouts;
-  for (auto& descLayoutWrapper : descriptorSetLayouts)
+  // Create a pipelineLayout if none is provided:
+  /*vk::raii::PipelineLayout customPipelineLayout = nullptr;
+  if (!providedPipelineLayout)
   {
-    auto& descLayout = reinterpret_cast<VulkanDescriptorSetLayout*>(descLayoutWrapper)->dsLayout;
-    descSetLayouts.push_back(descLayout);
+    vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
+    std::vector<vk::DescriptorSetLayout> descSetLayouts;
+    for (auto& descLayoutWrapper : descriptorSetLayouts)
+    {
+      auto& descLayout = reinterpret_cast<VulkanDescriptorSetLayout*>(descLayoutWrapper)->dsLayout;
+      descSetLayouts.push_back(descLayout);
+    }
+    pipelineLayoutCreateInfo.setSetLayoutCount(descriptorSetLayouts.size());
+    pipelineLayoutCreateInfo.setSetLayouts(descSetLayouts);
+    pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
+    customPipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
   }
-  pipelineLayoutCreateInfo.setSetLayoutCount(descriptorSetLayouts.size());
-  pipelineLayoutCreateInfo.setSetLayouts(descSetLayouts);
-  pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
-  auto customPipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
+  else
+  {
+    customPipelineLayout = reinterpret_cast<VulkanPipelineLayout*>(providedPipelineLayout)->pipelineLayout;
+  }
+*/
 
   vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
   pipelineRenderingCreateInfo.setColorAttachmentCount(1);
@@ -1151,7 +1160,7 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
     .setPMultisampleState(&multisampleStateCreateInfo)
     .setPColorBlendState(&colorBlendStateCreateInfo)
     .setPDynamicState(&dsCreateInfo)
-    .setLayout(customPipelineLayout)
+    .setLayout(*reinterpret_cast<VulkanPipelineLayout*>(providedPipelineLayout)->pipelineLayout)
     .setRenderPass(nullptr);
 
     pipelineCreateInfoChain.assign(pipelineRenderingCreateInfo);
@@ -1160,7 +1169,7 @@ tz::PipelineStateObject *tz::render::vulkan::VulkanRenderer::createPipelineState
     .setPColorAttachmentFormats(&surfaceFormat.format);
 
   auto customGraphicsPipeline = vk::raii::Pipeline(device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
-  auto vulkanPSO = new tz::render::vulkan::VulkanPSO(std::move(customGraphicsPipeline), std::move(customPipelineLayout));
+  auto vulkanPSO = new tz::render::vulkan::VulkanPSO(std::move(customGraphicsPipeline));
   return vulkanPSO;
 
 }
@@ -1273,8 +1282,7 @@ void tz::render::vulkan::VulkanRenderer::updateBuffer(tz::Buffer *buffer,
   auto targetMemory = currentFrameBufferMem.mapMemory(alignedStride * offset, sizeInBytes);
   memcpy(targetMemory, data, sizeInBytes);
   currentFrameBufferMem.unmapMemory();
-  // TODo we should maybe better permanently map certain buffers (via flag) but for now
-  // we just stick with simple map/unmap.
+
 }
 
 
@@ -1363,7 +1371,7 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
         auto frameIndexBuffer = vbuf->getMultiBufferByIndex(i);
         descBufferInfo.setBuffer(frameIndexBuffer)
         .setOffset(0)
-        .setRange(sizeof(TransformUniformBufferObject));
+        .setRange(binding->buffer->unitSize);
 
         vk::WriteDescriptorSet writeDescriptorSet;
         writeDescriptorSet.setDstSet(descriptorSets[i])
@@ -1557,5 +1565,30 @@ tz::Buffer *tz::render::vulkan::VulkanRenderer::createMultiframeUniformBuffer(
   }
   auto buffer = new VulkanBuffer(std::move(vulkanBuffers), std::move(memories));
   buffer->unitSize = objectSize;
+  buffer->overallSize = objectSize * numberOfPlannedObjects;
   return buffer;
+}
+tz::PipelineLayout *tz::render::vulkan::VulkanRenderer::createPipelineLayout(
+  std::vector<tz::DescriptorSetLayout *> descriptorSetLayouts)
+{
+  std::vector<vk::DescriptorSetLayout> vulkanDescSetLayouts;
+  for (auto& dl : descriptorSetLayouts)
+  {
+    auto vdl = reinterpret_cast<VulkanDescriptorSetLayout*>(dl);
+    vulkanDescSetLayouts.push_back(*vdl->dsLayout);
+  }
+  auto vkRaiiPipelineLayout = createPipelineLayout(vulkanDescSetLayouts);
+  auto customVulkanPipelineLayout = new VulkanPipelineLayout(std::move(vkRaiiPipelineLayout));
+  return customVulkanPipelineLayout;
+}
+
+vk::raii::PipelineLayout tz::render::vulkan::VulkanRenderer::createPipelineLayout(std::vector<vk::DescriptorSetLayout> descriptorSetLayouts)
+{
+  vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo;
+
+  pipelineLayoutCreateInfo.setSetLayoutCount(descriptorSetLayouts.size());
+  pipelineLayoutCreateInfo.setSetLayouts(descriptorSetLayouts);
+  pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
+  auto customPipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
+  return customPipelineLayout;
 }

@@ -312,13 +312,19 @@ struct VulkanInitData
   std::function<void(int* width, int* height)> displaySizeFunc;
 };
 
+struct VulkanPipelineLayout : public PipelineLayout
+{
+  VulkanPipelineLayout(vk::raii::PipelineLayout&& pl) : pipelineLayout(std::move(pl)) {}
+
+  vk::raii::PipelineLayout pipelineLayout;
+};
+
 struct VulkanPSO : public PipelineStateObject
 {
 
-  VulkanPSO(vk::raii::Pipeline&& pipeline, vk::raii::PipelineLayout&& layout)
+  VulkanPSO(vk::raii::Pipeline&& pipeline)
   {
     this->pipeline = std::move(pipeline);
-    this->pipelineLayout = std::move(layout);
   }
 
   vk::raii::Pipeline& getHandle()
@@ -326,14 +332,8 @@ struct VulkanPSO : public PipelineStateObject
     return pipeline;
   }
 
-  vk::raii::PipelineLayout& getPipelineLayout()
-  {
-    return pipelineLayout;
-  }
-
   private:
       vk::raii::Pipeline pipeline = nullptr;
-      vk::raii::PipelineLayout pipelineLayout = nullptr;
 };
 
 /**
@@ -372,6 +372,7 @@ class TZ_API VulkanRenderer : public Renderer
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
   CommandBuffer * createCommandBuffer() override;
   DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout) override;
+
   Texture * createTexture(Image* image) override;
   Image * createImage(tz::BitmapData bitmapData) override;
   ImageView * createImageView(Image* image) override;
@@ -379,10 +380,10 @@ class TZ_API VulkanRenderer : public Renderer
   void beginCommandBuffer(tz::CommandBuffer *cb) override;
   void endCommandBuffer(tz::CommandBuffer *cb) override;
   void recordCommand(tz::CommandBuffer* cb, tz::Command *cmd) override;
-  PipelineStateObject * createPipelineStateObject(tz::RenderState &renderState,
-                                                 tz::ShaderPipeline *shaderPipeline,
-                                                 tz::VertexLayout &vertexLayout,
-                                                 const std::vector<DescriptorSetLayout*> &descriptorSetLayouts) override;
+  PipelineLayout * createPipelineLayout(std::vector<tz::DescriptorSetLayout *> descriptorSetLayouts) override;
+  PipelineStateObject * createPipelineStateObject(tz::RenderState &renderState, tz::ShaderPipeline *shaderPipeline, tz::VertexLayout &vertexLayout,  PipelineLayout* providedPipelineLayout) override;
+
+  vk::raii::PipelineLayout createPipelineLayout(std::vector<vk::DescriptorSetLayout> descriptorSetLayouts);
 
   private:
   void initSurface();
