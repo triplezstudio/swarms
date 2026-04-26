@@ -682,6 +682,7 @@ struct RenderHints
   bool depthTest = true;
   bool blending = true;
   CullMode cullMode = CullMode::Back;
+  Texture* texture;
 
   uint64_t getHash() const
   {

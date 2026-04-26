@@ -33,6 +33,7 @@ namespace tz {
       virtual void renderSphere(Transform transform, RenderHints renderHints = {});
       virtual void renderCylinder(Transform transform, RenderHints renderHints = {});
 
+      tz::Texture* createTexture(const std::string& imagePath);
 
   private:
       WindowSystem* windowSystem = nullptr;
@@ -41,7 +42,8 @@ namespace tz {
       std::vector<FrameListener> frameListeners;
 
       std::vector<uint32_t> quadIndices;
-      Buffer* quadVertexBuffer = nullptr;
+      Buffer* quadPosVertexBuffer       = nullptr;
+      Buffer* quadPosTexCoordVertexBuffer = nullptr;
       Buffer* quadIndexBuffer = nullptr;
       PipelineStateObject* colorOnlyPSO = nullptr;
       CommandBuffer* commandBuffer = nullptr;
@@ -74,6 +76,8 @@ namespace tz {
       std::vector<PrimitiveRenderData> getRenderPrimitivesByCamera(Camera *camera);
       render::vulkan::VulkanRenderer *vulkanRenderer();
       void createMasterPipelineLayout();
+      void renderPrimitives(const std::vector<PrimitiveRenderData> &primitives,
+                            uint32_t &primitiveCounter);
   };
 
 
