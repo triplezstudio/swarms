@@ -367,7 +367,8 @@ class TZ_API VulkanRenderer : public Renderer
                                              uint32_t count,
                                              Buffer* buffer = nullptr,
                                              Texture* texture = nullptr) override;
-  DescriptorSetLayout * createDescriptorSetLayout(const std::vector<DescriptorBinding *> &bindings) override;
+  DescriptorSetLayout * createDescriptorSetLayout(const std::vector<DescriptorBinding *> &bindings, bool bindless = false) override;
+  void updateTextureDescriptorSet(tz::DescriptorSet *pSet, int binding, int index, tz::Texture *pTexture) override;
   ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
   ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
   CommandBuffer * createCommandBuffer() override;
@@ -458,7 +459,10 @@ class TZ_API VulkanRenderer : public Renderer
   VulkanInitData vulkanInitData;
   std::vector<char const*> requiredLayers;
   vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
-  vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT, vk::PhysicalDeviceShaderDrawParametersFeatures> deviceFeatures;
+  vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
+                     vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
+                     vk::PhysicalDeviceShaderDrawParametersFeatures,
+                     vk::PhysicalDeviceVulkan12Features> deviceFeatures;
   std::map<CommandBuffer*, vk::raii::CommandBuffers*> customCommandBuffers;
 
   std::vector<vk::VertexInputAttributeDescription> toVulkanAttributeDescriptions(

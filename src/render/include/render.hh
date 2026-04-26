@@ -159,6 +159,14 @@ struct alignas(16) TransformUniformBufferObject
 
 };
 
+struct alignas(16) PerObjectUniformBufferObject
+{
+  Eigen::Matrix4f model;
+  uint32_t textureId;
+  uint32_t padding[3];
+
+};
+
 struct Transform
 {
   Eigen::Vector3f position = {0, 0, 0};
@@ -633,7 +641,7 @@ class TZ_API Renderer
     uint32_t count,
     Buffer* buffer = nullptr,
     Texture* texture = nullptr) = 0;
-  virtual DescriptorSetLayout* createDescriptorSetLayout(const std::vector<DescriptorBinding*>& bindings) = 0;
+  virtual DescriptorSetLayout* createDescriptorSetLayout(const std::vector<DescriptorBinding*>& bindings, bool bindless = false) = 0;
   virtual PipelineLayout* createPipelineLayout(std::vector<tz::DescriptorSetLayout*> descriptorSetLayouts) = 0;
   virtual ShaderModule* createShaderModule(ShaderType types, const std::string& source) = 0;
   virtual ShaderPipeline* createShaderPipeline(const std::vector<ShaderModule*>& modules) = 0;
@@ -653,6 +661,7 @@ class TZ_API Renderer
 
   virtual tz::DescriptorSet *createMultiframeDescriptorSet(tz::DescriptorSetLayout* descriptorSetLayout)  = 0;
 
+  virtual void updateTextureDescriptorSet(DescriptorSet *pSet, int binding, int index, Texture *pTexture) = 0;
 };
 
 enum class VertexShaderType : int
@@ -682,7 +691,7 @@ struct RenderHints
   bool depthTest = true;
   bool blending = true;
   CullMode cullMode = CullMode::Back;
-  Texture* texture;
+  uint32_t texture;
 
   uint64_t getHash() const
   {

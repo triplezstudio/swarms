@@ -33,7 +33,7 @@ namespace tz {
       virtual void renderSphere(Transform transform, RenderHints renderHints = {});
       virtual void renderCylinder(Transform transform, RenderHints renderHints = {});
 
-      tz::Texture* createTexture(const std::string& imagePath);
+      uint32_t createTexture(const std::string& imagePath);
 
   private:
       WindowSystem* windowSystem = nullptr;
@@ -51,8 +51,11 @@ namespace tz {
 
       tz::DescriptorSet* cameraDescriptorSet = nullptr;
       tz::DescriptorSet* transformDescriptorSet = nullptr;
+      tz::DescriptorSet* perObjectDescriptorSet = nullptr;
       tz::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
       tz::PipelineLayout* masterPipelineLayout = nullptr;
+
+      uint32_t globalTextureIndex = 0;
 
       Camera* default3DCamera = nullptr;
       Camera* defaultUICamera = nullptr;

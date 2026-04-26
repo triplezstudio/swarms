@@ -7,11 +7,13 @@
 #include <app.hh>
 
 
-tz::Texture* testImageTexture = nullptr;
+uint32_t testImageTexture = 0;
+uint32_t testImage2Texture = 0;
 
 void initialize(tz::App* app)
 {
   testImageTexture = app->createTexture("assets/test_image.png");
+  testImage2Texture = app->createTexture("assets/test_image2.png");
 }
 
 
@@ -48,6 +50,14 @@ void doFrame(tz::App* app)
                   tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
                                             .vertexShaderType =tz::VertexShaderType::Static,
                                             .texture = testImageTexture });
+
+  for (int i = 0; i < 12; i++) {
+    app->renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
+                    tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
+                                    .vertexShaderType =tz::VertexShaderType::Static,
+                                    .texture = testImage2Texture });
+  }
+
 }
 
 void runApp()

@@ -44,28 +44,33 @@ void App::createMasterPipelineLayout()
 
 
   // Transform is set1, binding0
-  auto transformBuffer = renderer->createMultiframeUniformBuffer(100, sizeof(tz::TransformUniformBufferObject));
+  /*auto transformBuffer = renderer->createMultiframeUniformBuffer(100, sizeof(tz::TransformUniformBufferObject));
   auto transformUBOBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo,
                                                                tz::ShaderType::Vertex, 1,
                                                                transformBuffer);
   auto transformDescriptorSetLayout = renderer->createDescriptorSetLayout({transformUBOBinding});
   transformDescriptorSet = renderer->createMultiframeDescriptorSet(transformDescriptorSetLayout);
+  */
 
-  // Diffuse texture at set2, binding0
-  auto textureBitmapData = tz::loadBitmapDataFromPath("assets/test_image.png");
-  auto textureImage = renderer->createImage(textureBitmapData);
-  //auto sampler = renderer->createSampler();
-  //auto textureImageView = renderer->createImageView(textureImage);
-  auto texture = renderer->createTexture(textureImage);
 
+  // PerObject is set1, binding0
+  auto perObjectBuffer = renderer->createMultiframeUniformBuffer(100, sizeof(tz::PerObjectUniformBufferObject));
+  auto perObjectUBOBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo,
+                                                               tz::ShaderType::Vertex, 1,
+                                                               perObjectBuffer);
+  auto perObjectDescriptorSetLayout = renderer->createDescriptorSetLayout({perObjectUBOBinding});
+  perObjectDescriptorSet = renderer->createMultiframeDescriptorSet(perObjectDescriptorSetLayout);
+
+  // Diffuse textures at set2, binding0.
+  // We allow up to 1000 textures
   auto textureDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Sampler,
-                                                              tz::ShaderType::Fragment, 1, nullptr, texture);
+                                                              tz::ShaderType::Fragment, 1000, nullptr, nullptr);
 
-  auto diffuseTextureDescriptorSetLayout = renderer->createDescriptorSetLayout({textureDescBinding});
+  auto diffuseTextureDescriptorSetLayout = renderer->createDescriptorSetLayout({textureDescBinding}, true);
   diffuseTextureDescriptorSet = renderer->createMultiframeDescriptorSet(diffuseTextureDescriptorSetLayout);
 
+  masterPipelineLayout = renderer->createPipelineLayout({cameraDescriptorSetLayout, perObjectDescriptorSetLayout, diffuseTextureDescriptorSetLayout});
 
-  masterPipelineLayout = renderer->createPipelineLayout({cameraDescriptorSetLayout, transformDescriptorSetLayout, diffuseTextureDescriptorSetLayout});
 
 }
 
@@ -266,6 +271,7 @@ std::vector<tz::PrimitiveRenderData> App::getRenderPrimitivesByCamera(Camera* ca
 
 void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, uint32_t& primitiveCounter)
 {
+
   for (auto& prd : primitives)
   {
     auto pso = psoCache[prd.renderHints.getHash()];
@@ -275,19 +281,20 @@ void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, u
     transform.translate(prd.transform.position);
     transform.scale(prd.transform.scale);
     Eigen::Matrix4f tm = transform.matrix();
-    tz::TransformUniformBufferObject transformUBO;
-    transformUBO.model = tm;
-    renderer->updateBuffer(transformDescriptorSet->layout->descriptorBindings[0]->buffer, &transformUBO, sizeof(tz::TransformUniformBufferObject),
+    tz::PerObjectUniformBufferObject perObjectUBO;
+    perObjectUBO.model = tm;
+    perObjectUBO.textureId = prd.renderHints.texture;
+    renderer->updateBuffer(perObjectDescriptorSet->layout->descriptorBindings[0]->buffer, &perObjectUBO, sizeof(tz::PerObjectUniformBufferObject),
                            primitiveCounter);
-    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({transformDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
+    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({perObjectDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
 
     renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
     renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
 
 
-    if (prd.renderHints.texture)
+    if (prd.renderHints.materialType == MaterialType::DiffuseNormal)
     {
-      renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({diffuseTextureDescriptorSet}, masterPipelineLayout, {0}, 2));
+
       renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadPosTexCoordVertexBuffer}));
     }
     else
@@ -307,6 +314,11 @@ void App::renderFrame()
   renderer->beginFrame();
   renderer->beginCommandBuffer(commandBuffer);
 
+  // We can bind our diffuseTextureDescriptorSet once at the beginning of the frame.
+  // This descriptorSet contains slots for up to 1000 textures.
+  // The actual texture is then just indexed by the individual rendered object (see renderPrimitives)
+  renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({diffuseTextureDescriptorSet}, masterPipelineLayout, {0}, 2));
+
   // We are rendering the scene ordered by "camera".
   // First everything which has the 3d scene camera,
   // then the 2d ui camera.
@@ -319,6 +331,7 @@ void App::renderFrame()
   renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {0}, 0));
   renderer->updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(tz::CameraUniformBufferObject),
                          0);
+
   uint32_t primitiveCounter = 0;
   renderPrimitives(camera3DPrimitives, primitiveCounter);
 
@@ -440,11 +453,13 @@ void App::renderCylinder(Transform transform, RenderHints renderHints)
 {
   throw std::runtime_error("not yet implemented: renderCylinder!");
 }
-tz::Texture *App::createTexture(const std::string &imagePath)
+uint32_t App::createTexture(const std::string &imagePath)
 {
   auto bitmapData = loadBitmapDataFromPath(imagePath);
   auto image = renderer->createImage(bitmapData);
-  return renderer->createTexture(image);
+  auto texture = renderer->createTexture(image);
+  renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
+  return globalTextureIndex++;
 }
 
 }

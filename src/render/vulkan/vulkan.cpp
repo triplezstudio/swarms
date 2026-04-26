@@ -231,11 +231,18 @@ bool tz::render::vulkan::VulkanRenderer::isDeviceSuitable(const vk::raii::Physic
 {
   auto deviceProperties = physicalDevice.getProperties();
   auto queueFamilies = physicalDevice.getQueueFamilyProperties();
-  deviceFeatures = physicalDevice.template getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT, vk::PhysicalDeviceShaderDrawParameterFeatures>();
+  deviceFeatures = physicalDevice.template getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
+                                                               vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
+                                                               vk::PhysicalDeviceShaderDrawParameterFeatures,
+                                                               vk::PhysicalDeviceVulkan12Features>();
 
 
   // We want a discrete GPU with version >= 1.3:
   if (deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu &&
+      deviceFeatures.get<vk::PhysicalDeviceVulkan12Features>().descriptorIndexing &&
+      deviceFeatures.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingPartiallyBound &&
+      deviceFeatures.get<vk::PhysicalDeviceVulkan12Features>().runtimeDescriptorArray &&
+      deviceFeatures.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingSampledImageUpdateAfterBind &&
       deviceFeatures.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
       std::ranges::any_of(queueFamilies, [](auto const & qfp) {
         return !!(qfp.queueFlags & vk::QueueFlagBits::eGraphics);
@@ -1300,7 +1307,9 @@ void tz::render::vulkan::VulkanRenderer::createDescriptorPool()
   vk::DescriptorPoolCreateInfo poolInfo;
   poolInfo.poolSizeCount = 3;
   poolInfo.pPoolSizes = poolSizes;
-  poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+  poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet
+                   | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind
+    ;
   poolInfo.maxSets = 200;
 
   descriptorPool = vk::raii::DescriptorPool(device, poolInfo);
@@ -1346,22 +1355,28 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
     {
       if (binding->type == tz::ResourceType::Sampler)
       {
+
         auto vulkanTexture = reinterpret_cast<VulkanTexture*>(binding->texture);
-        auto& raiiSampler = vulkanTexture->getSampler();
-        vk::DescriptorImageInfo descImageInfo;
-        descImageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-        .setImageView(vulkanTexture->getImageView())
-        .setSampler(raiiSampler);
+        if (vulkanTexture) {
+          auto& raiiSampler = vulkanTexture->getSampler();
+          vk::DescriptorImageInfo descImageInfo;
+          descImageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+            .setImageView(vulkanTexture->getImageView())
+            .setSampler(raiiSampler);
+
+          vk::WriteDescriptorSet writeDescriptorSet;
+          writeDescriptorSet.setDstSet(descriptorSets[i])
+            .setDstBinding(binding->bindingIndex)
+            .setDstArrayElement(0)
+            .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+            .setImageInfo(descImageInfo);
+          device.updateDescriptorSets(writeDescriptorSet, {});
+        }
 
 
-        vk::WriteDescriptorSet writeDescriptorSet;
-        writeDescriptorSet.setDstSet(descriptorSets[i])
-          .setDstBinding(binding->bindingIndex)
-          .setDstArrayElement(0)
-          .setDescriptorCount(1)
-          .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-          .setImageInfo(descImageInfo);
-        device.updateDescriptorSets(writeDescriptorSet, {});
+
+
       }
 
       else if (binding->type == tz::ResourceType::Ubo || binding->type == tz::ResourceType::Ssbo)
@@ -1392,7 +1407,7 @@ tz::DescriptorSet *tz::render::vulkan::VulkanRenderer::createMultiframeDescripto
 
 }
 tz::DescriptorSetLayout *tz::render::vulkan::VulkanRenderer::createDescriptorSetLayout(
-  const std::vector<DescriptorBinding *>& bindings)
+  const std::vector<DescriptorBinding *>& bindings, bool bindless)
 {
   std::vector<vk::DescriptorSetLayoutBinding> layoutBindings;
   for (auto& lb : bindings)
@@ -1401,8 +1416,20 @@ tz::DescriptorSetLayout *tz::render::vulkan::VulkanRenderer::createDescriptorSet
     auto descLayout = vulkanBinding->getDescLayout();
     layoutBindings.push_back(descLayout);
   }
+
+
+
   vk::DescriptorSetLayoutCreateInfo layoutInfo{};
   layoutInfo.setBindings(layoutBindings);
+  if (bindless)
+  {
+    vk::DescriptorBindingFlags bindingFlags = vk::DescriptorBindingFlagBits::ePartiallyBound |
+                                              vk::DescriptorBindingFlagBits::eUpdateAfterBind;
+    vk::DescriptorSetLayoutBindingFlagsCreateInfo flagsCreateInfo{};
+    flagsCreateInfo.setBindingFlags(bindingFlags);
+    layoutInfo.flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool;
+    layoutInfo.setPNext(&flagsCreateInfo);
+  }
   auto descriptorLayout = vk::raii::DescriptorSetLayout(device, layoutInfo);
 
   auto dsLayout = new tz::render::vulkan::VulkanDescriptorSetLayout(std::move(descriptorLayout));
@@ -1591,4 +1618,29 @@ vk::raii::PipelineLayout tz::render::vulkan::VulkanRenderer::createPipelineLayou
   pipelineLayoutCreateInfo.setPushConstantRangeCount(0);
   auto customPipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
   return customPipelineLayout;
+}
+void tz::render::vulkan::VulkanRenderer::updateTextureDescriptorSet(tz::DescriptorSet *descriptorSet,
+                                                                    int binding,
+                                                                    int index,
+                                                                    tz::Texture *pTexture)
+{
+
+  auto vulkanTexture = reinterpret_cast<VulkanTexture*>(pTexture);
+  vk::DescriptorImageInfo imageInfo{};
+  imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+  imageInfo.imageView = vulkanTexture->getImageView();
+  imageInfo.sampler = vulkanTexture->getSampler();
+
+  for (int i = 0; i < maxFramesInFlight; i++)
+  {
+    vk::WriteDescriptorSet write{};
+    write.dstSet = *reinterpret_cast<VulkanDescriptorSet*>(descriptorSet)->descSets[i];
+    write.dstBinding = binding;
+    write.dstArrayElement = index;
+    write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    write.descriptorCount = 1;
+    write.pImageInfo = &imageInfo;
+    device.updateDescriptorSets(write, {});
+  }
+
 }
