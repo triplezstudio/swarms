@@ -28,16 +28,16 @@ void doFrame(tz::App* app)
   }
   // This allows us to "see" our scene through a camera in a 3d world
   // and place objects in world coordinates.
-  app->activate3DCamera(Eigen::Vector3f(0,-10, 25), Eigen::Vector3f(0, 0, 0));
+  app->activate3DCamera(Eigen::Vector3f(0,2, 25), Eigen::Vector3f(0, 2, 0));
   for (int i = 0; i < 3; i++) {
-    app->renderQuad({Eigen::Vector3f(0 + i * 1.2, 0, 0)});
+    app->renderQuad({Eigen::Vector3f(0 + i * 1.2, 0, -10)});
   }
 
-  app->renderCube({Eigen::Vector3f(-2, 0, -3)});
+  app->renderCube({Eigen::Vector3f(-2, 0, 0)});
 
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
-  app->activateUICamera();
+  app->activateUICamera(Eigen::Vector3f(0, 00, 4));
   app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   static float mover = 24;
@@ -48,7 +48,7 @@ void doFrame(tz::App* app)
   }
   app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
 
-  app->renderQuad({Eigen::Vector3f(400, 200, 0.2), Eigen::Vector3f(64, 64, 1)},
+  app->renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
                   tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
                                             .vertexShaderType =tz::VertexShaderType::Static,
                                             .texture = testImageTexture });

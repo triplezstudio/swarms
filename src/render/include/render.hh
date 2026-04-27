@@ -70,7 +70,7 @@ class Camera
       float zNear = 0.1;
 
       m(0,0) = 1.0f / (aspect * tanHalfFovy);
-      m(1,1) = 1.0f / (tanHalfFovy); // Negated for Vulkan Y-down
+      m(1,1) = 1.0f / (tanHalfFovy);
       m(2,2) = zFar / (zNear - zFar);
       m(2,3) = (zNear * zFar) / (zNear - zFar);
       m(3,2) = -1.0f; // This must be at (3,2) for Eigen's Col-Major layout
