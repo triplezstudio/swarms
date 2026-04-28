@@ -1,12 +1,10 @@
 find_package(Eigen3 CONFIG REQUIRED)
 
-add_library(render_lib SHARED renderer.cpp)
+add_library(render_lib INTERFACE)
 
-target_include_directories(render_lib PUBLIC include)
-#target_sources(render_lib PUBLIC renderer.cpp)
+target_include_directories(render_lib INTERFACE include)
 
-target_link_libraries(render_lib PUBLIC window_lib Eigen3::Eigen)
-target_compile_definitions(render_lib PRIVATE EXPORT_TZ_LIB)
+target_link_libraries(render_lib INTERFACE window_lib Eigen3::Eigen)
 
 # --------------------------------------------------------------------------
 # Assets copying

@@ -1,16 +1,220 @@
 #include <defines.h>
 #include <functional>
 
+#include <Eigen/Dense>
 #include <window_system.hh>
 #include <vulkan_renderer.hh>
 
 namespace tz {
+namespace rv =  render::vulkan;
+
+enum class CameraType
+{
+  Ortho,
+  Perspective
+};
+
+class Camera
+{
+  public:
+  [[maybe_unused]] Camera(Eigen::Vector3f pos, Eigen::Vector3f lookAt, CameraType type) : pos(pos), lookAt(lookAt), type(type)
+  {
+
+  }
+
+  Eigen::Matrix4f getViewMatrix()
+  {
+    Eigen::Vector3f up = {0, 1, 0};
+    Eigen::Vector3f f = (lookAt - pos).normalized();
+    Eigen::Vector3f s = f.cross(up).normalized();
+    Eigen::Vector3f u = s.cross(f);
+
+    Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
+
+    // Set Columns (Eigen is Column-Major)
+    mat.col(0).head<3>() = s;
+    mat.col(1).head<3>() = u;
+    mat.col(2).head<3>() = -f;
+
+    // Translation part
+    mat(0,3) = -s.dot(pos);
+    mat(1,3) = -u.dot(pos);
+    mat(2,3) =  f.dot(pos);
+
+    return mat;
+  }
+
+  Eigen::Matrix4f getProjectionMatrix(float width, float height)
+  {
+    if (type == CameraType::Perspective)
+    {
+      float fovY = 0.5236; // around 30 degress vertical fov
+      float aspect = width / height;
+      float tanHalfFovy = std::tan(fovY * 0.5f);
+      Eigen::Matrix4f m = Eigen::Matrix4f::Zero();
+
+      // TODO customizable:
+
+      float zFar = 1000;
+      float zNear = 0.1;
+
+      m(0,0) = 1.0f / (aspect * tanHalfFovy);
+      m(1,1) = 1.0f / (tanHalfFovy);
+      m(2,2) = zFar / (zNear - zFar);
+      m(2,3) = (zNear * zFar) / (zNear - zFar);
+      m(3,2) = -1.0f; // This must be at (3,2) for Eigen's Col-Major layout
+
+      return m;
+    }
+    else if (type == CameraType::Ortho)
+    {
+      float left = 0;
+      float right = width;
+      float top = height;
+      float bottom = 0;
+
+      // TODO customizable:
+      float zFar = 100;
+      float zNear = 0.1;
+
+      Eigen::Matrix4f m = Eigen::Matrix4f::Zero();
+
+      m(0,0) = 2.0f / (right - left);
+      m(1,1) = 2.0f / (top - bottom);
+      m(2,2) = 1.0f / (zNear - zFar);   // Vulkan: [0,1] depth
+      m(3,3) = 1.0f;
+
+      m(0,3) = -(right + left) / (right - left);
+      m(1,3) = -(top + bottom) / (top - bottom);
+      m(2,3) = zNear / (zNear - zFar);
+
+      return m;
+    }
+  }
+
+
+  public:
+  Eigen::Vector3f pos;
+  Eigen::Vector3f lookAt;
+  CameraType type;
+
+};
+
+
+struct CameraUniformBufferObject
+{
+  Eigen::Matrix4f view;
+  Eigen::Matrix4f proj;
+};
+
+struct alignas(16) TransformUniformBufferObject
+{
+  Eigen::Matrix4f model;
+
+};
+
+struct alignas(16) PerObjectUniformBufferObject
+{
+  Eigen::Matrix4f model;
+  uint32_t textureId;
+  uint32_t padding[3];
+
+};
+
+struct Transform
+{
+  Eigen::Vector3f position = {0, 0, 0};
+  Eigen::Vector3f scale = {1, 1, 1};
+  Eigen::Quaternionf orientation;
+};
+
+enum class VertexShaderType : int
+{
+  Static,
+  Skeletal
+};
+
+enum class MaterialType
+{
+  SingleColor,
+  DiffuseNormal,
+  PBR,
+};
+
+
+
+/**
+ * Intended use is for selecting PSOs efficiently.
+ * Can be used to form a hashkey to select into an
+ * unordered map of PSOs.
+ *
+ */
+struct RenderHints
+{
+  MaterialType materialType = MaterialType::SingleColor;
+  VertexShaderType vertexShaderType = VertexShaderType::Static;
+  bool wireframe = false;
+  bool depthTest = true;
+  bool blending = true;
+  rv::CullMode cullMode = rv::CullMode::Back;
+  uint32_t texture;
+
+  uint64_t getHash() const
+  {
+    uint64_t key = 0;
+    key |= (static_cast<int>(materialType) & 0xFF);
+    key |= (static_cast<int>(vertexShaderType) & 0xFF) << 8;
+    key |= (wireframe? 1 : 0) << 16;
+    key |= (depthTest? 1 : 0) << 17;
+    key |= (blending? 1: 0)  << 18;
+    key |= (static_cast<int>(cullMode) & 0xFF) << 19;
+
+    return key;
+
+
+  }
+};
+
+
+enum class PrimitiveGeometryType
+{
+  Line,
+  Quad,
+  Cube,
+  Sphere,
+  Mesh
+};
+
+enum class PrimitiveMaterialType
+{
+  SingleColor,
+  DiffuseTexture,
+  PBR,
+
+};
+
+
+struct PrimitiveRenderData
+{
+  PrimitiveGeometryType geometryType;
+  RenderHints renderHints;
+  Transform transform;
+  Camera* associatedCamera = nullptr;
+  rv::Buffer* vertexBuffer = nullptr;
+  rv::Buffer* indexBuffer = nullptr;
+  uint32_t indexCount = 0;
+};
+
+
+
+
 
   class App;
   using FrameListener = std::function< void(App* app)>;
 
   class TZ_API App
   {
+
 
     public:
       App();
@@ -32,28 +236,28 @@ namespace tz {
 
   private:
       WindowSystem* windowSystem = nullptr;
-      Renderer* renderer = nullptr;
+      rv::Renderer* renderer = nullptr;
 
       std::vector<FrameListener> frameListeners;
 
       std::vector<uint32_t> quadIndices;
       std::vector<uint32_t> cubeIndices;
       std::vector<uint32_t> cubeIndicesPosTex;
-      Buffer* quadPosVertexBuffer       = nullptr;
-      Buffer* cubePosVertexBuffer = nullptr;
-      Buffer* cubePosTexCoordVertexBuffer = nullptr;
-      Buffer* quadPosTexCoordVertexBuffer = nullptr;
-      Buffer* quadIndexBuffer = nullptr;
-      Buffer* cubeIndexBuffer = nullptr;
-      Buffer* cubeTexIndexBuffer = nullptr;
-      PipelineStateObject* colorOnlyPSO = nullptr;
-      CommandBuffer* commandBuffer = nullptr;
+      rv::Buffer* quadPosVertexBuffer       = nullptr;
+      rv::Buffer* cubePosVertexBuffer = nullptr;
+      rv::Buffer* cubePosTexCoordVertexBuffer = nullptr;
+      rv::Buffer* quadPosTexCoordVertexBuffer = nullptr;
+      rv::Buffer* quadIndexBuffer = nullptr;
+      rv::Buffer* cubeIndexBuffer = nullptr;
+      rv::Buffer* cubeTexIndexBuffer = nullptr;
+      rv::PipelineStateObject* colorOnlyPSO = nullptr;
+      rv::CommandBuffer* commandBuffer = nullptr;
       std::vector<PrimitiveRenderData> framePrimitives;
 
-      tz::DescriptorSet* cameraDescriptorSet = nullptr;
-      tz::DescriptorSet* perObjectDescriptorSet = nullptr;
-      tz::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
-      tz::PipelineLayout* masterPipelineLayout = nullptr;
+      rv::DescriptorSet* cameraDescriptorSet = nullptr;
+      rv::DescriptorSet* perObjectDescriptorSet = nullptr;
+      rv::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
+      rv::PipelineLayout* masterPipelineLayout = nullptr;
 
       uint32_t globalTextureIndex = 0;
 
@@ -63,7 +267,7 @@ namespace tz {
 
       void updateFrameListeners(float frameTime);
       void prepareRenderPrimitives();
-      PipelineStateObject* createColorOnlyPSO();
+      rv::PipelineStateObject* createColorOnlyPSO();
       Eigen::Matrix4f createPerspectiveProjectionMatrix(float fovY,
                                                         float aspect,
                                                         float zNear,
@@ -72,12 +276,12 @@ namespace tz {
                                          const Eigen::Vector3f &center,
                                          const Eigen::Vector3f &up);
 
-      std::unordered_map<uint64_t, PipelineStateObject*> psoCache;
+      std::unordered_map<uint64_t, rv::PipelineStateObject*> psoCache;
       void buildPSOCache();
-      PipelineStateObject *createTexturedPSO();
+      rv::PipelineStateObject *createTexturedPSO();
       void renderFrame();
       std::vector<PrimitiveRenderData> getRenderPrimitivesByCamera(Camera *camera);
-      render::vulkan::VulkanRenderer *vulkanRenderer();
+      render::vulkan::Renderer *vulkanRenderer();
       void createMasterPipelineLayout();
       void renderPrimitives(const std::vector<PrimitiveRenderData> &primitives,
                             uint32_t &primitiveCounter);

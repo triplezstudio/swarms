@@ -1,13 +1,29 @@
 #pragma once
 #include "common.hh"
 #include "defines.h"
-//#include "render.hh"
+#include <Eigen/Dense>
 #include <functional>
 #include <optional>
 #include <map>
 #include <vulkan/vulkan_raii.hpp>
+#include <window_system.hh>
 
 namespace tz::render::vulkan {
+
+
+
+enum class BufferUsage
+{
+  Vertex,
+  Index,
+  Uniform,
+  Storage,
+  TansferDest,
+  TransferSource,
+  Indirect,
+
+};
+
 
 inline vk::BufferUsageFlags toVkBufferUsage(BufferUsage bufferUsage)
 {
@@ -25,17 +41,131 @@ inline vk::BufferUsageFlags toVkBufferUsage(BufferUsage bufferUsage)
   return flags;
 }
 
-class VulkanCommandBuffer : public tz::CommandBuffer
+
+
+struct ViewPort
+{
+  int x;
+  int y;
+  int width;
+  int height;
+};
+
+struct Scissor
+{
+  int x;
+  int y;
+  int width;
+  int height;
+};
+
+
+class PipelineStateObject;
+class Command
+{
+  public:
+  virtual ~Command() = default;
+};
+
+class CmdBindPipeline : public Command
+{
+  public:
+  CmdBindPipeline(PipelineStateObject* pso) : pso(pso) {}
+
+  public:
+  PipelineStateObject* pso = nullptr;
+};
+
+class DescriptorSet;
+class PipelineLayout;
+class CmdBindDescriptors : public Command
+{
+  public:
+  CmdBindDescriptors(std::vector<DescriptorSet*> descriptorSets, PipelineLayout* pl, std::vector<uint32_t> offsets, uint32_t setIndex)
+    : descriptorSets(descriptorSets), pipelineLayout(pl), offsets(offsets), setIndex(setIndex) {}
+
+  std::vector<DescriptorSet*> descriptorSets;
+  PipelineLayout* pipelineLayout;
+  std::vector<uint32_t> offsets;
+  uint32_t setIndex;
+};
+
+
+class CmdSetViewPorts : public Command
+{
+  public:
+  CmdSetViewPorts(std::vector<ViewPort> viewPorts) : viewPorts(viewPorts) {}
+
+  std::vector<ViewPort> viewPorts;
+};
+
+class CmdSetScissors : public Command
+{
+  public:
+  CmdSetScissors(std::vector<Scissor> scissors) : scissors(scissors) {}
+
+  std::vector<Scissor> scissors;
+};
+
+class Buffer;
+class CmdBindIndexBuffer : public Command
+{
+  public:
+  CmdBindIndexBuffer(Buffer* buffer, uint32_t offset) : indexBuffer(buffer), offset(offset) {}
+
+  Buffer* indexBuffer;
+  uint32_t offset;
+};
+
+class CmdBindVertexBuffers : public Command
+{
+  public:
+  // TODO: we "must" copy the vbs here, maybe we can avoid this.
+  CmdBindVertexBuffers(std::vector<Buffer*> vbs) : vertexBuffers(vbs) {}
+
+  std::vector<Buffer*> vertexBuffers;
+};
+
+class CmdDrawIndexed : public Command
+{
+  public:
+  CmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
+                 uint32_t vertexOffset, uint32_t firstInstance) :
+    indexCount(indexCount), instanceCount(instanceCount), firstIndex(firstIndex),
+    vertexOffset(vertexOffset), firstInstance(firstInstance) {}
+
+  uint32_t indexCount;
+  uint32_t instanceCount;
+  uint32_t firstIndex;
+  uint32_t vertexOffset;
+  uint32_t firstInstance;
+
+};
+
+class CmdDraw : public Command
+{
+  public:
+  CmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) :
+    vertexCount(vertexCount), instanceCount(instanceCount), firstVertex(firstVertex), firstInstance(firstInstance)
+  {}
+
+  uint32_t vertexCount;
+  uint32_t instanceCount;
+  uint32_t firstVertex;
+  uint32_t firstInstance;
+};
+
+
+
+class CommandBuffer
 {
 
   public:
-  explicit VulkanCommandBuffer(vk::raii::CommandBuffers&& cbs) {
+  explicit CommandBuffer(vk::raii::CommandBuffers&& cbs) {
     this->cbs = std::move(cbs);
   }
 
-
-
-  void * getHandle() override
+  void * getHandle()
   {
     return &cbs;
   }
@@ -46,68 +176,66 @@ class VulkanCommandBuffer : public tz::CommandBuffer
   }
 
   private:
-      vk::raii::CommandBuffers cbs = nullptr;
+  vk::raii::CommandBuffers cbs = nullptr;
 };
 
-class VulkanShaderPipeline : public tz::ShaderPipeline
-{
-  public:
-
-      void link(const std::vector<ShaderModule *> &modules) override
-      {
-        stages = modules;
-      }
-      void * getHandle() override
-      {
-        return &stages;
-      }
-
-  private:
-      std::vector<ShaderModule*> stages;
+enum class ShaderType {
+  Vertex,
+  Fragment,
+  Tessellation
 };
 
-class VulkanShaderModule : public tz::ShaderModule
+class ShaderModule
 {
 
   public:
-  VulkanShaderModule(vk::PipelineShaderStageCreateInfo createInfo, vk::raii::ShaderModule&& shaderModule):
+  ShaderModule(vk::PipelineShaderStageCreateInfo createInfo, vk::raii::ShaderModule&& shaderModule):
         createInfo(createInfo), shaderModule(std::move(shaderModule)) {}
-  void init(ShaderType type, const std::string& source) override {}
-  void* getHandle() override
-  {
-    return &createInfo;
-  }
+
+
+  vk::PipelineShaderStageCreateInfo createInfo;
 
   private:
-      vk::PipelineShaderStageCreateInfo createInfo;
+
       vk::raii::ShaderModule shaderModule;
 
 };
 
-class VulkanDescriptorSet : public tz::DescriptorSet
+class ShaderPipeline
 {
   public:
-      VulkanDescriptorSet(std::vector<vk::raii::DescriptorSet>&& descriptorSets) : descSets(std::move(descriptorSets)) {}
 
-      std::vector<vk::raii::DescriptorSet> descSets;
+  void link(const std::vector<ShaderModule *> &modules)
+  {
+    stages = modules;
+  }
+  void * getHandle()
+  {
+    return &stages;
+  }
 
+  private:
+  std::vector<ShaderModule*> stages;
 };
 
-class VulkanDescriptorSetLayout : public tz::DescriptorSetLayout
-{
-  public:
-      VulkanDescriptorSetLayout(vk::raii::DescriptorSetLayout&& dsLayout)
-      : dsLayout(std::move(dsLayout)) {}
 
-      vk::raii::DescriptorSetLayout dsLayout;
+
+
+
+enum class DescriptorResourceType
+{
+  Ubo,
+  Ssbo,
+  Sampler
 };
 
-class VulkanBuffer;
-class VulkanImageView;
-class VulkanDescriptorBinding : public tz::DescriptorBinding
+
+class Buffer;
+class Texture;
+class DescriptorBinding
 {
   public:
-      VulkanDescriptorBinding(vk::DescriptorSetLayoutBinding&& descriptorSetLayout)
+      DescriptorBinding(vk::DescriptorSetLayoutBinding&& descriptorSetLayout)
         : descSetLayoutBinding(std::move(descriptorSetLayout)) {}
 
       vk::DescriptorSetLayoutBinding getDescLayout()
@@ -115,13 +243,64 @@ class VulkanDescriptorBinding : public tz::DescriptorBinding
         return descSetLayoutBinding;
       }
 
+      struct Details
+      {
+        uint8_t setIndex     = 0;
+        uint8_t bindingIndex = 0;
+        DescriptorResourceType type;
+        ShaderType shaderType;
+        uint32_t count = 1; // This is useful for arrays/instancing
+        Buffer *buffer
+          = nullptr; // This is optional, but useful to store here for later descriptor set creation
+        Texture *texture = nullptr; // Optional, needed when image-textures are used:
+      };
+
+      DescriptorResourceType type;
+      Buffer* buffer = nullptr;
+      Texture* texture= nullptr;
+      ShaderType shaderType;
+      uint32_t count = 0;
+      uint32_t bindingIndex = 0;
+
+  private:
   vk::DescriptorSetLayoutBinding descSetLayoutBinding;
 };
 
-class VulkanTexture : public tz::Texture
+class DescriptorSetLayout
 {
   public:
-      VulkanTexture(vk::raii::ImageView&& imageView, vk::raii::Sampler&& sampler)
+  DescriptorSetLayout(vk::raii::DescriptorSetLayout&& dsLayout)
+    : dsLayout(std::move(dsLayout)) {}
+
+  vk::raii::DescriptorSetLayout dsLayout;
+
+  std::vector<DescriptorBinding*> descriptorBindings;
+};
+
+class DescriptorSet
+{
+  public:
+  DescriptorSet(std::vector<vk::raii::DescriptorSet>&& descriptorSets) : descSets(std::move(descriptorSets)) {}
+
+  std::vector<vk::raii::DescriptorSet> descSets;
+
+  DescriptorSetLayout* layout;
+
+};
+
+struct BitmapData
+{
+  uint8_t* pixels;
+  uint32_t width;
+  uint32_t height;
+};
+
+BitmapData TZ_API loadBitmapDataFromPath(const std::string & imagePath);
+
+class Texture
+{
+  public:
+      Texture(vk::raii::ImageView&& imageView, vk::raii::Sampler&& sampler)
       : raiiImageView(std::move(imageView)), sampler(std::move(sampler)) {}
 
       vk::raii::ImageView& getImageView()
@@ -137,12 +316,13 @@ class VulkanTexture : public tz::Texture
   private:
       vk::raii::ImageView raiiImageView;
       vk::raii::Sampler sampler;
+
 };
 
-class VulkanSampler : public tz::Sampler
+class Sampler
 {
   public:
-      VulkanSampler(vk::raii::Sampler&& sampler) : sampler(std::move(sampler)) {}
+      Sampler(vk::raii::Sampler&& sampler) : sampler(std::move(sampler)) {}
 
       vk::raii::Sampler& getSampler()
       {
@@ -158,11 +338,11 @@ class VulkanSampler : public tz::Sampler
       vk::raii::Sampler sampler;
 };
 
-class VulkanImageView : public tz::ImageView
+class ImageView
 {
 
   public:
-      VulkanImageView(vk::raii::ImageView&& imageView) : imageView(std::move(imageView)) {}
+      ImageView(vk::raii::ImageView&& imageView) : imageView(std::move(imageView)) {}
 
       vk::raii::ImageView& getImageView()
       {
@@ -178,10 +358,10 @@ class VulkanImageView : public tz::ImageView
       vk::raii::ImageView imageView;
 };
 
-class VulkanImage : public tz::Image
+class Image
 {
   public:
-      VulkanImage(vk::raii::Image&& image, vk::raii::DeviceMemory&& imageMemory, vk::raii::Buffer&& stagingBuffer)
+      Image(vk::raii::Image&& image, vk::raii::DeviceMemory&& imageMemory, vk::raii::Buffer&& stagingBuffer)
       : image(std::move(image)), imageMemory(std::move(imageMemory)), stagingBuffer(std::move(stagingBuffer)) {}
 
       vk::raii::Image& getRaiiImage()
@@ -204,39 +384,49 @@ class VulkanImage : public tz::Image
         return *imageMemory;
       }
 
+      struct Details
+      {
+        uint8_t* pixels;
+        size_t size = 0;
+        uint32_t width = 0;
+        uint32_t height = 0;
+      } details;
+
   private:
       vk::raii::Image image;
       vk::raii::DeviceMemory imageMemory;
       vk::raii::Buffer stagingBuffer;
+
+
 };
 
-class VulkanBuffer : public tz::Buffer
+class Buffer
 {
 
   public:
-  VulkanBuffer(vk::raii::Buffer&& vkBuffer, vk::raii::DeviceMemory&& devMemory)
+  Buffer(vk::raii::Buffer&& vkBuffer, vk::raii::DeviceMemory&& devMemory)
   {
     buffer = std::move(vkBuffer);
     devMemory = std::move(memory);
   }
 
-  VulkanBuffer(std::vector<vk::raii::Buffer>&& multiBuffers, std::vector<vk::raii::DeviceMemory>&& multiMemories)
+  Buffer(std::vector<vk::raii::Buffer>&& multiBuffers, std::vector<vk::raii::DeviceMemory>&& multiMemories)
   {
     this->multiBuffers = std::move(multiBuffers);
     this->multiMemories = std::move(multiMemories);
   }
 
-  void updateData(void* data, size_t sizeInBytes) override
+  void updateData(void* data, size_t sizeInBytes)
   {
     
   }
 
-  void appendData(void* data, size_t sizeInBytes) override
+  void appendData(void* data, size_t sizeInBytes)
   {
     
   }
   
-  void* getHandle() override
+  void* getHandle()
   {
     return (void *) &(*buffer);
   }
@@ -276,22 +466,11 @@ class VulkanBuffer : public tz::Buffer
     return memory;
   }
 
-  void bind() override
-  {
 
-  }
-  void unbind() override
-  {
+    size_t unitSize = 0;
+    size_t overallSize = 0;
 
-  }
-  void map() override
-  {
 
-  }
-  void unmap() override
-  {
-
-  }
   private:
       vk::raii::Buffer buffer = nullptr;
       vk::raii::DeviceMemory memory = nullptr;
@@ -302,6 +481,8 @@ class VulkanBuffer : public tz::Buffer
       // the engine, the current frame-index buffer can be used.
       std::vector<vk::raii::Buffer> multiBuffers;
       std::vector<vk::raii::DeviceMemory> multiMemories;
+
+
 };
 
 struct VulkanInitData
@@ -312,17 +493,16 @@ struct VulkanInitData
   std::function<void(int* width, int* height)> displaySizeFunc;
 };
 
-struct VulkanPipelineLayout : public PipelineLayout
+struct PipelineLayout
 {
-  VulkanPipelineLayout(vk::raii::PipelineLayout&& pl) : pipelineLayout(std::move(pl)) {}
+  PipelineLayout(vk::raii::PipelineLayout&& pl) : pipelineLayout(std::move(pl)) {}
 
   vk::raii::PipelineLayout pipelineLayout;
 };
 
-struct VulkanPSO : public PipelineStateObject
+struct PipelineStateObject
 {
-
-  VulkanPSO(vk::raii::Pipeline&& pipeline)
+  PipelineStateObject(vk::raii::Pipeline&& pipeline)
   {
     this->pipeline = std::move(pipeline);
   }
@@ -336,55 +516,177 @@ struct VulkanPSO : public PipelineStateObject
       vk::raii::Pipeline pipeline = nullptr;
 };
 
+enum class CullMode
+{
+  None,
+  Front,
+  Back
+};
+
+enum class FillMode
+{
+  Solid,
+  Line
+};
+
+enum class FrontFace
+{
+  Clockwise,
+  CounterClockwise
+};
+
+enum class PrimitiveType {
+  Triangles,
+  Lines,
+  Quads
+
+};
+
+
+enum class VertexInputRate
+{
+  PerVertex,
+  PerInstance
+};
+
+enum class DataType
+{
+  Byte,
+  Short,
+  Int,
+  UInt,
+  Float,
+  Double,
+
+};
+
+
+struct VertexBinding
+{
+  uint32_t bufferSlot;
+  uint32_t stride;
+  VertexInputRate vertexInputRate;
+
+};
+
+struct VertexAttribute
+{
+  uint32_t shaderLocation;
+  uint32_t bufferSlot;
+  DataType dataType;
+  int32_t componentCount;
+  uint32_t offset;
+
+
+};
+
+struct VertexLayout
+{
+  std::vector<VertexBinding> bindings;
+  std::vector<VertexAttribute> attributes;
+
+  std::string toHash()
+  {
+    std::string hash = "";
+    for (auto& b : bindings)
+    {
+      hash += std::to_string(b.bufferSlot);
+      hash += std::to_string(b.stride);
+      hash += std::to_string(static_cast<int>(b.vertexInputRate));
+    }
+    for (auto& a : attributes)
+    {
+      hash += std::to_string(a.bufferSlot);
+      hash += std::to_string(a.shaderLocation);
+      hash += std::to_string(a.offset);
+      hash += std::to_string(a.componentCount);
+      hash += std::to_string(static_cast<int>(a.dataType));
+    }
+
+    return hash;
+  }
+};
+
+
+
+
+struct RenderState
+{
+  CullMode cullMode = CullMode::Back;
+  FillMode fillMode = FillMode::Solid;
+  FrontFace frontFace = FrontFace::CounterClockwise;
+  bool depthTesting = false;
+  bool stencilTesting = false;
+  bool blending = false;
+  PrimitiveType primitiveType = PrimitiveType::Triangles;
+};
+
+
+
+
+
+struct VertexPos
+{
+  Eigen::Vector3f pos;
+};
+
+struct VertexPosColor
+{
+  Eigen::Vector3f pos;
+  Eigen::Vector3f color;
+};
+
+struct VertexPosTexCoords
+{
+  Eigen::Vector3f pos;
+  Eigen::Vector2f texCoords;
+};
+
+
 /**
- * VulkanRenderer is a custom renderer using the Vulkan API.
+ * Renderer .
  *
  */
-class TZ_API VulkanRenderer : public Renderer
+class TZ_API Renderer
 {
   public:
-  void init(tz::Window *window) override;
+  void init(tz::Window *window);
 
-  WindowDesc getRequiredWindowDesc() override;
-  void clearScreen() override;
-  void beginDraw(PrimitiveType primitiveType) override;
-  void endDraw() override;
-  void emitPosition(Eigen::Vector3f position) override;
-  void emitColor(Eigen::Vector4f color) override;
-  void emitUV(Eigen::Vector2f uv) override;
-  void emitNormal(Eigen::Vector3f normal) override;
+  WindowDesc getRequiredWindowDesc() ;
 
-  void beginFrame() override;
-  void endFrame() override;
-  void submitCommandBuffer(CommandBuffer*cb) override;
+  void beginFrame() ;
+  void endFrame() ;
+  void submitCommandBuffer(CommandBuffer*cb);
 
-  Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage) override;
-  Buffer * createMultiframeBuffer(void *initialData, size_t sizeInBytes, tz::BufferUsage bufferUsage) override;
-  Buffer * createMultiframeUniformBuffer(uint32_t numberOfPlannedObjects, size_t objectSize) override;
+  Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage);
+  Buffer * createMultiframeBuffer(void *initialData, size_t sizeInBytes, BufferUsage bufferUsage);
+  Buffer * createMultiframeUniformBuffer(uint32_t numberOfPlannedObjects, size_t objectSize);
   DescriptorBinding * createDescriptorBinding(uint8_t binding,
-                                             tz::ResourceType resourceType,
-                                             tz::ShaderType shaderType,
+                                             DescriptorResourceType resourceType,
+                                             ShaderType shaderType,
                                              uint32_t count,
                                              Buffer* buffer = nullptr,
-                                             Texture* texture = nullptr) override;
-  DescriptorSetLayout * createDescriptorSetLayout(const std::vector<DescriptorBinding *> &bindings, bool bindless = false) override;
-  void updateTextureDescriptorSet(tz::DescriptorSet *pSet, int binding, int index, tz::Texture *pTexture) override;
-  ShaderModule* createShaderModule(tz::ShaderType type, const std::string &source) override;
-  ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) override;
-  CommandBuffer * createCommandBuffer() override;
-  DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout) override;
+                                             Texture* texture = nullptr) ;
+  DescriptorSetLayout * createDescriptorSetLayout(const std::vector<DescriptorBinding *> &bindings, bool bindless = false) ;
+  void updateTextureDescriptorSet(DescriptorSet *pSet, int binding, int index, Texture *pTexture);
+  ShaderModule* createShaderModule(ShaderType type, const std::string &source) ;
+  ShaderPipeline * createShaderPipeline(const std::vector<ShaderModule *> &modules) ;
+  CommandBuffer * createCommandBuffer();
+  DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout) ;
 
-  Texture * createTexture(Image* image) override;
-  Image * createImage(tz::BitmapData bitmapData) override;
-  ImageView * createImageView(Image* image) override;
-  Sampler * createSampler() override;
-  void beginCommandBuffer(tz::CommandBuffer *cb) override;
-  void endCommandBuffer(tz::CommandBuffer *cb) override;
-  void recordCommand(tz::CommandBuffer* cb, tz::Command *cmd) override;
-  PipelineLayout * createPipelineLayout(std::vector<tz::DescriptorSetLayout *> descriptorSetLayouts) override;
-  PipelineStateObject * createPipelineStateObject(tz::RenderState &renderState, tz::ShaderPipeline *shaderPipeline, tz::VertexLayout &vertexLayout,  PipelineLayout* providedPipelineLayout) override;
+  Texture * createTexture(Image* image);
+  Image * createImage(BitmapData bitmapData);
+  ImageView * createImageView(Image* image) ;
+  Sampler * createSampler() ;
+  void beginCommandBuffer(CommandBuffer *cb);
+  void endCommandBuffer(CommandBuffer *cb);
+  void recordCommand(CommandBuffer* cb, Command *cmd);
+  PipelineLayout * createPipelineLayout(std::vector<DescriptorSetLayout *> descriptorSetLayouts);
+  PipelineStateObject * createPipelineStateObject(RenderState &renderState, ShaderPipeline *shaderPipeline, VertexLayout &vertexLayout,  PipelineLayout* providedPipelineLayout);
 
   vk::raii::PipelineLayout createPipelineLayout(std::vector<vk::DescriptorSetLayout> descriptorSetLayouts);
+
+  void updateBuffer(Buffer *buffer, void *data, size_t sizeInBytes, uint32_t offset);
 
   private:
   void initSurface();
@@ -406,10 +708,10 @@ class TZ_API VulkanRenderer : public Renderer
                              vk::AccessFlags2 dstAccessMask,
                              vk::PipelineStageFlags2 srcStageMask,
                              vk::PipelineStageFlags2 dstStageMask);
-  std::vector<vk::VertexInputBindingDescription> toVulkanBindingDescriptions(const std::vector<tz::VertexBinding>& vertexBindings);
+  std::vector<vk::VertexInputBindingDescription> toVulkanBindingDescriptions(const std::vector<VertexBinding>& vertexBindings);
   vk::VertexInputRate toVulkanInputRate(VertexInputRate ir);
   void createSyncObjects();
-  vk::raii::CommandBuffer& getCommandBufferForCurrentFrame(tz::CommandBuffer* cb);
+  vk::raii::CommandBuffer& getCommandBufferForCurrentFrame(CommandBuffer* cb);
   vk::raii::ShaderModule createSlangShaderModule(const std::string& shaderBinaryPath);
   bool isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice);
   vk::SurfaceFormatKHR selectSurfaceColorFormat(std::vector<vk::SurfaceFormatKHR> const& availableFormats);
@@ -421,7 +723,6 @@ class TZ_API VulkanRenderer : public Renderer
                                                         vk::DebugUtilsMessageTypeFlagsEXT              type,
                                                         const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
                                                         void *                                         pUserData);
-  void updateBuffer(tz::Buffer *buffer, void *data, size_t sizeInBytes, uint32_t offset) override;
 
   private:
   const uint32_t maxFramesInFlight = 2;
@@ -466,7 +767,7 @@ class TZ_API VulkanRenderer : public Renderer
   std::map<CommandBuffer*, vk::raii::CommandBuffers*> customCommandBuffers;
 
   std::vector<vk::VertexInputAttributeDescription> toVulkanAttributeDescriptions(
-    const std::vector<tz::VertexAttribute> &vertexAttributes);
+    const std::vector<VertexAttribute> &vertexAttributes);
   vk::Format toVulkanAttributeFormat(VertexAttribute va);
   uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags);
   void createDescriptorPool();
@@ -477,7 +778,7 @@ class TZ_API VulkanRenderer : public Renderer
                              vk::AccessFlags2 dstAccessMask,
                              vk::PipelineStageFlags2 srcStageMask,
                              vk::PipelineStageFlags2 dstStageMask);
-  VulkanBuffer *createStagingBuffer(size_t sizeInBytes);
+  Buffer *createStagingBuffer(size_t sizeInBytes);
   vk::raii::CommandBuffer beginOneTimeCommandbuffer();
   void endOneTimeCommandBuffer(vk::raii::CommandBuffer &cb);
   void copyBuffer(vk::raii::Buffer &srcBuffer, vk::raii::Buffer &targetBuffer, vk::DeviceSize size);
@@ -493,6 +794,6 @@ class TZ_API VulkanRenderer : public Renderer
   vk::CullModeFlags toVulkanCullMode(CullMode cullMode);
 };
 
-vk::DescriptorType toVulkanDescriptorType(ResourceType resourceType);
+vk::DescriptorType toVulkanDescriptorType(DescriptorResourceType resourceType);
 vk::ShaderStageFlagBits toShaderStageFlags(ShaderType shaderType);
 } // namespace tz::render::vulkan

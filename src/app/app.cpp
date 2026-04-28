@@ -8,10 +8,11 @@
 
 namespace tz
 {
+namespace rv = render::vulkan;
 
 App::App()
 {
-  renderer = reinterpret_cast<tz::Renderer *>(new tz::render::vulkan::VulkanRenderer());
+  renderer = new rv::Renderer();
   windowSystem = new tz::SDL2WindowSystem();
   auto winDesc = renderer->getRequiredWindowDesc();
   auto window = windowSystem->createWindow(winDesc);
@@ -33,24 +34,24 @@ void App::createMasterPipelineLayout()
   // Camera is set0, binding0
   auto cameraBuffer = renderer->createMultiframeUniformBuffer(2, sizeof(tz::CameraUniformBufferObject));
   auto cameraUBOBinding = vulkanRenderer()->createDescriptorBinding(0,
-                                                                    tz::ResourceType::Ubo,
-                                                                    tz::ShaderType::Vertex, 1,
+                                                                    rv::DescriptorResourceType::Ubo,
+                                                                    rv::ShaderType::Vertex, 1,
                                                                     cameraBuffer);
   auto cameraDescriptorSetLayout =  (vulkanRenderer()->createDescriptorSetLayout({cameraUBOBinding}));
   cameraDescriptorSet = vulkanRenderer()->createMultiframeDescriptorSet(cameraDescriptorSetLayout);
 
   // PerObject is set1, binding0
   auto perObjectBuffer = renderer->createMultiframeUniformBuffer(100, sizeof(tz::PerObjectUniformBufferObject));
-  auto perObjectUBOBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo,
-                                                               tz::ShaderType::Vertex, 1,
+  auto perObjectUBOBinding = renderer->createDescriptorBinding(0, rv::DescriptorResourceType::Ubo,
+                                                               rv::ShaderType::Vertex, 1,
                                                                perObjectBuffer);
   auto perObjectDescriptorSetLayout = renderer->createDescriptorSetLayout({perObjectUBOBinding});
   perObjectDescriptorSet = renderer->createMultiframeDescriptorSet(perObjectDescriptorSetLayout);
 
   // Diffuse textures at set2, binding0.
   // We allow up to 1000 textures
-  auto textureDescBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Sampler,
-                                                              tz::ShaderType::Fragment, 1000, nullptr, nullptr);
+  auto textureDescBinding = renderer->createDescriptorBinding(0, rv::DescriptorResourceType::Sampler,
+                                                              rv::ShaderType::Fragment, 1000, nullptr, nullptr);
 
   auto diffuseTextureDescriptorSetLayout = renderer->createDescriptorSetLayout({textureDescBinding}, true);
   diffuseTextureDescriptorSet = renderer->createMultiframeDescriptorSet(diffuseTextureDescriptorSetLayout);
@@ -63,7 +64,7 @@ void App::createMasterPipelineLayout()
 void App::prepareRenderPrimitives()
 {
 
-  std::vector<tz::VertexPos> verticesPos =
+  std::vector<rv::VertexPos> verticesPos =
     {
       {{-0.5, 0.5, 0.5}},
       {{-0.5, -0.5, 0.5}},
@@ -71,7 +72,7 @@ void App::prepareRenderPrimitives()
       {{0.5, 0.5, 0.5}}
     };
 
-  std::vector<tz::VertexPosTexCoords> verticesPosTexCoord =
+  std::vector<rv::VertexPosTexCoords> verticesPosTexCoord =
     {
       {{-0.5, 0.5, 0.5}, {0, 1}},
       {{-0.5, -0.5, 0.5}, {0, 0}},
@@ -79,7 +80,7 @@ void App::prepareRenderPrimitives()
       {{0.5, 0.5, 0.5}, {1, 1}}
     };
 
-  std::vector<tz::VertexPos> cubeVerticesPos = {
+  std::vector<rv::VertexPos> cubeVerticesPos = {
     {{-1.0f, -1.0f,  1.0f}}, // 0: Front-Bottom-Left
     {{ 1.0f, -1.0f,  1.0f}}, // 1: Front-Bottom-Right
     {{ 1.0f,  1.0f,  1.0f}}, // 2: Front-Top-Right
@@ -90,7 +91,7 @@ void App::prepareRenderPrimitives()
     {{-1.0f,  1.0f, -1.0f}}  // 7: Back-Top-Left
   };
 
-  std::vector<tz::VertexPosTexCoords> cubeVerticesPosTex = {
+  std::vector<rv::VertexPosTexCoords> cubeVerticesPosTex = {
     // Front face (Z = 1.0f)
     {{-1.0f, -1.0f,  1.0f}, {0.0f, 0.0f}}, {{ 1.0f, -1.0f,  1.0f}, {1.0f, 0.0f}},
     {{ 1.0f,  1.0f,  1.0f}, {1.0f, 1.0f}}, {{-1.0f,  1.0f,  1.0f}, {0.0f, 1.0f}},
@@ -148,39 +149,39 @@ void App::prepareRenderPrimitives()
   };
 
   quadPosVertexBuffer = renderer->createBuffer(verticesPos.data(),
-                                                 verticesPos.size() * sizeof (tz::VertexPos),
-                                                 tz::BufferUsage::Vertex);
+                                                 verticesPos.size() * sizeof (rv::VertexPos),
+                                                 rv::BufferUsage::Vertex);
 
   cubePosVertexBuffer = renderer->createBuffer(cubeVerticesPos.data(),
-                                               cubeVerticesPos.size() * sizeof (tz::VertexPos),
-                                               tz::BufferUsage::Vertex);
+                                               cubeVerticesPos.size() * sizeof (rv::VertexPos),
+                                               rv::BufferUsage::Vertex);
 
   cubePosTexCoordVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
-                                                       verticesPosTexCoord.size() * sizeof (tz::VertexPosTexCoords),
-                                                       tz::BufferUsage::Vertex);
+                                                       verticesPosTexCoord.size() * sizeof (rv::VertexPosTexCoords),
+                                                       rv::BufferUsage::Vertex);
 
 
 
   quadPosTexCoordVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
-                                            verticesPosTexCoord.size() * sizeof (tz::VertexPosTexCoords),
-                                            tz::BufferUsage::Vertex);
+                                            verticesPosTexCoord.size() * sizeof (rv::VertexPosTexCoords),
+                                            rv::BufferUsage::Vertex);
 
   quadIndexBuffer = renderer->createBuffer(quadIndices.data(),
                                                 quadIndices.size() * sizeof(uint32_t),
-                                                tz::BufferUsage::Index);
+                                                rv::BufferUsage::Index);
 
   cubeIndexBuffer = renderer->createBuffer(cubeIndices.data(),
                                            cubeIndices.size() * sizeof(uint32_t),
-                                           tz::BufferUsage::Index);
+                                           rv::BufferUsage::Index);
 
   cubeTexIndexBuffer = renderer->createBuffer(cubeIndicesPosTex.data(),
                                            cubeIndicesPosTex.size() * sizeof(uint32_t),
-                                           tz::BufferUsage::Index);
+                                           rv::BufferUsage::Index);
 }
 
-tz::render::vulkan::VulkanRenderer* App::vulkanRenderer()
+tz::render::vulkan::Renderer * App::vulkanRenderer()
 {
-  return dynamic_cast<tz::render::vulkan::VulkanRenderer*>(renderer);
+  return dynamic_cast<tz::render::vulkan::Renderer *>(renderer);
 }
 
 /**
@@ -204,36 +205,36 @@ void App::buildPSOCache()
 
 }
 
-tz::PipelineStateObject* App::createColorOnlyPSO()
+rv::PipelineStateObject* App::createColorOnlyPSO()
 {
 
   auto spvPath = "shader_binaries/default_colored_transform.slang.spv";
 
-  auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
-  auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
+  auto vs = renderer->createShaderModule(rv::ShaderType::Vertex, spvPath);
+  auto fs = renderer->createShaderModule(rv::ShaderType::Fragment, spvPath);
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
 
-  auto renderState = tz::RenderState {};
-  renderState.primitiveType = tz::PrimitiveType::Triangles;
-  renderState.cullMode = tz::CullMode::Back;
+  auto renderState = rv::RenderState {};
+  renderState.primitiveType = rv::PrimitiveType::Triangles;
+  renderState.cullMode = rv::CullMode::Back;
   renderState.blending = false;
   renderState.depthTesting = true;
-  renderState.fillMode = tz::FillMode::Solid;
-  renderState.frontFace = tz::FrontFace::CounterClockwise;
+  renderState.fillMode = rv::FillMode::Solid;
+  renderState.frontFace = rv::FrontFace::CounterClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
 
-  auto vertexLayout = tz::VertexLayout {};
-  vertexLayout.bindings =  {tz::VertexBinding {
+  auto vertexLayout = rv::VertexLayout {};
+  vertexLayout.bindings =  {rv::VertexBinding {
       .bufferSlot = 0,
-      .stride = sizeof(tz::VertexPos),
-      .vertexInputRate=tz::VertexInputRate::PerVertex,
+      .stride = sizeof(rv::VertexPos),
+      .vertexInputRate=rv::VertexInputRate::PerVertex,
   }};
   vertexLayout.attributes = {
-    tz::VertexAttribute {
+    rv::VertexAttribute {
       .shaderLocation = 0,
       .bufferSlot = 0,
-      .dataType = tz::DataType::Float,
+      .dataType = rv::DataType::Float,
       .componentCount = 3,
       .offset = 0
     }
@@ -251,45 +252,45 @@ tz::PipelineStateObject* App::createColorOnlyPSO()
   return pso;
 }
 
-PipelineStateObject* App::createTexturedPSO()
+rv::PipelineStateObject* App::createTexturedPSO()
 {
 
   auto spvPath = "shader_binaries/default_textured.slang.spv";
 
-  auto vs = renderer->createShaderModule(tz::ShaderType::Vertex, spvPath);
-  auto fs = renderer->createShaderModule(tz::ShaderType::Fragment, spvPath);
+  auto vs = renderer->createShaderModule(rv::ShaderType::Vertex, spvPath);
+  auto fs = renderer->createShaderModule(rv::ShaderType::Fragment, spvPath);
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
 
-  auto renderState = tz::RenderState {};
-  renderState.primitiveType = tz::PrimitiveType::Triangles;
-  renderState.cullMode = tz::CullMode::Back;
+  auto renderState = rv::RenderState {};
+  renderState.primitiveType = rv::PrimitiveType::Triangles;
+  renderState.cullMode = rv::CullMode::Back;
   renderState.blending = true;
   renderState.depthTesting = true;
-  renderState.fillMode = tz::FillMode::Solid;
-  renderState.frontFace = tz::FrontFace::CounterClockwise;
+  renderState.fillMode = rv::FillMode::Solid;
+  renderState.frontFace = rv::FrontFace::CounterClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
 
-  auto vertexLayout = tz::VertexLayout {};
-  vertexLayout.bindings =  {tz::VertexBinding {
+  auto vertexLayout = rv::VertexLayout {};
+  vertexLayout.bindings =  {rv::VertexBinding {
       .bufferSlot = 0,
-      .stride = sizeof(tz::VertexPosTexCoords),
-      .vertexInputRate=tz::VertexInputRate::PerVertex,
+      .stride = sizeof(rv::VertexPosTexCoords),
+      .vertexInputRate=rv::VertexInputRate::PerVertex,
   }};
   vertexLayout.attributes = {
-    tz::VertexAttribute {
+    rv::VertexAttribute {
       .shaderLocation = 0,
       .bufferSlot = 0,
-      .dataType = tz::DataType::Float,
+      .dataType = rv::DataType::Float,
       .componentCount = 3,
       .offset = 0
     },
     {
-      tz::VertexAttribute
+      rv::VertexAttribute
       {
         .shaderLocation = 1,
         .bufferSlot = 0,
-        .dataType = tz::DataType::Float,
+        .dataType = rv::DataType::Float,
         .componentCount = 2,
         .offset = sizeof(float) * 3
       }
@@ -337,7 +338,7 @@ void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, u
   for (auto& prd : primitives)
   {
     auto pso = psoCache[prd.renderHints.getHash()];
-    renderer->recordCommand(commandBuffer,new tz::CmdBindPipeline (pso));
+    renderer->recordCommand(commandBuffer,new rv::CmdBindPipeline (pso));
 
     auto transform = Eigen::Affine3f::Identity();
     transform.translate(prd.transform.position);
@@ -348,14 +349,14 @@ void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, u
     perObjectUBO.textureId = prd.renderHints.texture;
     renderer->updateBuffer(perObjectDescriptorSet->layout->descriptorBindings[0]->buffer, &perObjectUBO, sizeof(tz::PerObjectUniformBufferObject),
                            primitiveCounter);
-    renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({perObjectDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
+    renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({perObjectDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
 
-    renderer->recordCommand(commandBuffer, new tz::CmdSetViewPorts({{0, 0, 640, 480}}));
-    renderer->recordCommand(commandBuffer, new tz::CmdSetScissors({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new rv::CmdSetViewPorts({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new rv::CmdSetScissors({{0, 0, 640, 480}}));
 
-    renderer->recordCommand(commandBuffer,new tz::CmdBindVertexBuffers({prd.vertexBuffer}));
-    renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(prd.indexBuffer, 0));
-    renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(prd.indexCount, 1,0, 0, 0));
+    renderer->recordCommand(commandBuffer,new rv::CmdBindVertexBuffers({prd.vertexBuffer}));
+    renderer->recordCommand(commandBuffer, new rv::CmdBindIndexBuffer(prd.indexBuffer, 0));
+    renderer->recordCommand(commandBuffer, new rv::CmdDrawIndexed(prd.indexCount, 1,0, 0, 0));
 
     /*if (prd.renderHints.materialType == MaterialType::DiffuseNormal)
     {
@@ -395,7 +396,7 @@ void App::renderFrame()
   // We can bind our diffuseTextureDescriptorSet once at the beginning of the frame.
   // This descriptorSet contains slots for up to 1000 textures.
   // The actual texture is then just indexed by the individual rendered object (see renderPrimitives)
-  renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({diffuseTextureDescriptorSet}, masterPipelineLayout, {0}, 2));
+  renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({diffuseTextureDescriptorSet}, masterPipelineLayout, {0}, 2));
 
   // We are rendering the scene ordered by "camera".
   // First everything which has the 3d scene camera,
@@ -406,7 +407,7 @@ void App::renderFrame()
   tz::CameraUniformBufferObject cameraUBO;
   cameraUBO.view = default3DCamera->getViewMatrix();
   cameraUBO.proj = default3DCamera->getProjectionMatrix(640, 480);
-  renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {0}, 0));
+  renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {0}, 0));
   renderer->updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(tz::CameraUniformBufferObject),
                          0);
 
@@ -417,7 +418,7 @@ void App::renderFrame()
   auto cameraUIPrimitives = getRenderPrimitivesByCamera(defaultUICamera);
   cameraUBO.view = defaultUICamera->getViewMatrix();
   cameraUBO.proj = defaultUICamera->getProjectionMatrix(640, 480);
-  renderer->recordCommand(commandBuffer, new tz::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {1}, 0));
+  renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {1}, 0));
 
   renderer->updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO,
                          sizeof(tz::CameraUniformBufferObject),
@@ -545,7 +546,7 @@ void App::renderCylinder(Transform transform, RenderHints renderHints)
 }
 uint32_t App::createTexture(const std::string &imagePath)
 {
-  auto bitmapData = loadBitmapDataFromPath(imagePath);
+  auto bitmapData = rv::loadBitmapDataFromPath(imagePath);
   auto image = renderer->createImage(bitmapData);
   auto texture = renderer->createTexture(image);
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
