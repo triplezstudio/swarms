@@ -156,10 +156,9 @@ void App::prepareRenderPrimitives()
                                                cubeVerticesPos.size() * sizeof (rv::VertexPos),
                                                rv::BufferUsage::Vertex);
 
-  cubePosTexCoordVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
-                                                       verticesPosTexCoord.size() * sizeof (rv::VertexPosTexCoords),
+  cubePosTexCoordVertexBuffer = renderer->createBuffer(cubeVerticesPosTex.data(),
+                                                       cubeVerticesPosTex.size() * sizeof (rv::VertexPosTexCoords),
                                                        rv::BufferUsage::Vertex);
-
 
 
   quadPosTexCoordVertexBuffer = renderer->createBuffer(verticesPosTexCoord.data(),
@@ -219,7 +218,7 @@ rv::PipelineStateObject* App::createColorOnlyPSO()
   renderState.blending = false;
   renderState.depthTesting = true;
   renderState.fillMode = vk::PolygonMode::eLine;
-  renderState.frontFace = vk::FrontFace::eCounterClockwise;
+  renderState.frontFace = vk::FrontFace::eClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
 
@@ -265,7 +264,7 @@ rv::PipelineStateObject* App::createTexturedPSO()
   renderState.blending = true;
   renderState.depthTesting = true;
   renderState.fillMode = vk::PolygonMode::eFill;
-  renderState.frontFace = vk::FrontFace::eCounterClockwise;
+  renderState.frontFace = vk::FrontFace::eClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
 

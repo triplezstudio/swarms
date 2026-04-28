@@ -966,9 +966,9 @@ void Renderer::recordCommand(CommandBuffer* cb, Command *cmd)
     {
       vk::Viewport targetVp;
       targetVp.width = vp.width;
-      targetVp.height = -(float)vp.height;    // This flips the y coordinate, a vulkan quirk
+      targetVp.height = vp.height;    
       targetVp.x = vp.x;
-      targetVp.y = vp.height;                 // Start at the botto, so we don't need any projection -y trick
+      targetVp.y = 0;                 
       targetVp.minDepth = 0;
       targetVp.maxDepth = 1;
       targetVps.push_back(targetVp);
