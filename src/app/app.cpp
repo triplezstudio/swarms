@@ -81,14 +81,14 @@ void App::prepareRenderPrimitives()
     };
 
   std::vector<rv::VertexPos> cubeVerticesPos = {
-    {{-1.0f, -1.0f,  1.0f}}, // 0: Front-Bottom-Left
-    {{ 1.0f, -1.0f,  1.0f}}, // 1: Front-Bottom-Right
-    {{ 1.0f,  1.0f,  1.0f}}, // 2: Front-Top-Right
-    {{-1.0f,  1.0f,  1.0f}}, // 3: Front-Top-Left
-    {{-1.0f, -1.0f, -1.0f}}, // 4: Back-Bottom-Left
-    {{ 1.0f, -1.0f, -1.0f}}, // 5: Back-Bottom-Right
-    {{ 1.0f,  1.0f, -1.0f}}, // 6: Back-Top-Right
-    {{-1.0f,  1.0f, -1.0f}}  // 7: Back-Top-Left
+    {{-.5f, -.5f,  .50f}}, // 0: Front-Bottom-Left
+    {{ .5f, -.5f,  .5f}}, // 1: Front-Bottom-Right
+    {{ .5f,  .5f,  .5f}}, // 2: Front-Top-Right
+    {{-.5f,  .5f,  .5f}}, // 3: Front-Top-Left
+    {{-.5f, -.5f, -.5f}}, // 4: Back-Bottom-Left
+    {{ .5f, -.5f, -.5f}}, // 5: Back-Bottom-Right
+    {{ .5f,  .5f, -.5f}}, // 6: Back-Top-Right
+    {{-.5f,  .5f, -.5f}}  // 7: Back-Top-Left
   };
 
   std::vector<rv::VertexPosTexCoords> cubeVerticesPosTex = {

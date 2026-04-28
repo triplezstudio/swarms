@@ -23,13 +23,13 @@ void doFrame(tz::App* app)
   }
   // This allows us to "see" our scene through a camera in a 3d world
   // and place objects in world coordinates.
-  app->activate3DCamera(Eigen::Vector3f(0,10, 20), Eigen::Vector3f(0, 0, 0));
-  for (int i = 0; i < 3; i++) {
-    app->renderQuad({Eigen::Vector3f(0 + i * 1.2, 0, -10)});
+  app->activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));
+  for (int i = 0; i < 8; i++) {
+    app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
   }
 
-  app->renderCube({Eigen::Vector3f(.5, 0, 0), Eigen::Vector3f(1, 1, 1)});
-   app->renderCube({Eigen::Vector3f(1.5, 0, -1.5), Eigen::Vector3f(1, 1, 1)});
+  app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
+  app->renderCube({Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)});
   for (int i = 0; i < 5; i++) {
     for (int z = 0; z < 5; z++) {
        app->renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
