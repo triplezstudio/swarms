@@ -1186,7 +1186,7 @@ void Renderer::endCommandBuffer(CommandBuffer *cb)
   currentFrameCommandBuffer.end();
 }
 
-vk::DescriptorType tz::render::vulkan::toVulkanDescriptorType(DescriptorResourceType resourceType)
+vk::DescriptorType toVulkanDescriptorType(DescriptorResourceType resourceType)
 {
   switch (resourceType)
   {
@@ -1196,7 +1196,7 @@ vk::DescriptorType tz::render::vulkan::toVulkanDescriptorType(DescriptorResource
   }
 }
 
-vk::ShaderStageFlagBits tz::render::vulkan::toShaderStageFlags(ShaderType shaderType)
+vk::ShaderStageFlagBits toShaderStageFlags(ShaderType shaderType)
 {
   switch (shaderType)
   {

@@ -3,7 +3,7 @@ if (USE_VULKAN)
     find_package(Vulkan REQUIRED)
     message(STATUS "Vulkan found $ENV{VULKAN_SDK}")
 
-    add_library(render_vulkan_lib)
+    add_library(render_vulkan_lib SHARED)
     set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
     target_sources(render_vulkan_lib
