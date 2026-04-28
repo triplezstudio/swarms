@@ -966,9 +966,9 @@ void Renderer::recordCommand(CommandBuffer* cb, Command *cmd)
     {
       vk::Viewport targetVp;
       targetVp.width = vp.width;
-      targetVp.height = vp.height;    
+      targetVp.height = -vp.height;    
       targetVp.x = vp.x;
-      targetVp.y = 0;                 
+      targetVp.y = vp.height;                 
       targetVp.minDepth = 0;
       targetVp.maxDepth = 1;
       targetVps.push_back(targetVp);
@@ -1287,9 +1287,9 @@ void Renderer::createDescriptorPool()
 {
   vk::DescriptorPoolSize poolSizes[3];
   poolSizes[0].setType(vk::DescriptorType::eUniformBufferDynamic)
-          .setDescriptorCount(100);
+          .setDescriptorCount(1000);
   poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
-          .setDescriptorCount(500);
+          .setDescriptorCount(2000);
   poolSizes[2].setType(vk::DescriptorType::eStorageImage)
           .setDescriptorCount(50);
 
@@ -1299,7 +1299,7 @@ void Renderer::createDescriptorPool()
   poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet
                    | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind
     ;
-  poolInfo.maxSets = 200;
+  poolInfo.maxSets = 2000;
 
   descriptorPool = vk::raii::DescriptorPool(device, poolInfo);
 }

@@ -41,7 +41,7 @@ void App::createMasterPipelineLayout()
   cameraDescriptorSet = vulkanRenderer()->createMultiframeDescriptorSet(cameraDescriptorSetLayout);
 
   // PerObject is set1, binding0
-  auto perObjectBuffer = renderer->createMultiframeUniformBuffer(100, sizeof(tz::PerObjectUniformBufferObject));
+  auto perObjectBuffer = renderer->createMultiframeUniformBuffer(10000, sizeof(tz::PerObjectUniformBufferObject));
   auto perObjectUBOBinding = renderer->createDescriptorBinding(0, rv::DescriptorResourceType::Ubo,
                                                                rv::ShaderType::Vertex, 1,
                                                                perObjectBuffer);
@@ -217,8 +217,9 @@ rv::PipelineStateObject* App::createColorOnlyPSO()
   renderState.primitiveType = rv::PrimitiveType::Triangles;
   renderState.blending = false;
   renderState.depthTesting = true;
+  renderState.cullMode = vk::CullModeFlagBits::eBack;
   renderState.fillMode = vk::PolygonMode::eLine;
-  renderState.frontFace = vk::FrontFace::eClockwise;
+  renderState.frontFace = vk::FrontFace::eCounterClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
 
@@ -263,8 +264,9 @@ rv::PipelineStateObject* App::createTexturedPSO()
   renderState.primitiveType = rv::PrimitiveType::Triangles;
   renderState.blending = true;
   renderState.depthTesting = true;
+  renderState.cullMode = vk::CullModeFlagBits::eBack;
   renderState.fillMode = vk::PolygonMode::eFill;
-  renderState.frontFace = vk::FrontFace::eClockwise;
+  renderState.frontFace = vk::FrontFace::eCounterClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
 
