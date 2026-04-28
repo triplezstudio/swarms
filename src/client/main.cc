@@ -1,9 +1,4 @@
-
 #include <Eigen/Dense>
-#include <render.hh>
-#include <vulkan_renderer.hh>
-#include <sdl2.hh>
-#include <cmath>
 #include <app.hh>
 
 

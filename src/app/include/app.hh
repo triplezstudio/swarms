@@ -2,20 +2,15 @@
 #include <functional>
 
 #include <window_system.hh>
-#include <render.hh>
 #include <vulkan_renderer.hh>
 
-
 namespace tz {
-
-
 
   class App;
   using FrameListener = std::function< void(App* app)>;
 
   class TZ_API App
   {
-
 
     public:
       App();

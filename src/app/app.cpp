@@ -1,9 +1,7 @@
 #include <SDL2/SDL.h>
 #include <iostream>
 #include <functional>
-
 #include "app.hh"
-#include <render.hh>
 #include <vulkan_renderer.hh>
 #include <window_system.hh>
 #include <sdl2.hh>
@@ -40,18 +38,6 @@ void App::createMasterPipelineLayout()
                                                                     cameraBuffer);
   auto cameraDescriptorSetLayout =  (vulkanRenderer()->createDescriptorSetLayout({cameraUBOBinding}));
   cameraDescriptorSet = vulkanRenderer()->createMultiframeDescriptorSet(cameraDescriptorSetLayout);
-
-
-
-  // Transform is set1, binding0
-  /*auto transformBuffer = renderer->createMultiframeUniformBuffer(100, sizeof(tz::TransformUniformBufferObject));
-  auto transformUBOBinding = renderer->createDescriptorBinding(0, tz::ResourceType::Ubo,
-                                                               tz::ShaderType::Vertex, 1,
-                                                               transformBuffer);
-  auto transformDescriptorSetLayout = renderer->createDescriptorSetLayout({transformUBOBinding});
-  transformDescriptorSet = renderer->createMultiframeDescriptorSet(transformDescriptorSetLayout);
-  */
-
 
   // PerObject is set1, binding0
   auto perObjectBuffer = renderer->createMultiframeUniformBuffer(100, sizeof(tz::PerObjectUniformBufferObject));
