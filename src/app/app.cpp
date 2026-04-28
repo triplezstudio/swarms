@@ -93,28 +93,28 @@ void App::prepareRenderPrimitives()
 
   std::vector<rv::VertexPosTexCoords> cubeVerticesPosTex = {
     // Front face (Z = 1.0f)
-    {{-1.0f, -1.0f,  1.0f}, {0.0f, 0.0f}}, {{ 1.0f, -1.0f,  1.0f}, {1.0f, 0.0f}},
-    {{ 1.0f,  1.0f,  1.0f}, {1.0f, 1.0f}}, {{-1.0f,  1.0f,  1.0f}, {0.0f, 1.0f}},
+    {{-.5f, -.5f,  .5f}, {0.0f, 0.0f}}, {{ .5f, -.5f,  .5f}, {1.0f, 0.0f}},
+    {{ .5f,  .5f,  .5f}, {1.0f, 1.0f}}, {{-.5f,  .5f,  .5f}, {0.0f, 1.0f}},
 
     // Back face (Z = -1.0f)
-    {{ 1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}}, {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
-    {{-1.0f,  1.0f, -1.0f}, {1.0f, 1.0f}}, {{ 1.0f,  1.0f, -1.0f}, {0.0f, 1.0f}},
+    {{ .5f, -.5f, -.5f}, {0.0f, 0.0f}}, {{-.5f, -.5f, -.5f}, {1.0f, 0.0f}},
+    {{-.5f,  .5f, -.5f}, {1.0f, 1.0f}}, {{ .5f,  .5f, -.5f}, {0.0f, 1.0f}},
 
     // Left face (X = -1.0f)
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}}, {{-1.0f, -1.0f,  1.0f}, {1.0f, 0.0f}},
-    {{-1.0f,  1.0f,  1.0f}, {1.0f, 1.0f}}, {{-1.0f,  1.0f, -1.0f}, {0.0f, 1.0f}},
+    {{-.5f, -.5f, -.5f}, {0.0f, 0.0f}}, {{-.5f, -.5f,  .5f}, {1.0f, 0.0f}},
+    {{-.5f,  .5f,  .5f}, {1.0f, 1.0f}}, {{-.5f,  .5f, -.5f}, {0.0f, 1.0f}},
 
     // Right face (X = 1.0f)
-    {{ 1.0f, -1.0f,  1.0f}, {0.0f, 0.0f}}, {{ 1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
-    {{ 1.0f,  1.0f, -1.0f}, {1.0f, 1.0f}}, {{ 1.0f,  1.0f,  1.0f}, {0.0f, 1.0f}},
+    {{ .5f, -.5f,  .5f}, {0.0f, 0.0f}}, {{ .5f, -.5f, -.5f}, {1.0f, 0.0f}},
+    {{ .5f,  .5f, -.5f}, {1.0f, 1.0f}}, {{ .5f,  .5f,  .5f}, {0.0f, 1.0f}},
 
     // Top face (Y = 1.0f)
-    {{-1.0f,  1.0f,  1.0f}, {0.0f, 0.0f}}, {{ 1.0f,  1.0f,  1.0f}, {1.0f, 0.0f}},
-    {{ 1.0f,  1.0f, -1.0f}, {1.0f, 1.0f}}, {{-1.0f,  1.0f, -1.0f}, {0.0f, 1.0f}},
+    {{-.5f,  .5f,  .5f}, {0.0f, 0.0f}}, {{ .5f,  .5f,  .5f}, {1.0f, 0.0f}},
+    {{ .5f,  .5f, -.5f}, {1.0f, 1.0f}}, {{-.5f,  .5f, -.5f}, {0.0f, 1.0f}},
 
     // Bottom face (Y = -1.0f)
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}}, {{ 1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},
-    {{ 1.0f, -1.0f,  1.0f}, {1.0f, 1.0f}}, {{-1.0f, -1.0f,  1.0f}, {0.0f, 1.0f}}
+    {{-.5f, -.5f, -.5f}, {0.0f, 0.0f}}, {{ .5f, -.5f, -.5f}, {1.0f, 0.0f}},
+    {{ .5f, -.5f,  .5f}, {1.0f, 1.0f}}, {{-.5f, -.5f,  .5f}, {0.0f, 1.0f}}
   };
 
 
@@ -218,7 +218,7 @@ rv::PipelineStateObject* App::createColorOnlyPSO()
   renderState.blending = false;
   renderState.depthTesting = true;
   renderState.cullMode = vk::CullModeFlagBits::eBack;
-  renderState.fillMode = vk::PolygonMode::eLine;
+  renderState.fillMode = vk::PolygonMode::eFill;
   renderState.frontFace = vk::FrontFace::eCounterClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
