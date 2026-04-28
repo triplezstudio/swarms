@@ -22,6 +22,30 @@ class Camera
 
   }
 
+  // Right-handed look-at view matrix for Vulkan // Vulkan uses: +X right, +Y down (in NDC), +Z forward (into screen) // World space convention here: +X right, +Y up, -Z forward (RH, like GLM default) 
+  Eigen::Matrix4f lookAtRH() 
+  { 
+    Eigen::Vector3f up = {0, 1, 0};
+    // Forward vector (from eye to target), negated for RH 
+    Eigen::Vector3f f = (lookAt - pos).normalized(); // Right vector 
+    Eigen::Vector3f s = f.cross(up).normalized(); // Recomputed up (orthogonal) 
+    Eigen::Vector3f u = s.cross(f); 
+    Eigen::Matrix4f view = Eigen::Matrix4f::Identity(); 
+    view(0, 0) = s.x(); 
+    view(0, 1) = s.y(); 
+    view(0, 2) = s.z(); 
+    view(1, 0) = u.x(); 
+    view(1, 1) = u.y(); 
+    view(1, 2) = u.z(); 
+    view(2, 0) = -f.x(); 
+    view(2, 1) = -f.y(); 
+    view(2, 2) = -f.z(); 
+    view(0, 3) = -s.dot(pos); 
+    view(1, 3) = -u.dot(pos); 
+    view(2, 3) = f.dot(pos); 
+    return view;
+  }
+
   Eigen::Matrix4f getViewMatrix()
   {
     Eigen::Vector3f up = {0, 1, 0};
@@ -59,7 +83,7 @@ class Camera
       float zNear = 0.1;
 
       m(0,0) = 1.0f / (aspect * tanHalfFovy);
-      m(1,1) = 1.0f / (tanHalfFovy);
+      m(1,1) = -1.0f / (tanHalfFovy);
       m(2,2) = zFar / (zNear - zFar);
       m(2,3) = (zNear * zFar) / (zNear - zFar);
       m(3,2) = -1.0f; // This must be at (3,2) for Eigen's Col-Major layout

@@ -216,11 +216,10 @@ rv::PipelineStateObject* App::createColorOnlyPSO()
 
   auto renderState = rv::RenderState {};
   renderState.primitiveType = rv::PrimitiveType::Triangles;
-  renderState.cullMode = rv::CullMode::Back;
   renderState.blending = false;
   renderState.depthTesting = true;
-  renderState.fillMode = rv::FillMode::Solid;
-  renderState.frontFace = rv::FrontFace::CounterClockwise;
+  renderState.fillMode = vk::PolygonMode::eLine;
+  renderState.frontFace = vk::FrontFace::eCounterClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
 
@@ -263,11 +262,10 @@ rv::PipelineStateObject* App::createTexturedPSO()
 
   auto renderState = rv::RenderState {};
   renderState.primitiveType = rv::PrimitiveType::Triangles;
-  renderState.cullMode = rv::CullMode::Back;
   renderState.blending = true;
   renderState.depthTesting = true;
-  renderState.fillMode = rv::FillMode::Solid;
-  renderState.frontFace = rv::FrontFace::CounterClockwise;
+  renderState.fillMode = vk::PolygonMode::eFill;
+  renderState.frontFace = vk::FrontFace::eCounterClockwise;
   renderState.stencilTesting = false;
   shaderPipeline = shaderPipeline;
 
@@ -340,7 +338,7 @@ void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, u
     auto pso = psoCache[prd.renderHints.getHash()];
     renderer->recordCommand(commandBuffer,new rv::CmdBindPipeline (pso));
 
-    auto transform = Eigen::Affine3f::Identity();
+    auto transform = Eigen::Affine3f::Identity();  
     transform.translate(prd.transform.position);
     transform.scale(prd.transform.scale);
     Eigen::Matrix4f tm = transform.matrix();
@@ -357,32 +355,6 @@ void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, u
     renderer->recordCommand(commandBuffer,new rv::CmdBindVertexBuffers({prd.vertexBuffer}));
     renderer->recordCommand(commandBuffer, new rv::CmdBindIndexBuffer(prd.indexBuffer, 0));
     renderer->recordCommand(commandBuffer, new rv::CmdDrawIndexed(prd.indexCount, 1,0, 0, 0));
-
-    /*if (prd.renderHints.materialType == MaterialType::DiffuseNormal)
-    {
-      switch (prd.geometryType)
-      {
-        case PrimitiveGeometryType::Quad: renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({quadPosTexCoordVertexBuffer})); break;
-        //case PrimitiveGeometryType::Cube: renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({cubePosTexCoordVertexBuffer})); break;
-      }
-    }
-    else
-    {
-      switch (prd.geometryType)
-      {
-        case PrimitiveGeometryType::Quad:
-          renderer->recordCommand(commandBuffer,new tz::CmdBindVertexBuffers({quadPosVertexBuffer}));
-          renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(quadIndexBuffer, 0));
-          renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(quadIndices.size(), 1,0, 0, 0));
-          break;
-
-        case PrimitiveGeometryType::Cube:
-          renderer->recordCommand(commandBuffer, new tz::CmdBindVertexBuffers ({cubePosVertexBuffer})); break;
-          renderer->recordCommand(commandBuffer, new tz::CmdBindIndexBuffer(cubeIndexBuffer, 0));
-          renderer->recordCommand(commandBuffer, new tz::CmdDrawIndexed(cubeIndices.size(), 1,0, 0, 0));
-          break;
-      }
-    }*/
 
     primitiveCounter++;
   }
@@ -405,7 +377,7 @@ void App::renderFrame()
   // makes sure, UI always renders on top of everything else.
   auto camera3DPrimitives = getRenderPrimitivesByCamera(default3DCamera);
   tz::CameraUniformBufferObject cameraUBO;
-  cameraUBO.view = default3DCamera->getViewMatrix();
+  cameraUBO.view = default3DCamera->lookAtRH();
   cameraUBO.proj = default3DCamera->getProjectionMatrix(640, 480);
   renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {0}, 0));
   renderer->updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(tz::CameraUniformBufferObject),
@@ -416,7 +388,7 @@ void App::renderFrame()
 
   // Next UI:
   auto cameraUIPrimitives = getRenderPrimitivesByCamera(defaultUICamera);
-  cameraUBO.view = defaultUICamera->getViewMatrix();
+  cameraUBO.view = defaultUICamera->lookAtRH();
   cameraUBO.proj = defaultUICamera->getProjectionMatrix(640, 480);
   renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {1}, 0));
 

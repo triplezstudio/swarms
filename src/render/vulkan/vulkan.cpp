@@ -1099,9 +1099,9 @@ PipelineStateObject *Renderer::createPipelineStateObject(
   vk::PipelineRasterizationStateCreateInfo rasterizationStateCreateInfo;
   rasterizationStateCreateInfo.setDepthClampEnable(vk::False)
     .setRasterizerDiscardEnable(vk::False)
-    .setPolygonMode(vk::PolygonMode::eFill)
-    .setCullMode(toVulkanCullMode(renderState.cullMode))
-    .setFrontFace(toVulkanFrontFace(renderState.frontFace))
+    .setPolygonMode(renderState.fillMode)
+    .setCullMode(renderState.cullMode)
+    .setFrontFace(renderState.frontFace)
     .setDepthBiasEnable(vk::False)
     .setLineWidth(1.0f);
 

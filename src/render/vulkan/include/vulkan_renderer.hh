@@ -612,9 +612,9 @@ struct VertexLayout
 
 struct RenderState
 {
-  CullMode cullMode = CullMode::Back;
-  FillMode fillMode = FillMode::Solid;
-  FrontFace frontFace = FrontFace::CounterClockwise;
+  vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
+  vk::PolygonMode fillMode = vk::PolygonMode::eFill;
+  vk::FrontFace frontFace = vk::FrontFace::eCounterClockwise;
   bool depthTesting = false;
   bool stencilTesting = false;
   bool blending = false;
