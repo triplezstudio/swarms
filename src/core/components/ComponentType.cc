@@ -9,6 +9,8 @@ auto str(const ComponentType &type) -> std::string
   {
     case ComponentType::ANIMAT:
       return "animat";
+    case ComponentType::FRUSTUM:
+      return "frustum";
     case ComponentType::TRANSFORM:
       return "transform";
     case ComponentType::VELOCITY:

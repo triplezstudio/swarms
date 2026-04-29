@@ -1,9 +1,10 @@
 
 #include "Environment.hh"
+#include "AnimatComponent.hh"
+#include "FrustumComponent.hh"
 #include "MotionSystem.hh"
 #include "TransformComponent.hh"
 #include "VelocityComponent.hh"
-#include <utility>
 
 namespace swarms::core {
 
@@ -30,6 +31,9 @@ void Environment::addComponent(const Uuid entityId, IComponent &&component)
 {
   switch (component.type())
   {
+    case ComponentType::FRUSTUM:
+      registerComponent(m_registry, entityId, std::move(component.as<FrustumComponent>()));
+      break;
     case ComponentType::TRANSFORM:
       registerComponent(m_registry, entityId, std::move(component.as<TransformComponent>()));
       break;
