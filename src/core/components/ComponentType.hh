@@ -8,6 +8,7 @@ namespace swarms::core {
 enum class ComponentType
 {
   ANIMAT,
+  FRUSTUM,
   TRANSFORM,
   VELOCITY,
 };

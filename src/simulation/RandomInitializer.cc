@@ -1,6 +1,8 @@
 
 #include "RandomInitializer.hh"
 #include "CircleBox.hh"
+#include "Frustum.hh"
+#include "FrustumComponent.hh"
 #include "TransformComponent.hh"
 #include "VectorUtils.hh"
 #include "VelocityComponent.hh"
@@ -47,6 +49,8 @@ void RandomInitializer::spawnAgent(core::IEnvironment &env, AgentProps config)
     .speedMode       = core::SpeedMode::VARIABLE,
   };
   env.addComponent<core::VelocityComponent>(entityId, data);
+
+  env.addComponent<core::FrustumComponent>(entityId, core::Frustum(box));
 
   debug("Spawned entity " + core::str(entityId) + " at " + core::str(config.position));
 }
