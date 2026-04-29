@@ -1,5 +1,6 @@
 cmake-build
 cmake-build-debug
+build
 ccache
 sandbox
 .vscode

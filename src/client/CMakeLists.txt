@@ -1,9 +1,9 @@
 add_executable (swarms_client)
 
-find_package(SDL2 CONFIG REQUIRED)
-
 target_sources(swarms_client PRIVATE main.cc)
 
-target_link_libraries(swarms_client PRIVATE SDL2::SDL2 SDL2::SDL2main)
+target_link_libraries(swarms_client PRIVATE window_lib window_sdl2_lib render_lib render_vulkan_lib app)
 
+
+add_dependencies(swarms_client copy_assets)
 

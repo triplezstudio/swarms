@@ -1,7 +1,8 @@
 cmake_minimum_required (VERSION 3.28)
 
-include (FetchContent)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include (FetchContent)
 FetchContent_Declare (
 	entt
 	GIT_REPOSITORY https://github.com/skypjack/entt.git
