@@ -46,7 +46,11 @@ apt-get install -y --no-install-recommends \
   glslc \
   glslang-dev \
   slang-compiler
+```
 
+Or alternatively for Vulkan:
+
+```bash
 wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
 wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
 apt update
