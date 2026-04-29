@@ -41,7 +41,11 @@ apt-get install -y --no-install-recommends \
   libgtest-dev \
   libgmock-dev \
   rsync \
-  libsdl2-dev
+  libsdl2-dev \
+  libvulkan-dev \
+  glslc \
+  glslang-dev \
+  slang-compiler
 
 wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
 wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list

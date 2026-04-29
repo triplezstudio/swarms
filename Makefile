@@ -9,6 +9,7 @@ debug:
 	cd cmake-build/Debug && \
 	cmake \
 		-DCMAKE_BUILD_TYPE=Debug \
+		-DUSE_VULKAN=1 \
 		-DCMAKE_C_COMPILER_LAUNCHER=ccache \
 		-DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
 		-S ../.. \
@@ -22,6 +23,7 @@ debugWithTests:
 	cmake \
 		-DCMAKE_BUILD_TYPE=Debug \
 		-DENABLE_TESTS=ON \
+		-DUSE_VULKAN=1 \
 		-DCMAKE_C_COMPILER_LAUNCHER=ccache \
 		-DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
 		-S ../.. \
@@ -34,6 +36,7 @@ release:
 	cd cmake-build/Release && \
 	cmake \
 		-DCMAKE_BUILD_TYPE=Release \
+		-DUSE_VULKAN=1 \
 		-DCMAKE_C_COMPILER_LAUNCHER=ccache \
 		-DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
 		-S ../.. \
