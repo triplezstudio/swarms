@@ -9,21 +9,21 @@ namespace swarms::core {
 class CircleBox : public IBoundingBox
 {
   public:
-  CircleBox(const Eigen::Vector3f &center, const float radius);
+  CircleBox(const Eigen::Vector3d &center, const double radius);
   ~CircleBox() override = default;
 
-  auto radius() const -> float;
+  auto radius() const -> double;
 
-  auto position() const -> Eigen::Vector3f override;
-  void moveTo(const Eigen::Vector3f &position) override;
-  bool isInside(const Eigen::Vector3f &pos) const override;
+  auto position() const -> Eigen::Vector3d override;
+  void moveTo(const Eigen::Vector3d &position) override;
+  bool isInside(const Eigen::Vector3d &pos) const override;
 
-  void translate(const Eigen::Vector3f &delta) override;
+  void translate(const Eigen::Vector3d &delta) override;
 
   private:
-  Eigen::Vector3f m_center{Eigen::Vector3f::Zero()};
-  float m_radius{1.0f};
-  float m_squaredRadius{1.0f};
+  Eigen::Vector3d m_center{Eigen::Vector3d::Zero()};
+  double m_radius{1.0};
+  double m_squaredRadius{1.0};
 };
 
 } // namespace swarms::core

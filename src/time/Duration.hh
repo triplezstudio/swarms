@@ -16,6 +16,8 @@ struct Duration
 
   static auto fromSeconds(const double duration) -> Duration;
   static auto fromMilliseconds(const double duration) -> Duration;
+
+  bool operator==(const Duration &rhs) const = default;
 };
 
 } // namespace swarms::time
