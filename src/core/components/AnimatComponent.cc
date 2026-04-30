@@ -3,25 +3,19 @@
 
 namespace swarms::core {
 
-AnimatComponent::AnimatComponent()
+AnimatComponent::AnimatComponent(AnimatShPtr animat)
   : AbstractComponent(ComponentType::ANIMAT)
-{}
-
-void AnimatComponent::plug(IAgentShPtr agent)
+  , m_animat(std::move(animat))
 {
-  m_agent = std::move(agent);
+  if (m_animat == nullptr)
+  {
+    throw std::invalid_argument("Expected non null animat");
+  }
 }
 
-void AnimatComponent::setPerceptions(std::vector<IPerceptionPtr> perceptions)
+auto AnimatComponent::animat() -> Animat &
 {
-  m_perceptions = std::move(perceptions);
-}
-
-auto AnimatComponent::consumeInfluences() -> std::vector<IInfluencePtr>
-{
-  std::vector<IInfluencePtr> out{};
-  out.swap(m_influences);
-  return out;
+  return *m_animat;
 }
 
 } // namespace swarms::core
