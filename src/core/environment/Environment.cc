@@ -31,6 +31,9 @@ void Environment::addComponent(const Uuid entityId, IComponent &&component)
 {
   switch (component.type())
   {
+    case ComponentType::ANIMAT:
+      registerComponent(m_registry, entityId, std::move(component.as<AnimatComponent>()));
+      break;
     case ComponentType::FRUSTUM:
       registerComponent(m_registry, entityId, std::move(component.as<FrustumComponent>()));
       break;
