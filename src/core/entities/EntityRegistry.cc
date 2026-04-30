@@ -10,7 +10,8 @@ auto EntityRegistry::createEntity() -> Uuid
   const auto uuid = m_nextEntity;
   ++m_nextEntity;
 
-  m_entities.emplace(uuid, entity);
+  m_entityToId.emplace(uuid, entity);
+  m_idToEntity.emplace(entity, uuid);
 
   return uuid;
 }

@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "IAgent.hh"
 #include "IComponent.hh"
 #include "TickData.hh"
 #include "Uuid.hh"
@@ -38,6 +39,14 @@ class IEnvironment
   template<class Component, class... Args>
     requires std::derived_from<Component, IComponent>
   void addComponent(const Uuid entityId, Args &&...args);
+
+  /// @brief - Attaches an agent to the entity referenced by the identifier.
+  /// After calling this function, the agent will be able to use the entity
+  /// as its body.
+  /// @param entityId - the identifier of the entity to which the agent will
+  /// be attached
+  /// @param agent - the agent to attach to the entity
+  virtual void attachAgent(const Uuid entityId, IAgentShPtr agent) = 0;
 
   /// @brief - Ticks the world described by this environment one step forward
   /// in time. The tick data is used to determine how much time has elapsed
