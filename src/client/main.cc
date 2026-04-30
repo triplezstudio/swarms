@@ -1,6 +1,6 @@
 #include <Eigen/Dense>
 #include <app.hh>
-
+#include <iostream>
 
 uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
@@ -21,6 +21,12 @@ void doFrame(tz::App* app)
     initialize(app);
     firstTime = false;
   }
+
+  if (app->isMouseButtonClicked(tz::input::MouseButton::LEFT))
+  {
+    std::cout << "left mb clicked" << std::endl;
+  }
+
   // This allows us to "see" our scene through a camera in a 3d world
   // and place objects in world coordinates.
   app->activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));

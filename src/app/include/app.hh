@@ -259,6 +259,8 @@ struct PrimitiveRenderData
 
       bool isKeyPressed(tz::input::KeyCode keyCode);
       bool isKeyDown(tz::input::KeyCode keyCode);
+      bool isMouseButtonClicked(tz::input::MouseButton mb);
+      bool isMouseButtonDown(tz::input::MouseButton mb);
 
       uint32_t createTexture(const std::string& imagePath);
 

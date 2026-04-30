@@ -67,10 +67,26 @@ enum class KeyCode
 
 };
 
+enum class MouseButton
+{
+  LEFT,
+  RIGHT,
+  MIDDLE
+};
+
 class TZ_API SDL2InputSystem
 {
 public:
   SDL2InputSystem(const SDL2WindowSystem& windowSystem);
+
+  // The current screen positions of the mouse, origin is top left (0,0).
+  void getMouseCoords(int& x, int& y);
+
+  // Single time, e.g. ui button click;
+  bool isMouseButtonClicked(MouseButton mouseButton);
+
+  // Continuous
+  bool isMouseButtonDown(MouseButton mouseButton);
 
   // For single key presses, e.g. menu
   bool isKeyPressed(KeyCode keyCode);

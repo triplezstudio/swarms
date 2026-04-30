@@ -1,4 +1,5 @@
 #include <input.hh>
+#include <iostream>
 
 namespace tz::input {
 bool SDL2InputSystem::isKeyPressed(KeyCode keyCode)
@@ -184,6 +185,51 @@ KeyCode SDL2InputSystem::fromSDLEvent(SDL_Event ev)
       // Handle unmapped keys here
       return KeyCode::ESC;
   }
+}
+void SDL2InputSystem::getMouseCoords(int &x, int &y)
+{
+  for (auto& e : frameEvents)
+  {
+    if (e.type == SDL_MOUSEMOTION)
+    {
+      x = e.motion.x;
+      y = e.motion.y;
+      break;
+    }
+  }
+}
+
+
+bool SDL2InputSystem::isMouseButtonDown(MouseButton mouseButton)
+{
+  int x,y;
+  auto buttonState = SDL_GetMouseState(&x,&y);
+
+  switch (mouseButton)
+  {
+    case MouseButton::LEFT: return buttonState & SDL_BUTTON(SDL_BUTTON_LEFT);
+    case MouseButton::RIGHT: return buttonState & SDL_BUTTON(SDL_BUTTON_RIGHT);
+    case MouseButton::MIDDLE: return buttonState & SDL_BUTTON(SDL_BUTTON_MIDDLE);
+  }
+}
+bool SDL2InputSystem::isMouseButtonClicked(MouseButton mouseButton)
+{
+  auto button = SDL_BUTTON_LEFT;
+  switch(mouseButton)
+  {
+    case MouseButton::RIGHT: button = SDL_BUTTON_RIGHT;
+    case MouseButton::MIDDLE: button = SDL_BUTTON_MIDDLE;
+  }
+
+  for (auto& e: frameEvents)
+  {
+    if (e.type == SDL_MOUSEBUTTONDOWN)
+    {
+      std::cout << "mbutton down" << std::endl;
+      if (e.button.button == button) return true;
+    }
+  }
+  return false;
 }
 
 }

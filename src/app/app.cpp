@@ -536,6 +536,14 @@ bool App::isKeyPressed(tz::input::KeyCode keyCode)
 {
   return inputSystem->isKeyPressed(keyCode);
 }
+bool App::isMouseButtonClicked(tz::input::MouseButton mb)
+{
+  return inputSystem->isMouseButtonClicked(mb);
+}
+bool App::isMouseButtonDown(tz::input::MouseButton mb)
+{
+  return inputSystem->isMouseButtonDown(mb);
+}
 
 }
 
