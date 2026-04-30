@@ -188,7 +188,7 @@ KeyCode SDL2InputSystem::fromSDLEvent(SDL_Event ev)
 }
 void SDL2InputSystem::getMouseCoords(int &x, int &y)
 {
-  for (auto& e : frameEvents)
+  for (auto& e : windowSystem.getFrameEvents())
   {
     if (e.type == SDL_MOUSEMOTION)
     {
@@ -214,6 +214,8 @@ bool SDL2InputSystem::isMouseButtonDown(MouseButton mouseButton)
 }
 bool SDL2InputSystem::isMouseButtonClicked(MouseButton mouseButton)
 {
+  if (windowSystem.getFrameEvents().empty()) return false;
+
   auto button = SDL_BUTTON_LEFT;
   switch(mouseButton)
   {
@@ -221,11 +223,10 @@ bool SDL2InputSystem::isMouseButtonClicked(MouseButton mouseButton)
     case MouseButton::MIDDLE: button = SDL_BUTTON_MIDDLE;
   }
 
-  for (auto& e: frameEvents)
+  for (auto& e: windowSystem.getFrameEvents())
   {
     if (e.type == SDL_MOUSEBUTTONDOWN)
     {
-      std::cout << "mbutton down" << std::endl;
       if (e.button.button == button) return true;
     }
   }

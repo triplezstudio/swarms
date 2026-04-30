@@ -99,8 +99,6 @@ public:
       KeyCode fromSDLEvent(SDL_Event ev);
       SDL_Scancode toSDLScanCode(KeyCode keyCode);
 
-
-      std::vector<SDL_Event> frameEvents;
       const SDL2WindowSystem &windowSystem;
 };
 
