@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.28)
 
+project (swarms LANGUAGES CXX)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include (FetchContent)
@@ -8,8 +10,8 @@ FetchContent_Declare (
 	GIT_REPOSITORY https://github.com/skypjack/entt.git
 	GIT_TAG v3.13.2
 )
-
 FetchContent_MakeAvailable (entt)
+
 
 option (ENABLE_TESTS "Enable tests" OFF)
 
@@ -17,7 +19,7 @@ set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
 
-project (swarms LANGUAGES CXX)
+
 
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
