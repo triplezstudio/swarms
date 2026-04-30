@@ -4,6 +4,7 @@
 #include "app.hh"
 #include <vulkan_renderer.hh>
 #include <window_system.hh>
+#include <input.hh>
 #include <sdl2.hh>
 
 namespace tz
@@ -14,6 +15,7 @@ App::App()
 {
   renderer = new rv::Renderer();
   windowSystem = new tz::SDL2WindowSystem();
+  inputSystem = new tz::input::SDL2InputSystem(*dynamic_cast<const tz::SDL2WindowSystem*>(windowSystem));
   auto winDesc = renderer->getRequiredWindowDesc();
   auto window = windowSystem->createWindow(winDesc);
   renderer->init(window);
@@ -524,6 +526,15 @@ uint32_t App::createTexture(const std::string &imagePath)
   auto texture = renderer->createTexture(image);
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
   return globalTextureIndex++;
+}
+bool App::isKeyDown(tz::input::KeyCode keyCode)
+{
+  return inputSystem->isKeyDown(keyCode);
+}
+
+bool App::isKeyPressed(tz::input::KeyCode keyCode)
+{
+  return inputSystem->isKeyPressed(keyCode);
 }
 
 }

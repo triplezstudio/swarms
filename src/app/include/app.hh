@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <window_system.hh>
+#include <input.hh>
 #include <vulkan_renderer.hh>
 
 namespace tz {
@@ -256,10 +257,14 @@ struct PrimitiveRenderData
       virtual void renderSphere(Transform transform, RenderHints renderHints = {});
       virtual void renderCylinder(Transform transform, RenderHints renderHints = {});
 
+      bool isKeyPressed(tz::input::KeyCode keyCode);
+      bool isKeyDown(tz::input::KeyCode keyCode);
+
       uint32_t createTexture(const std::string& imagePath);
 
   private:
       WindowSystem* windowSystem = nullptr;
+      tz::input::SDL2InputSystem* inputSystem = nullptr;
       rv::Renderer* renderer = nullptr;
 
       std::vector<FrameListener> frameListeners;

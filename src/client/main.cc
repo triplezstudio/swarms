@@ -44,7 +44,13 @@ void doFrame(tz::App* app)
 
   static float mover = 24;
   static float dir = 1;
-  mover += 0.1 * dir;
+  if (app->isKeyPressed(tz::input::KeyCode::D)) {
+    mover += 1;
+  }
+  if (app->isKeyPressed(tz::input::KeyCode::A)) {
+    mover -= 1;
+  }
+
   if (mover > 616 || mover < 0 ) {
     dir *= -1;
   }

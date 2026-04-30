@@ -6,7 +6,7 @@ add_library(window_sdl2_lib SHARED)
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 target_sources(window_sdl2_lib PRIVATE
-                sdl2.cpp   
+                sdl2.cpp sdl2_input.cpp
 )
 
 target_include_directories(window_sdl2_lib

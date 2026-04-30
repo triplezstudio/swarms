@@ -5,6 +5,7 @@
 
 #include <SDL_vulkan.h>
 #include <common.hh>
+#include <input.hh>
 #include <sdl2.hh>
 #include <stdexcept>
 #include <iostream>
@@ -18,9 +19,11 @@ SDL2WindowSystem::SDL2WindowSystem()
 
 void SDL2WindowSystem::pollEvents()
 {
+  frameEvents.clear();
   SDL_Event event;
   while (SDL_PollEvent(&event))
   {
+    frameEvents.push_back(event);
     if (event.type == SDL_QUIT)
     {
       // TODO handle graceful shutdown
@@ -28,6 +31,8 @@ void SDL2WindowSystem::pollEvents()
     }
   }
 }
+
+
 
 void SDL2WindowSystem::present()
 {
@@ -119,7 +124,10 @@ client_common::NativeHandles SDL2WindowSystem::getNativeHandles()
   return {nullptr, nullptr};
 }
 
-
+const std::vector<SDL_Event>& SDL2WindowSystem::getFrameEvents() const
+{
+  return frameEvents;
+}
 
 }
 
