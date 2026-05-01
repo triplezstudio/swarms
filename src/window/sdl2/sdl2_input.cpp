@@ -183,7 +183,7 @@ KeyCode SDL2InputSystem::fromSDLEvent(SDL_Event ev)
 
     default:
       // Handle unmapped keys here
-      return KeyCode::ESC;
+      return KeyCode::None;
   }
 }
 void SDL2InputSystem::getMouseCoords(int &x, int &y)

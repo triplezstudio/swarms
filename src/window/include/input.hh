@@ -5,6 +5,7 @@
 namespace tz::input {
 enum class KeyCode
 {
+  None,
   A,
   B,
   C,
