@@ -30,11 +30,11 @@ void doFrame(tz::App* app)
     //app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
   }
 
-  //app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
-  //app->renderCube({Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)});
+  app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
+  app->renderCube({Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)});
   for (int i = 0; i < 5; i++) {
     for (int z = 0; z < 5; z++) {
-       //app->renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
+       app->renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
     }
   
   }
@@ -65,7 +65,10 @@ void doFrame(tz::App* app)
   }*/
 
   static int frame = 0;
+  // Just limiting our "framecounter" here to avoid unwanted text-buffer-creation explosion..
+  // this is just temporary demo code...
   frame++;
+  frame = frame % 100;
   app->renderText({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
   app->renderText({{8, 400, 0.5}}, "SWARMS", titleFont);
 }
