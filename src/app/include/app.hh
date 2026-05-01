@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <window_system.hh>
 #include <vulkan_renderer.hh>
+#include <text_render.hh>
 
 namespace tz {
 namespace rv =  render::vulkan;
@@ -261,6 +262,7 @@ struct PrimitiveRenderData
   private:
       WindowSystem* windowSystem = nullptr;
       rv::Renderer* renderer = nullptr;
+      tz::text::TextRenderer* textRenderer = nullptr;
 
       std::vector<FrameListener> frameListeners;
 
@@ -274,6 +276,9 @@ struct PrimitiveRenderData
       rv::Buffer* quadIndexBuffer = nullptr;
       rv::Buffer* cubeIndexBuffer = nullptr;
       rv::Buffer* cubeTexIndexBuffer = nullptr;
+      rv::Buffer* tzLabelVertexBuffer = nullptr;
+      rv::Buffer* tzLabelIndexBuffer = nullptr;
+      uint32_t tzLabelIndexCount = 0;
       rv::PipelineStateObject* colorOnlyPSO = nullptr;
       rv::CommandBuffer* commandBuffer = nullptr;
       std::vector<PrimitiveRenderData> framePrimitives;
@@ -309,6 +314,8 @@ struct PrimitiveRenderData
       void createMasterPipelineLayout();
       void renderPrimitives(const std::vector<PrimitiveRenderData> &primitives,
                             uint32_t &primitiveCounter);
+      int uiFont = -1;
+      uint32_t uiFontAtlasTextureIndex = 0;
   };
 
 

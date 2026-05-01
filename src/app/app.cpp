@@ -5,6 +5,7 @@
 #include <vulkan_renderer.hh>
 #include <window_system.hh>
 #include <sdl2.hh>
+#include <text_render.hh>
 
 namespace tz
 {
@@ -176,6 +177,35 @@ void App::prepareRenderPrimitives()
   cubeTexIndexBuffer = renderer->createBuffer(cubeIndicesPosTex.data(),
                                            cubeIndicesPosTex.size() * sizeof(uint32_t),
                                            rv::BufferUsage::Index);
+
+
+  // Text rendering test:
+  {
+    textRenderer = new tz::text::TextRenderer(*renderer);
+    uiFont = textRenderer->createFont("assets/consola.ttf", 12);
+    uiFontAtlasTextureIndex = globalTextureIndex;
+    renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex++, textRenderer->getAtlasTextureForFont(uiFont));
+    auto tzLabelTextGeo = textRenderer->getGeometryForText("triplezstudios", uiFont);
+    tzLabelIndexCount = tzLabelTextGeo.indices.size();
+
+    std::vector<rv::VertexPosTexCoords> tzLabelVertices;
+    for (int i = 0; i < tzLabelTextGeo.positions.size();i++)
+    {
+      rv::VertexPosTexCoords vertex;
+      vertex.pos = tzLabelTextGeo.positions[i];
+      vertex.texCoords = tzLabelTextGeo.texCoords[i];
+      tzLabelVertices.push_back(vertex);
+    }
+
+
+    tzLabelVertexBuffer = renderer->createBuffer(tzLabelVertices.data(),
+                                                 tzLabelVertices.size() * sizeof (rv::VertexPosTexCoords),
+                                                 rv::BufferUsage::Vertex);
+
+    tzLabelIndexBuffer = renderer->createBuffer(tzLabelTextGeo.indices.data(),
+                                                tzLabelTextGeo.indices.size() * sizeof(uint32_t),
+                                                rv::BufferUsage::Index);
+  }
 }
 
 tz::render::vulkan::Renderer * App::vulkanRenderer()
@@ -264,7 +294,7 @@ rv::PipelineStateObject* App::createTexturedPSO()
   renderState.primitiveType = rv::PrimitiveType::Triangles;
   renderState.blending = true;
   renderState.depthTesting = true;
-  renderState.cullMode = vk::CullModeFlagBits::eBack;
+  renderState.cullMode = vk::CullModeFlagBits::eNone;
   renderState.fillMode = vk::PolygonMode::eFill;
   renderState.frontFace = vk::FrontFace::eCounterClockwise;
   renderState.stencilTesting = false;
@@ -397,6 +427,38 @@ void App::renderFrame()
                          sizeof(tz::CameraUniformBufferObject),
                          1);
   renderPrimitives(cameraUIPrimitives, primitiveCounter);
+
+  // Temp: Render static text
+  {
+    RenderHints textRenderHints;
+    textRenderHints.materialType = MaterialType::DiffuseNormal;
+    textRenderHints.vertexShaderType = VertexShaderType::Static;
+    textRenderHints.texture = uiFontAtlasTextureIndex;
+    auto pso = psoCache[textRenderHints.getHash()];
+    renderer->recordCommand(commandBuffer,new rv::CmdBindPipeline (pso));
+
+    auto transform = Eigen::Affine3f::Identity();
+    transform.translate(Eigen::Vector3f{300, 300, 0.5});
+    Eigen::Matrix4f tm = transform.matrix();
+    tz::PerObjectUniformBufferObject perObjectUBO;
+    perObjectUBO.model = tm;
+    perObjectUBO.textureId = 0;
+    renderer->updateBuffer(perObjectDescriptorSet->layout->descriptorBindings[0]->buffer, &perObjectUBO, sizeof(tz::PerObjectUniformBufferObject),
+                           primitiveCounter);
+    renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({perObjectDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
+
+    renderer->recordCommand(commandBuffer, new rv::CmdSetViewPorts({{0, 0, 640, 480}}));
+    renderer->recordCommand(commandBuffer, new rv::CmdSetScissors({{0, 0, 640, 480}}));
+
+    renderer->recordCommand(commandBuffer,new rv::CmdBindVertexBuffers({tzLabelVertexBuffer}));
+    renderer->recordCommand(commandBuffer, new rv::CmdBindIndexBuffer(tzLabelIndexBuffer, 0));
+    renderer->recordCommand(commandBuffer, new rv::CmdDrawIndexed(tzLabelIndexCount, 1,0, 0, 0));
+
+    primitiveCounter++;
+  }
+
+
+  // end static text
 
   renderer->endCommandBuffer(commandBuffer);
   renderer->submitCommandBuffer(commandBuffer);

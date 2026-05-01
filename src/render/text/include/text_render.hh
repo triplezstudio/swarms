@@ -18,16 +18,30 @@ struct Font {
 
 };
 
-class TextRenderer
+struct TextGeometry
+{
+  std::vector<Eigen::Vector3f> positions;
+  std::vector<Eigen::Vector2f> texCoords;
+  std::vector<uint32_t> indices;
+};
+
+/**
+ * This class manages fonts and offers functions to render
+ * text to a vertex buffer.
+ *
+ */
+class TZ_API TextRenderer
 {
   public:
-  TextRenderer(tz::render::vulkan::Renderer& renderer);
+  explicit TextRenderer(tz::render::vulkan::Renderer& renderer);
   auto createFont(const std::string& fontFile, uint16_t size) -> int;
+  TextGeometry getGeometryForText(const std::string& text, uint32_t fontId);
 
-  std::map<int, Font*> fonts;
+  render::vulkan::Texture *getAtlasTextureForFont(int fontId);
 
   private:
       tz::render::vulkan::Renderer& renderer;
+      std::map<int, Font*> fonts;
 };
 
 

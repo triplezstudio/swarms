@@ -25,14 +25,14 @@ void doFrame(tz::App* app)
   // and place objects in world coordinates.
   app->activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));
   for (int i = 0; i < 8; i++) {
-    app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
+    //app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
   }
 
-  app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
-  app->renderCube({Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)});
+  //app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
+  //app->renderCube({Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)});
   for (int i = 0; i < 5; i++) {
     for (int z = 0; z < 5; z++) {
-       app->renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
+       //app->renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
     }
   
   }
@@ -40,7 +40,7 @@ void doFrame(tz::App* app)
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
   app->activateUICamera(Eigen::Vector3f(0, 00, 4));
-  app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
+  //app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   static float mover = 24;
   static float dir = 1;
@@ -48,19 +48,19 @@ void doFrame(tz::App* app)
   if (mover > 616 || mover < 0 ) {
     dir *= -1;
   }
-  app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
+  //app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   app->renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
                   tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
                                             .vertexShaderType =tz::VertexShaderType::Static,
                                             .texture = testImageTexture });
 
-  for (int i = 0; i < 12; i++) {
+  /*for (int i = 0; i < 12; i++) {
     app->renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
                     tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
                                     .vertexShaderType =tz::VertexShaderType::Static,
                                     .texture = testImage2Texture });
-  }
+  }*/
 
 }
 

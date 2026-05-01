@@ -381,11 +381,10 @@ void Renderer::createImageViews()
 
 
 
-vk::raii::ImageView Renderer::createVulkanImageView(vk::raii::Image &image)
+vk::raii::ImageView Renderer::createVulkanImageView(vk::raii::Image &image, vk::Format format)
 {
-
   vk::ImageViewCreateInfo viewInfo{ .image = image, .viewType = vk::ImageViewType::e2D,
-                                   .format = vk::Format::eR8G8B8A8Srgb, .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } };
+                                   .format = format, .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } };
   return vk::raii::ImageView( device, viewInfo );
 
 }
@@ -1464,13 +1463,13 @@ Texture *Renderer::createTexture(Image *image)
   // First we create an image view:
   vk::ImageViewCreateInfo viewInfo;
   viewInfo.image = vImage->getImage();
-  viewInfo.format = vk::Format::eR8G8B8A8Srgb;
+  viewInfo.format = image->details.channels == 4 ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8Srgb;;
 
   transitionImageLayout(vImage->getRaiiImage(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
   copyBufferToImage(vImage->getStagingBuffer(), vImage->getRaiiImage(), vImage->details.width, vImage->details.height);
   transitionImageLayout(vImage->getRaiiImage(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-  auto imageView = createVulkanImageView(vImage->getRaiiImage());
+  auto imageView = createVulkanImageView(vImage->getRaiiImage(), viewInfo.format);
 
   vk::raii::Sampler sampler = reinterpret_cast<tz::render::vulkan::Sampler *>(createSampler())->pullOutSampler();
   
@@ -1501,7 +1500,7 @@ Buffer* Renderer::createStagingBuffer(size_t sizeInBytes)
 
 Image *Renderer::createImage(BitmapData bitmapData)
 {
-  vk::DeviceSize  imageSize = bitmapData.width * bitmapData.height * 4;
+  vk::DeviceSize  imageSize = bitmapData.width * bitmapData.height * bitmapData.channels;
   auto stagingBuffer = createStagingBuffer(imageSize);
   void* targetData = stagingBuffer->getMemory().mapMemory(0, imageSize);
   memcpy(targetData, bitmapData.pixels, imageSize);
@@ -1513,7 +1512,7 @@ Image *Renderer::createImage(BitmapData bitmapData)
 
   vk::ImageCreateInfo imageInfo;
   imageInfo.imageType = vk::ImageType::e2D;
-  imageInfo.format = vk::Format::eR8G8B8A8Srgb;
+  imageInfo.format = bitmapData.channels == 4 ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8Srgb;
   imageInfo.extent = vk::Extent3D {bitmapData.width, bitmapData.height, 1};
   imageInfo.mipLevels = 1;
   imageInfo.arrayLayers = 1;
@@ -1532,6 +1531,7 @@ Image *Renderer::createImage(BitmapData bitmapData)
   auto vulkanImage = new tz::render::vulkan::Image(std::move(image), std::move(imageMemory), std::move(stagingBuffer->pullOutBuffer()));
   vulkanImage->details.width = bitmapData.width;
   vulkanImage->details.height = bitmapData.height;
+  vulkanImage->details.channels = bitmapData.channels;
   return vulkanImage;
 }
 
