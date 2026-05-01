@@ -34,3 +34,4 @@ add_custom_command(
 add_custom_target(copy_assets ALL DEPENDS ${ASSETS_BINARY_DIR})
 
 add_subdirectory(vulkan)
+add_subdirectory(text)
