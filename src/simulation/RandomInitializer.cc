@@ -1,10 +1,9 @@
 
 #include "RandomInitializer.hh"
-#include "Animat.hh"
-#include "AnimatComponent.hh"
 #include "CircleBox.hh"
 #include "Frustum.hh"
 #include "FrustumComponent.hh"
+#include "RandomAgent.hh"
 #include "TransformComponent.hh"
 #include "VectorUtils.hh"
 #include "VelocityComponent.hh"
@@ -51,10 +50,8 @@ void RandomInitializer::spawnAgent(core::IEnvironment &env, AgentProps config)
     .speedMode       = core::SpeedMode::VARIABLE,
   };
   env.addComponent<core::VelocityComponent>(entityId, data);
-
   env.addComponent<core::FrustumComponent>(entityId, core::Frustum(box));
-  // TODO: This should be replaced by the animat coming from the agent
-  env.addComponent<core::AnimatComponent>(entityId, std::make_shared<core::Animat>());
+  env.attachAgent(entityId, std::make_shared<RandomAgent>());
 
   debug("Spawned entity " + core::str(entityId) + " at " + core::str(config.position));
 }

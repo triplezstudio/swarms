@@ -48,6 +48,19 @@ void Environment::addComponent(const Uuid entityId, IComponent &&component)
   }
 }
 
+void Environment::attachAgent(const Uuid entityId, IAgentShPtr agent)
+{
+  const auto maybeAgent = m_agents.find(entityId);
+  if (maybeAgent != m_agents.end())
+  {
+    throw std::invalid_argument("Entity " + str(entityId) + " is already attached to an agent");
+  }
+
+  addComponent(entityId, AnimatComponent(agent->getAnimat()));
+
+  m_agents[entityId] = std::move(agent);
+}
+
 void Environment::computePreAgentsStep(const time::TickData & /*data*/) {}
 
 void Environment::computeAgentsStep(const time::TickData &data)

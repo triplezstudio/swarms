@@ -7,6 +7,10 @@ target_include_directories (simulation_lib PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
 	)
 
+add_subdirectory(
+	${CMAKE_CURRENT_SOURCE_DIR}/agents
+	)
+
 target_sources (simulation_lib PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/RandomInitializer.cc
 	)

@@ -19,6 +19,17 @@ class Environment : public AbstractEnvironment
   auto createEntity() -> Uuid override;
   void addComponent(const Uuid entityId, IComponent &&component) override;
 
+  /// @brief - Implementation of the interface method to attach an agent to an
+  /// entity. The process to attach an agent is:
+  ///  - create an animat component for the entity
+  ///  - attach the agent's animat to this component
+  ///  - register the agent in the internal list
+  /// In case the entity is already assigned to an agent, an error is raised.
+  /// @param entityId - the identifier of the entity to which the agent should
+  /// be attached to
+  /// @param agent - the agent to create
+  void attachAgent(const Uuid entityId, IAgentShPtr agent) override;
+
   protected:
   void computePreAgentsStep(const time::TickData &data) override;
   void computeAgentsStep(const time::TickData &data) override;
