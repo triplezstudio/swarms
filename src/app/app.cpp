@@ -278,7 +278,7 @@ rv::PipelineStateObject* App::createTextPSO()
   renderState.primitiveType = rv::PrimitiveType::Triangles;
   renderState.blending = true;
   renderState.depthTesting = true;
-  renderState.cullMode = vk::CullModeFlagBits::eNone;
+  renderState.cullMode = vk::CullModeFlagBits::eBack;
   renderState.fillMode = vk::PolygonMode::eFill;
   renderState.frontFace = vk::FrontFace::eCounterClockwise;
   renderState.stencilTesting = false;
@@ -331,7 +331,7 @@ rv::PipelineStateObject* App::createTexturedPSO()
   renderState.primitiveType = rv::PrimitiveType::Triangles;
   renderState.blending = true;
   renderState.depthTesting = true;
-  renderState.cullMode = vk::CullModeFlagBits::eNone;
+  renderState.cullMode = vk::CullModeFlagBits::eBack;
   renderState.fillMode = vk::PolygonMode::eFill;
   renderState.frontFace = vk::FrontFace::eCounterClockwise;
   renderState.stencilTesting = false;
