@@ -7,7 +7,6 @@
 auto tz::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fontSize) -> int
 {
 
-
     // Read font file
     FILE *fp = fopen(fontFile.c_str(), "rb");
     if (!fp) {
@@ -21,7 +20,6 @@ auto tz::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fo
     unsigned char *ttf_buffer = new unsigned char[size];
     fread(ttf_buffer, 1, size, fp);
     fclose(fp);
-
 
     tz::render::vulkan::BitmapData  atlasBitmapData = {
       .pixels = new uint8_t[512 * 512],

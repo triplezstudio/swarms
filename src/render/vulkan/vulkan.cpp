@@ -1109,9 +1109,28 @@ PipelineStateObject *Renderer::createPipelineStateObject(
     .setSampleShadingEnable(vk::False);
 
   vk::PipelineColorBlendAttachmentState colorBlendAttachmentState;
-  colorBlendAttachmentState.setBlendEnable(vk::False)
-    .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB |
-                       vk::ColorComponentFlagBits::eA);
+  if (renderState.blending)
+  {
+    colorBlendAttachmentState.setColorWriteMask(vk::ColorComponentFlagBits::eR |
+                                                vk::ColorComponentFlagBits::eG |
+                                                vk::ColorComponentFlagBits::eB |
+                                                vk::ColorComponentFlagBits::eA);
+    colorBlendAttachmentState.setBlendEnable(vk::True);
+    colorBlendAttachmentState.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha);
+    colorBlendAttachmentState.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha);
+    colorBlendAttachmentState.setColorBlendOp(vk::BlendOp::eAdd);
+    colorBlendAttachmentState.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
+    colorBlendAttachmentState.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
+    colorBlendAttachmentState.setAlphaBlendOp(vk::BlendOp::eAdd);
+  }
+  else
+  {
+    colorBlendAttachmentState.setBlendEnable(vk::False)
+      .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB |
+                         vk::ColorComponentFlagBits::eA);
+  }
+
+
 
   vk::PipelineColorBlendStateCreateInfo colorBlendStateCreateInfo;
   colorBlendStateCreateInfo.setLogicOpEnable(vk::False)
@@ -1463,7 +1482,7 @@ Texture *Renderer::createTexture(Image *image)
   // First we create an image view:
   vk::ImageViewCreateInfo viewInfo;
   viewInfo.image = vImage->getImage();
-  viewInfo.format = image->details.channels == 4 ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8Srgb;;
+  viewInfo.format = image->details.channels == 4 ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8Unorm;;
 
   transitionImageLayout(vImage->getRaiiImage(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
   copyBufferToImage(vImage->getStagingBuffer(), vImage->getRaiiImage(), vImage->details.width, vImage->details.height);
@@ -1512,7 +1531,7 @@ Image *Renderer::createImage(BitmapData bitmapData)
 
   vk::ImageCreateInfo imageInfo;
   imageInfo.imageType = vk::ImageType::e2D;
-  imageInfo.format = bitmapData.channels == 4 ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8Srgb;
+  imageInfo.format = bitmapData.channels == 4 ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8Unorm;
   imageInfo.extent = vk::Extent3D {bitmapData.width, bitmapData.height, 1};
   imageInfo.mipLevels = 1;
   imageInfo.arrayLayers = 1;
@@ -1547,17 +1566,19 @@ Sampler *Renderer::createSampler()
 {
   vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
 		vk::SamplerCreateInfo        samplerInfo{
-		           .magFilter        = vk::Filter::eLinear,
-		           .minFilter        = vk::Filter::eLinear,
-		           .mipmapMode       = vk::SamplerMipmapMode::eLinear,
-		           .addressModeU     = vk::SamplerAddressMode::eRepeat,
-		           .addressModeV     = vk::SamplerAddressMode::eRepeat,
-		           .addressModeW     = vk::SamplerAddressMode::eRepeat,
-		           .mipLodBias       = 0.0f,
-		           .anisotropyEnable = vk::True,
-		           .maxAnisotropy    = properties.limits.maxSamplerAnisotropy,
-		           .compareEnable    = vk::False,
-		           .compareOp        = vk::CompareOp::eAlways};
+                .magFilter        = vk::Filter::eLinear,
+                .minFilter        = vk::Filter::eLinear,
+                .mipmapMode       = vk::SamplerMipmapMode::eNearest,
+                .addressModeU     = vk::SamplerAddressMode::eRepeat,
+                .addressModeV     = vk::SamplerAddressMode::eRepeat,
+                .addressModeW     = vk::SamplerAddressMode::eRepeat,
+                .mipLodBias       = 0.0f,
+                .anisotropyEnable = vk::True,
+                .maxAnisotropy    = properties.limits.maxSamplerAnisotropy,
+                .compareEnable    = vk::False,
+                .compareOp        = vk::CompareOp::eAlways,
+                .minLod = 0.0f,
+                .maxLod = 0.0f};
 		auto sampler = vk::raii::Sampler(device, samplerInfo);
 
     auto samplerWrapper = new tz::render::vulkan::Sampler(std::move(sampler));

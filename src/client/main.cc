@@ -4,11 +4,13 @@
 
 uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
+int titleFont = -1;
 
 void initialize(tz::App* app)
 {
   testImageTexture = app->createTexture("assets/test_image.png");
   testImage2Texture = app->createTexture("assets/test_image2.png");
+  titleFont = app->createFont("assets/consolab.ttf", 40);
 }
 
 
@@ -62,6 +64,10 @@ void doFrame(tz::App* app)
                                     .texture = testImage2Texture });
   }*/
 
+  static int frame = 0;
+  frame++;
+  app->renderText({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
+  app->renderText({{8, 400, 0.5}}, "SWARMS", titleFont);
 }
 
 void runApp()
