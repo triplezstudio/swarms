@@ -293,6 +293,7 @@ struct BitmapData
   uint8_t* pixels;
   uint32_t width;
   uint32_t height;
+  uint8_t channels = 4;
 };
 
 BitmapData TZ_API loadBitmapDataFromPath(const std::string & imagePath);
@@ -390,6 +391,7 @@ class Image
         size_t size = 0;
         uint32_t width = 0;
         uint32_t height = 0;
+        uint8_t channels = 4;
       } details;
 
   private:
@@ -696,7 +698,7 @@ class TZ_API Renderer
   void createLogicalDevice();
   void createSwapChain();
   void createImageViews();
-  vk::raii::ImageView createVulkanImageView(vk::raii::Image& image);
+  vk::raii::ImageView createVulkanImageView(vk::raii::Image& image, vk::Format format = vk::Format::eR8G8B8A8Srgb);
   void createGraphicsPipeline();
   void createCommandPool();
   void createDefaultCommandBuffer();

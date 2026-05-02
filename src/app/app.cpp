@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 #include <iostream>
 #include <functional>
 #include "app.hh"
@@ -6,6 +5,7 @@
 #include <window_system.hh>
 #include <input.hh>
 #include <sdl2.hh>
+#include <text_render.hh>
 
 namespace tz
 {
@@ -178,6 +178,13 @@ void App::prepareRenderPrimitives()
   cubeTexIndexBuffer = renderer->createBuffer(cubeIndicesPosTex.data(),
                                            cubeIndicesPosTex.size() * sizeof(uint32_t),
                                            rv::BufferUsage::Index);
+
+
+
+    textRenderer = new tz::text::TextRenderer(*renderer);
+    uiFont = textRenderer->createFont("assets/consola.ttf", 12);
+    uiFontAtlasTextureIndex = globalTextureIndex;
+    renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex++, textRenderer->getAtlasTextureForFont(uiFont));
 }
 
 tz::render::vulkan::Renderer * App::vulkanRenderer()
@@ -203,6 +210,12 @@ void App::buildPSOCache()
   texturedHints.materialType = MaterialType::DiffuseNormal;
   texturedHints.vertexShaderType = VertexShaderType::Static;
   psoCache[texturedHints.getHash()] = texturedPSO;
+
+  auto textPSO = createTextPSO();
+  RenderHints textHints;
+  textHints.materialType = MaterialType::Text;
+  textHints.vertexShaderType = VertexShaderType::Static;
+  psoCache[textHints.getHash()] = textPSO;
 
 }
 
@@ -250,6 +263,59 @@ rv::PipelineStateObject* App::createColorOnlyPSO()
                                               vertexLayout,
                                                  masterPipelineLayout);
 
+  return pso;
+}
+
+rv::PipelineStateObject* App::createTextPSO()
+{
+  auto spvVertexShaderPath = "shader_binaries/default_textured_vs.slang.spv";
+  auto spvFragmentShaderPath = "shader_binaries/text_fs.slang.spv";
+
+  auto vs = renderer->createShaderModule(rv::ShaderType::Vertex, spvVertexShaderPath);
+  auto fs = renderer->createShaderModule(rv::ShaderType::Fragment, spvFragmentShaderPath);
+  auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
+
+  auto renderState = rv::RenderState {};
+  renderState.primitiveType = rv::PrimitiveType::Triangles;
+  renderState.blending = true;
+  renderState.depthTesting = true;
+  renderState.cullMode = vk::CullModeFlagBits::eBack;
+  renderState.fillMode = vk::PolygonMode::eFill;
+  renderState.frontFace = vk::FrontFace::eCounterClockwise;
+  renderState.stencilTesting = false;
+  shaderPipeline = shaderPipeline;
+
+  auto vertexLayout = rv::VertexLayout {};
+  vertexLayout.bindings =  {rv::VertexBinding {
+      .bufferSlot = 0,
+      .stride = sizeof(rv::VertexPosTexCoords),
+      .vertexInputRate=rv::VertexInputRate::PerVertex,
+  }};
+  vertexLayout.attributes = {
+    rv::VertexAttribute {
+      .shaderLocation = 0,
+      .bufferSlot = 0,
+      .dataType = rv::DataType::Float,
+      .componentCount = 3,
+      .offset = 0
+    },
+    {
+      rv::VertexAttribute
+      {
+        .shaderLocation = 1,
+        .bufferSlot = 0,
+        .dataType = rv::DataType::Float,
+        .componentCount = 2,
+        .offset = sizeof(float) * 3
+      }
+    }
+  };
+
+
+  auto pso = renderer->createPipelineStateObject(renderState,
+                                                 shaderPipeline,
+                                                 vertexLayout,
+                                                 masterPipelineLayout);
   return pso;
 }
 
@@ -544,6 +610,7 @@ bool App::isMouseButtonDown(tz::input::MouseButton mb)
 {
   return inputSystem->isMouseButtonDown(mb);
 }
+
 
 }
 

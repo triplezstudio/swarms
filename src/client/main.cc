@@ -33,7 +33,7 @@ void doFrame(tz::App* app)
   // and place objects in world coordinates.
   app->activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));
   for (int i = 0; i < 8; i++) {
-    //app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
+    app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
   }
 
   app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
@@ -48,7 +48,7 @@ void doFrame(tz::App* app)
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
   app->activateUICamera(Eigen::Vector3f(0, 00, 4));
-  //app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
+  app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   static float mover = 24;
   static float dir = 1;
@@ -62,7 +62,7 @@ void doFrame(tz::App* app)
   if (mover > 616 || mover < 0 ) {
     dir *= -1;
   }
-  //app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
+  app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   app->renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
                   tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
@@ -83,6 +83,7 @@ void doFrame(tz::App* app)
   frame = frame % 100;
   app->renderText({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
   app->renderText({{8, 400, 0.5}}, "SWARMS", titleFont);
+
 }
 
 void runApp()
