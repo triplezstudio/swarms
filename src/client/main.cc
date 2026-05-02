@@ -4,11 +4,13 @@
 
 uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
+int titleFont = -1;
 
 void initialize(tz::App* app)
 {
   testImageTexture = app->createTexture("assets/test_image.png");
   testImage2Texture = app->createTexture("assets/test_image2.png");
+  titleFont = app->createFont("assets/consolab.ttf", 40);
 }
 
 
@@ -25,7 +27,7 @@ void doFrame(tz::App* app)
   // and place objects in world coordinates.
   app->activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));
   for (int i = 0; i < 8; i++) {
-    app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
+    //app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
   }
 
   app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
@@ -40,7 +42,7 @@ void doFrame(tz::App* app)
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
   app->activateUICamera(Eigen::Vector3f(0, 00, 4));
-  app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
+  //app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   static float mover = 24;
   static float dir = 1;
@@ -48,20 +50,27 @@ void doFrame(tz::App* app)
   if (mover > 616 || mover < 0 ) {
     dir *= -1;
   }
-  app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
+  //app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   app->renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
                   tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
                                             .vertexShaderType =tz::VertexShaderType::Static,
                                             .texture = testImageTexture });
 
-  for (int i = 0; i < 12; i++) {
+  /*for (int i = 0; i < 12; i++) {
     app->renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
                     tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
                                     .vertexShaderType =tz::VertexShaderType::Static,
                                     .texture = testImage2Texture });
-  }
+  }*/
 
+  static int frame = 0;
+  // Just limiting our "framecounter" here to avoid unwanted text-buffer-creation explosion..
+  // this is just temporary demo code...
+  frame++;
+  frame = frame % 100;
+  app->renderText({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
+  app->renderText({{8, 400, 0.5}}, "SWARMS", titleFont);
 }
 
 void runApp()

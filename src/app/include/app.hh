@@ -1,9 +1,10 @@
 #include <defines.h>
 #include <functional>
-
+#include <string>
 #include <Eigen/Dense>
 #include <window_system.hh>
 #include <vulkan_renderer.hh>
+#include <text_render.hh>
 
 namespace tz {
 namespace rv =  render::vulkan;
@@ -163,6 +164,7 @@ enum class MaterialType
   SingleColor,
   DiffuseNormal,
   PBR,
+  Text,
 };
 
 
@@ -258,9 +260,13 @@ struct PrimitiveRenderData
 
       uint32_t createTexture(const std::string& imagePath);
 
+      int createFont(const std::string& fileName, int size);
+      void renderText(Transform transform, const std::string& text, int fontId = -1);
+
   private:
       WindowSystem* windowSystem = nullptr;
       rv::Renderer* renderer = nullptr;
+      tz::text::TextRenderer* textRenderer = nullptr;
 
       std::vector<FrameListener> frameListeners;
 
@@ -274,6 +280,13 @@ struct PrimitiveRenderData
       rv::Buffer* quadIndexBuffer = nullptr;
       rv::Buffer* cubeIndexBuffer = nullptr;
       rv::Buffer* cubeTexIndexBuffer = nullptr;
+      rv::Buffer* tzLabelVertexBuffer = nullptr;
+      rv::Buffer* tzLabelIndexBuffer = nullptr;
+      std::map<std::string, tz::text::TextGeometry> textGeometries;
+      std::map<std::string, rv::Buffer*> textVertexBuffers;
+      std::map<std::string, rv::Buffer*> textIndexBuffers;
+      std::map<int, uint32_t> fontTextureMap;
+      uint32_t tzLabelIndexCount = 0;
       rv::PipelineStateObject* colorOnlyPSO = nullptr;
       rv::CommandBuffer* commandBuffer = nullptr;
       std::vector<PrimitiveRenderData> framePrimitives;
@@ -303,12 +316,15 @@ struct PrimitiveRenderData
       std::unordered_map<uint64_t, rv::PipelineStateObject*> psoCache;
       void buildPSOCache();
       rv::PipelineStateObject *createTexturedPSO();
+      rv::PipelineStateObject *createTextPSO();
       void renderFrame();
       std::vector<PrimitiveRenderData> getRenderPrimitivesByCamera(Camera *camera);
       render::vulkan::Renderer *vulkanRenderer();
       void createMasterPipelineLayout();
       void renderPrimitives(const std::vector<PrimitiveRenderData> &primitives,
                             uint32_t &primitiveCounter);
+      int uiFont = -1;
+      uint32_t uiFontAtlasTextureIndex = 0;
   };
 
 
