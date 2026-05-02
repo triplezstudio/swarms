@@ -1,11 +1,11 @@
+#include "../../input/include/input.hh"
+#include <Eigen/Dense>
 #include <defines.h>
 #include <functional>
 #include <string>
-#include <Eigen/Dense>
-#include <window_system.hh>
-#include <input.hh>
-#include <vulkan_renderer.hh>
 #include <text_render.hh>
+#include <vulkan_renderer.hh>
+#include <window_system.hh>
 
 namespace tz {
 namespace rv =  render::vulkan;
@@ -259,11 +259,6 @@ struct PrimitiveRenderData
       virtual void renderSphere(Transform transform, RenderHints renderHints = {});
       virtual void renderCylinder(Transform transform, RenderHints renderHints = {});
 
-      bool isKeyPressed(tz::input::KeyCode keyCode);
-      bool isKeyDown(tz::input::KeyCode keyCode);
-      bool isMouseButtonClicked(tz::input::MouseButton mb);
-      bool isMouseButtonDown(tz::input::MouseButton mb);
-
       uint32_t createTexture(const std::string& imagePath);
 
       int createFont(const std::string& fileName, int size);
@@ -271,7 +266,7 @@ struct PrimitiveRenderData
 
   private:
       WindowSystem* windowSystem = nullptr;
-      tz::input::SDL2InputSystem* inputSystem = nullptr;
+      tz::input::SDL2InputSystem& inputSystem;
       rv::Renderer* renderer = nullptr;
       tz::text::TextRenderer* textRenderer = nullptr;
 

@@ -24,7 +24,7 @@ void doFrame(tz::App* app)
     firstTime = false;
   }
 
-  if (app->isMouseButtonClicked(tz::input::MouseButton::LEFT))
+  if (tz::input::SDL2InputSystem::getInstance().isMouseButtonClicked(tz::input::MouseButton::LEFT))
   {
     std::cout << "left mb clicked" << std::endl;
   }
@@ -52,10 +52,10 @@ void doFrame(tz::App* app)
 
   static float mover = 24;
   static float dir = 1;
-  if (app->isKeyPressed(tz::input::KeyCode::D)) {
+  if (tz::input::SDL2InputSystem::getInstance().isKeyPressed(tz::input::KeyCode::D)) {
     mover += 1;
   }
-  if (app->isKeyPressed(tz::input::KeyCode::A)) {
+  if (tz::input::SDL2InputSystem::getInstance().isKeyPressed(tz::input::KeyCode::A)) {
     mover -= 1;
   }
 

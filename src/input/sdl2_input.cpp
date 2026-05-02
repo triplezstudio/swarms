@@ -2,27 +2,18 @@
 #include <iostream>
 
 namespace tz::input {
+
+// Key "pressed" means: was the key down in the previous frame and is now up?
 bool SDL2InputSystem::isKeyPressed(KeyCode keyCode)
 {
-  for (auto &e : windowSystem.getFrameEvents())
-  {
-    if (fromSDLEvent(e) == keyCode) return true;
-  }
+  auto scanCode = toSDLScanCode(keyCode);
+  return !currentFrameKeyboardState[scanCode] && prevFrameKeyboardState[scanCode];
 
-  return false;
 }
 
 bool SDL2InputSystem::isKeyDown(tz::input::KeyCode keyCode)
 {
-  const Uint8* state = SDL_GetKeyboardState(NULL);
-  return state[toSDLScanCode(keyCode)];
-
-}
-
-
-SDL2InputSystem::SDL2InputSystem(const tz::SDL2WindowSystem &windowSystem) :windowSystem(windowSystem)
-{
-
+  return currentFrameKeyboardState[toSDLScanCode(keyCode)];
 }
 
 SDL_Scancode SDL2InputSystem::toSDLScanCode(KeyCode keyCode)
@@ -186,51 +177,60 @@ KeyCode SDL2InputSystem::fromSDLEvent(SDL_Event ev)
       return KeyCode::None;
   }
 }
+
 void SDL2InputSystem::getMouseCoords(int &x, int &y)
 {
-  for (auto& e : windowSystem.getFrameEvents())
-  {
-    if (e.type == SDL_MOUSEMOTION)
-    {
-      x = e.motion.x;
-      y = e.motion.y;
-      break;
-    }
-  }
+  SDL_GetMouseState(&x,&y);
 }
 
+bool SDL2InputSystem::isMouseButtonDown(tz::input::MouseButton mouseButton, uint32_t state)
+{
+  switch (mouseButton)
+  {
+    case MouseButton::LEFT: return state & SDL_BUTTON(SDL_BUTTON_LEFT);
+    case MouseButton::RIGHT: return state & SDL_BUTTON(SDL_BUTTON_RIGHT);
+    case MouseButton::MIDDLE: return state & SDL_BUTTON(SDL_BUTTON_MIDDLE);
+  }
+}
 
 bool SDL2InputSystem::isMouseButtonDown(MouseButton mouseButton)
 {
-  int x,y;
-  auto buttonState = SDL_GetMouseState(&x,&y);
-
-  switch (mouseButton)
-  {
-    case MouseButton::LEFT: return buttonState & SDL_BUTTON(SDL_BUTTON_LEFT);
-    case MouseButton::RIGHT: return buttonState & SDL_BUTTON(SDL_BUTTON_RIGHT);
-    case MouseButton::MIDDLE: return buttonState & SDL_BUTTON(SDL_BUTTON_MIDDLE);
-  }
+  return isMouseButtonDown(mouseButton, currentFrameMouseState);
 }
 bool SDL2InputSystem::isMouseButtonClicked(MouseButton mouseButton)
 {
-  if (windowSystem.getFrameEvents().empty()) return false;
-
-  auto button = SDL_BUTTON_LEFT;
-  switch(mouseButton)
-  {
-    case MouseButton::RIGHT: button = SDL_BUTTON_RIGHT;
-    case MouseButton::MIDDLE: button = SDL_BUTTON_MIDDLE;
-  }
-
-  for (auto& e: windowSystem.getFrameEvents())
-  {
-    if (e.type == SDL_MOUSEBUTTONDOWN)
-    {
-      if (e.button.button == button) return true;
-    }
-  }
-  return false;
-}
+  return isMouseButtonDown(mouseButton, prevFrameMouseState) &&
+         !isMouseButtonDown(mouseButton, currentFrameMouseState);
 
 }
+
+void SDL2InputSystem::update()
+{
+  std::copy(currentFrameKeyboardState.begin(), currentFrameKeyboardState.end(), prevFrameKeyboardState.begin());
+  int numKeys;
+  auto keyboardState = SDL_GetKeyboardState(&numKeys);
+  std::copy(keyboardState, keyboardState + numKeys, currentFrameKeyboardState.begin());
+
+  prevFrameMouseState = currentFrameMouseState;
+  int x, y;
+  currentFrameMouseState = SDL_GetMouseState(&x, &y);
+}
+SDL2InputSystem::SDL2InputSystem()
+{
+  int numKeys =0;
+  SDL_GetKeyboardState(&numKeys);
+  prevFrameKeyboardState.resize(numKeys);
+  currentFrameKeyboardState.resize(numKeys);
+
+}
+
+
+SDL2InputSystem &SDL2InputSystem::getInstance()
+{
+  static SDL2InputSystem instance;
+  return instance;
+}
+}
+
+
+

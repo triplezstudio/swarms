@@ -1,21 +1,21 @@
-#include <iostream>
-#include <functional>
 #include "app.hh"
-#include <vulkan_renderer.hh>
-#include <window_system.hh>
-#include <input.hh>
+#include "../input/include/input.hh"
+#include <functional>
+#include <iostream>
 #include <sdl2.hh>
 #include <text_render.hh>
+#include <vulkan_renderer.hh>
+#include <window_system.hh>
 
 namespace tz
 {
 namespace rv = render::vulkan;
 
-App::App()
+App::App() :inputSystem(tz::input::SDL2InputSystem::getInstance())
 {
   renderer = new rv::Renderer();
   windowSystem = new tz::SDL2WindowSystem();
-  inputSystem = new tz::input::SDL2InputSystem(*dynamic_cast<const tz::SDL2WindowSystem*>(windowSystem));
+
   auto winDesc = renderer->getRequiredWindowDesc();
   auto window = windowSystem->createWindow(winDesc);
   renderer->init(window);
@@ -378,6 +378,7 @@ void tz::App::run()
   while (true)
   {
     windowSystem->pollEvents();
+    inputSystem.update();
     updateFrameListeners(16.66f);
     renderFrame();
   }
@@ -592,23 +593,6 @@ uint32_t App::createTexture(const std::string &imagePath)
   auto texture = renderer->createTexture(image);
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
   return globalTextureIndex++;
-}
-bool App::isKeyDown(tz::input::KeyCode keyCode)
-{
-  return inputSystem->isKeyDown(keyCode);
-}
-
-bool App::isKeyPressed(tz::input::KeyCode keyCode)
-{
-  return inputSystem->isKeyPressed(keyCode);
-}
-bool App::isMouseButtonClicked(tz::input::MouseButton mb)
-{
-  return inputSystem->isMouseButtonClicked(mb);
-}
-bool App::isMouseButtonDown(tz::input::MouseButton mb)
-{
-  return inputSystem->isMouseButtonDown(mb);
 }
 
 

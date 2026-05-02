@@ -3,12 +3,12 @@
 
 #include <vector>
 
+#include "src/input/include/input.hh"
 #include <SDL_vulkan.h>
 #include <common.hh>
-#include <input.hh>
+#include <iostream>
 #include <sdl2.hh>
 #include <stdexcept>
-#include <iostream>
 
 namespace tz {
 
