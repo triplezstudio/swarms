@@ -1,4 +1,3 @@
-#include "../../input/include/input.hh"
 #include <Eigen/Dense>
 #include <defines.h>
 #include <functional>
@@ -6,6 +5,7 @@
 #include <text_render.hh>
 #include <vulkan_renderer.hh>
 #include <window_system.hh>
+#include <input.hh>
 
 namespace tz {
 namespace rv =  render::vulkan;

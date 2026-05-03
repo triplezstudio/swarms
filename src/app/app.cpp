@@ -1,11 +1,10 @@
-#include "app.hh"
-#include "../input/include/input.hh"
-#include <functional>
+#include <app.hh>
 #include <iostream>
 #include <sdl2.hh>
 #include <text_render.hh>
 #include <vulkan_renderer.hh>
 #include <window_system.hh>
+#include <sdl2.hh>
 
 namespace tz
 {
@@ -319,6 +318,59 @@ rv::PipelineStateObject* App::createTextPSO()
   return pso;
 }
 
+rv::PipelineStateObject* App::createTextPSO()
+{
+  auto spvVertexShaderPath = "shader_binaries/default_textured_vs.slang.spv";
+  auto spvFragmentShaderPath = "shader_binaries/text_fs.slang.spv";
+
+  auto vs = renderer->createShaderModule(rv::ShaderType::Vertex, spvVertexShaderPath);
+  auto fs = renderer->createShaderModule(rv::ShaderType::Fragment, spvFragmentShaderPath);
+  auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
+
+  auto renderState = rv::RenderState {};
+  renderState.primitiveType = rv::PrimitiveType::Triangles;
+  renderState.blending = true;
+  renderState.depthTesting = true;
+  renderState.cullMode = vk::CullModeFlagBits::eBack;
+  renderState.fillMode = vk::PolygonMode::eFill;
+  renderState.frontFace = vk::FrontFace::eCounterClockwise;
+  renderState.stencilTesting = false;
+  shaderPipeline = shaderPipeline;
+
+  auto vertexLayout = rv::VertexLayout {};
+  vertexLayout.bindings =  {rv::VertexBinding {
+      .bufferSlot = 0,
+      .stride = sizeof(rv::VertexPosTexCoords),
+      .vertexInputRate=rv::VertexInputRate::PerVertex,
+  }};
+  vertexLayout.attributes = {
+    rv::VertexAttribute {
+      .shaderLocation = 0,
+      .bufferSlot = 0,
+      .dataType = rv::DataType::Float,
+      .componentCount = 3,
+      .offset = 0
+    },
+    {
+      rv::VertexAttribute
+      {
+        .shaderLocation = 1,
+        .bufferSlot = 0,
+        .dataType = rv::DataType::Float,
+        .componentCount = 2,
+        .offset = sizeof(float) * 3
+      }
+    }
+  };
+
+
+  auto pso = renderer->createPipelineStateObject(renderState,
+                                                 shaderPipeline,
+                                                 vertexLayout,
+                                                 masterPipelineLayout);
+  return pso;
+}
+
 rv::PipelineStateObject* App::createTexturedPSO()
 {
 
@@ -378,7 +430,6 @@ void tz::App::run()
   while (true)
   {
     windowSystem->pollEvents();
-    inputSystem.update();
     updateFrameListeners(16.66f);
     renderFrame();
   }
@@ -593,6 +644,59 @@ uint32_t App::createTexture(const std::string &imagePath)
   auto texture = renderer->createTexture(image);
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
   return globalTextureIndex++;
+}
+void App::renderText(Transform transform, const std::string &text, int fontId)
+{
+
+  RenderHints textRenderHints;
+  textRenderHints.materialType = MaterialType::Text;
+  textRenderHints.vertexShaderType = VertexShaderType::Static;
+  textRenderHints.texture = uiFontAtlasTextureIndex;
+  PrimitiveRenderData prd;
+  prd.transform = transform;;
+  prd.geometryType     = PrimitiveGeometryType::Quad;
+  prd.renderHints = textRenderHints;
+  prd.associatedCamera = activeRenderCamera;
+
+
+  if (textVertexBuffers.find(text) == textVertexBuffers.end())
+  {
+    auto textGeometry = textRenderer->getGeometryForText(text, fontId == -1 ? uiFont : fontId);
+    textGeometries[text]= textGeometry;
+
+    std::vector<rv::VertexPosTexCoords> vertices;
+    for (int i = 0; i < textGeometry.positions.size();i++)
+    {
+      rv::VertexPosTexCoords vertex;
+      vertex.pos = textGeometry.positions[i];
+      vertex.texCoords = textGeometry.texCoords[i];
+      vertices.push_back(vertex);
+    }
+
+    textVertexBuffers[text] = renderer->createBuffer(vertices.data(),
+                                                     vertices.size() * sizeof (rv::VertexPosTexCoords),
+                                                     rv::BufferUsage::Vertex);
+
+    textIndexBuffers[text] = renderer->createBuffer(textGeometry.indices.data(),
+                                                    textGeometry.indices.size() * sizeof(uint32_t),
+                                                    rv::BufferUsage::Index);
+  }
+
+
+
+  prd.vertexBuffer = textVertexBuffers[text];
+  prd.indexBuffer = textIndexBuffers[text];
+  prd.indexCount = textGeometries[text].indices.size();
+  prd.renderHints.texture = fontTextureMap[fontId == -1 ? uiFont : fontId];
+  framePrimitives.push_back(prd);
+
+}
+int App::createFont(const std::string &fileName, int size)
+{
+  auto fontId = textRenderer->createFont(fileName, size);
+  fontTextureMap[fontId] = globalTextureIndex;
+  renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex++, textRenderer->getAtlasTextureForFont(fontId));
+  return fontId;
 }
 
 
