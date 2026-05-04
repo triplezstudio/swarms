@@ -237,7 +237,8 @@ struct PrimitiveRenderData
 
 
   class App;
-  using FrameListener = std::function< void(App* app)>;
+  using FrameListener = std::function<void(App* app)>;
+  using InputListener = std::function<void(const tz::input::SDL2InputSystem& inputSystem)>;
 
   class TZ_API App
   {
@@ -247,6 +248,7 @@ struct PrimitiveRenderData
       App();
       virtual void run();
       virtual void setUpdateFunction(FrameListener frameListener);
+      virtual void setInputListenerFunc(InputListener inputListener);
       virtual float getLastFrameTime();
 
       virtual void activate3DCamera();
@@ -271,6 +273,7 @@ struct PrimitiveRenderData
       tz::text::TextRenderer* textRenderer = nullptr;
 
       std::vector<FrameListener> frameListeners;
+      std::vector<InputListener> inputListeners;
 
       std::vector<uint32_t> quadIndices;
       std::vector<uint32_t> cubeIndices;
@@ -327,6 +330,7 @@ struct PrimitiveRenderData
                             uint32_t &primitiveCounter);
       int uiFont = -1;
       uint32_t uiFontAtlasTextureIndex = 0;
+      void updateInputListeners();
   };
 
 

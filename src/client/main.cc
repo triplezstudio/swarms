@@ -13,6 +13,10 @@ void initialize(tz::App* app)
   titleFont = app->createFont("assets/consolab.ttf", 40);
 }
 
+void gatherInput(const tz::input::SDL2InputSystem& inputSystem)
+{
+  // TODO
+}
 
 void doFrame(tz::App* app)
 {
@@ -91,6 +95,7 @@ void runApp()
   auto app = tz::App();
 
   app.setUpdateFunction(doFrame);
+  app.setInputListenerFunc(gatherInput);
   app.run();
 }
 

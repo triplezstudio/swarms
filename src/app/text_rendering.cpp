@@ -58,4 +58,8 @@ int App::createFont(const std::string &fileName, int size)
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex++, textRenderer->getAtlasTextureForFont(fontId));
   return fontId;
 }
+void App::setInputListenerFunc(InputListener inputListener)
+{
+  inputListeners.push_back(inputListener);
+}
 }

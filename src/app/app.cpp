@@ -380,9 +380,18 @@ void tz::App::run()
     windowSystem->pollEvents();
     inputSystem.update();
     updateFrameListeners(16.66f);
+    updateInputListeners();
     renderFrame();
   }
 
+}
+
+void App::updateInputListeners()
+{
+  for (auto& inputListener : inputListeners)
+  {
+    inputListener(inputSystem);
+  }
 }
 
 std::vector<tz::PrimitiveRenderData> App::getRenderPrimitivesByCamera(Camera* camera)
