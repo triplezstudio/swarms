@@ -41,7 +41,7 @@ KeyCode SDL2InputSystem::fromSDLEvent(SDL_Event ev)
   if (ev.type != SDL_KEYDOWN && ev.type != SDL_KEYUP)
   {
     // You might want to handle this case, perhaps with a KeyCode::NONE
-    return KeyCode::ESC;
+    return KeyCode::None;
   }
 
   switch (ev.key.keysym.sym)
