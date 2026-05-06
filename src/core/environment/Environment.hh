@@ -48,6 +48,9 @@ class Environment : public AbstractEnvironment
   std::vector<ISystemPtr> m_systems{};
 
   void initialize();
+
+  void executeSystems(const time::TickData &data);
+  void applyInfluences(const time::TickData &data);
 };
 
 } // namespace swarms::core

@@ -28,6 +28,13 @@ class Animat
   /// @return - the list of influences produced by the agent
   auto consumeInfluences() -> std::vector<IInfluencePtr>;
 
+  /// @brief - Registers a new influence for this animat. The influence will be made
+  /// available to the environment for the next simulation step. It is valid to call
+  /// this function multiple times in a single simulation step: all influences will
+  /// be stored until the next simulation step.
+  /// @param influence - the influence to register
+  void addInfluence(IInfluencePtr influence);
+
   private:
   std::vector<IPerceptionPtr> m_perceptions{};
   std::vector<IInfluencePtr> m_influences{};

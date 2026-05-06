@@ -15,4 +15,9 @@ auto Animat::consumeInfluences() -> std::vector<IInfluencePtr>
   return out;
 }
 
+void Animat::addInfluence(IInfluencePtr influence)
+{
+  m_influences.emplace_back(std::move(influence));
+}
+
 } // namespace swarms::core

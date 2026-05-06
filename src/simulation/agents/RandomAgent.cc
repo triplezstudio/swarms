@@ -1,11 +1,13 @@
 
 #include "RandomAgent.hh"
+#include "MotionInfluence.hh"
 
 namespace swarms::simulation {
 
 void RandomAgent::live(const time::TickData & /*data*/)
 {
-  // TODO: Implement the live method
+  // TODO: This behavior should be refined.
+  addInfluence(std::make_unique<core::MotionInfluence>(Eigen::Vector3d::Zero()));
 }
 
 } // namespace swarms::simulation
