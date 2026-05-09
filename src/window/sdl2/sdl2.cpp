@@ -3,11 +3,12 @@
 
 #include <vector>
 
+#include "src/input/include/input.hh"
 #include <SDL_vulkan.h>
 #include <common.hh>
+#include <iostream>
 #include <sdl2.hh>
 #include <stdexcept>
-#include <iostream>
 
 namespace tz {
 
@@ -16,11 +17,24 @@ SDL2WindowSystem::SDL2WindowSystem()
   init();
 }
 
+static bool isInputEvent(SDL_Event event)
+{
+  return event.type == SDL_KEYDOWN || event.type == SDL_KEYUP || event.type == SDL_MOUSEBUTTONDOWN
+  || event.type == SDL_MOUSEBUTTONUP;
+}
+
+
 void SDL2WindowSystem::pollEvents()
 {
+  frameInputEvents.clear();
   SDL_Event event;
   while (SDL_PollEvent(&event))
   {
+    if (isInputEvent(event))
+    {
+      frameInputEvents.push_back(event);
+    }
+
     if (event.type == SDL_QUIT)
     {
       // TODO handle graceful shutdown
@@ -28,6 +42,8 @@ void SDL2WindowSystem::pollEvents()
     }
   }
 }
+
+
 
 void SDL2WindowSystem::present()
 {
@@ -76,7 +92,7 @@ tz::Window* tz::SDL2WindowSystem::createWindow(tz::WindowDesc desc)
 GraphicsSurface tz::SDL2WindowSystem::createSurface(GraphicsInstance& instance, WindowDesc desc) {
   if (desc.api == WindowDesc::GraphicsAPI::Vulkan)
   {
-    VkInstance vkInst = reinterpret_cast<VkInstance>(instance.handle);
+    auto vkInst = reinterpret_cast<VkInstance>(instance.handle);
     VkSurfaceKHR rawSurface;
     if (!SDL_Vulkan_CreateSurface(window, vkInst, &rawSurface))
     {
@@ -119,7 +135,10 @@ client_common::NativeHandles SDL2WindowSystem::getNativeHandles()
   return {nullptr, nullptr};
 }
 
-
+const std::vector<SDL_Event> SDL2WindowSystem::getFrameEvents() const
+{
+  return frameInputEvents;
+}
 
 }
 

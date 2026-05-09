@@ -1,6 +1,6 @@
 #include <Eigen/Dense>
 #include <app.hh>
-
+#include <iostream>
 
 uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
@@ -13,6 +13,10 @@ void initialize(tz::App* app)
   titleFont = app->createFont("assets/consolab.ttf", 40);
 }
 
+void gatherInput(const tz::input::SDL2InputSystem& inputSystem)
+{
+  // TODO
+}
 
 void doFrame(tz::App* app)
 {
@@ -23,11 +27,17 @@ void doFrame(tz::App* app)
     initialize(app);
     firstTime = false;
   }
+
+  if (tz::input::SDL2InputSystem::getInstance().isMouseButtonClicked(tz::input::MouseButton::LEFT))
+  {
+    std::cout << "left mb clicked" << std::endl;
+  }
+
   // This allows us to "see" our scene through a camera in a 3d world
   // and place objects in world coordinates.
   app->activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));
   for (int i = 0; i < 8; i++) {
-    //app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
+    app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
   }
 
   app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
@@ -42,27 +52,33 @@ void doFrame(tz::App* app)
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
   app->activateUICamera(Eigen::Vector3f(0, 00, 4));
-  //app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
+  app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   static float mover = 24;
   static float dir = 1;
-  mover += 0.1 * dir;
+  if (tz::input::SDL2InputSystem::getInstance().isKeyPressed(tz::input::KeyCode::D)) {
+    mover += 1;
+  }
+  if (tz::input::SDL2InputSystem::getInstance().isKeyPressed(tz::input::KeyCode::A)) {
+    mover -= 1;
+  }
+
   if (mover > 616 || mover < 0 ) {
     dir *= -1;
   }
-  //app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
+  app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   app->renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
                   tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
                                             .vertexShaderType =tz::VertexShaderType::Static,
                                             .texture = testImageTexture });
 
-  /*for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < 12; i++) {
     app->renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
                     tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
                                     .vertexShaderType =tz::VertexShaderType::Static,
                                     .texture = testImage2Texture });
-  }*/
+  }
 
   static int frame = 0;
   // Just limiting our "framecounter" here to avoid unwanted text-buffer-creation explosion..
@@ -71,6 +87,7 @@ void doFrame(tz::App* app)
   frame = frame % 100;
   app->renderText({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
   app->renderText({{8, 400, 0.5}}, "SWARMS", titleFont);
+
 }
 
 void runApp()
@@ -78,6 +95,7 @@ void runApp()
   auto app = tz::App();
 
   app.setUpdateFunction(doFrame);
+  app.setInputListenerFunc(gatherInput);
   app.run();
 }
 
