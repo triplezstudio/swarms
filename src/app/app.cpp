@@ -378,7 +378,7 @@ void tz::App::run()
   while (true)
   {
     windowSystem->pollEvents();
-    inputSystem.update();
+    inputSystem.update(reinterpret_cast<SDL2WindowSystem*>(windowSystem)->getFrameEvents());
     updateFrameListeners(16.66f);
     updateInputListeners();
     renderFrame();

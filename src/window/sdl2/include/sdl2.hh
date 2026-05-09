@@ -8,6 +8,12 @@
 
 namespace tz {
 
+class SDLFrameEvent
+{
+
+  SDL_Event event;
+};
+
 class TZ_API SDL2WindowSystem : public WindowSystem
 {
   public:
@@ -19,7 +25,7 @@ class TZ_API SDL2WindowSystem : public WindowSystem
 
   GraphicsSurface createSurface(GraphicsInstance& instance, WindowDesc desc) override;
 
-  [[nodiscard]] const std::vector<SDL_Event>& getFrameEvents() const;
+  [[nodiscard]] const std::vector<SDL_Event> getFrameEvents() const;
 
   private:
   client_common::NativeHandles getNativeHandles();
@@ -28,7 +34,7 @@ class TZ_API SDL2WindowSystem : public WindowSystem
   private:
   SDL_Window* window = nullptr;
   WindowDesc windowDesc;
-  std::vector<SDL_Event> frameEvents;
+  std::vector<SDL_Event> frameInputEvents;
 
 };
 

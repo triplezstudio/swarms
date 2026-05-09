@@ -6,12 +6,19 @@ namespace tz::input {
 // Key "pressed" means: was the key down in the previous frame and is now up?
 bool SDL2InputSystem::isKeyPressed(KeyCode keyCode)
 {
-  auto scanCode = toSDLScanCode(keyCode);
-  return !currentFrameKeyboardState[scanCode] && prevFrameKeyboardState[scanCode];
+  for (auto& e : frameInputEvents)
+  {
+    if (e.type == SDL_KEYDOWN && getKeyCodeFromSDLEvent(e) == keyCode)
+    {
+      return true;
+    }
+  }
+
+  return false;
 
 }
 
-bool SDL2InputSystem::isKeyDown(tz::input::KeyCode keyCode)
+bool SDL2InputSystem::isKeyDown(KeyCode keyCode)
 {
   return currentFrameKeyboardState[toSDLScanCode(keyCode)];
 }
@@ -35,7 +42,7 @@ SDL_Scancode SDL2InputSystem::toSDLScanCode(KeyCode keyCode)
   }
 }
 
-KeyCode SDL2InputSystem::fromSDLEvent(SDL_Event ev)
+KeyCode SDL2InputSystem::getKeyCodeFromSDLEvent(SDL_Event ev)
 {
   // We only care about keyboard events
   if (ev.type != SDL_KEYDOWN && ev.type != SDL_KEYUP)
@@ -204,16 +211,9 @@ bool SDL2InputSystem::isMouseButtonClicked(MouseButton mouseButton)
 
 }
 
-void SDL2InputSystem::update()
+void SDL2InputSystem::update(std::vector<SDL_Event> incomingEvents)
 {
-  std::copy(currentFrameKeyboardState.begin(), currentFrameKeyboardState.end(), prevFrameKeyboardState.begin());
-  int numKeys;
-  auto keyboardState = SDL_GetKeyboardState(&numKeys);
-  std::copy(keyboardState, keyboardState + numKeys, currentFrameKeyboardState.begin());
-
-  prevFrameMouseState = currentFrameMouseState;
-  int x, y;
-  currentFrameMouseState = SDL_GetMouseState(&x, &y);
+ frameInputEvents = incomingEvents;
 }
 SDL2InputSystem::SDL2InputSystem()
 {

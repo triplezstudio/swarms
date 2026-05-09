@@ -86,9 +86,8 @@ public:
 
   static SDL2InputSystem& getInstance();
 
-
   // This must be called once a frame to gather the latest inputs
-  void update();
+  void update(std::vector<SDL_Event> incomingEvents);
 
   // The current screen positions of the mouse, origin is top left (0,0).
   void getMouseCoords(int& x, int& y);
@@ -107,9 +106,11 @@ public:
 
   private:
       SDL2InputSystem();
-      KeyCode fromSDLEvent(SDL_Event ev);
+      KeyCode getKeyCodeFromSDLEvent(SDL_Event ev);
       SDL_Scancode toSDLScanCode(KeyCode keyCode);
       std::map<KeyCode, bool> keyDownMap;
+
+      std::vector<SDL_Event> frameInputEvents;
 
       std::vector<uint8_t> prevFrameKeyboardState;
       std::vector<uint8_t> currentFrameKeyboardState;
