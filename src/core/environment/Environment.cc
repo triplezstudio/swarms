@@ -73,14 +73,46 @@ void Environment::computeAgentsStep(const time::TickData &data)
 
 void Environment::computePostAgentsStep(const time::TickData &data)
 {
-  std::for_each(m_systems.begin(), m_systems.end(), [this, &data](const ISystemPtr &systemPtr) {
-    systemPtr->update(data, m_registry);
-  });
+  executeSystems(data);
+  applyInfluences(data);
 }
 
 void Environment::initialize()
 {
   m_systems.emplace_back(std::make_unique<MotionSystem>());
+}
+
+void Environment::executeSystems(const time::TickData &data)
+{
+  std::for_each(m_systems.begin(), m_systems.end(), [this, &data](const ISystemPtr &systemPtr) {
+    systemPtr->update(data, m_registry);
+  });
+}
+
+namespace {
+struct InfluenceWrapper
+{
+  Uuid emitter{};
+  IInfluencePtr influence{};
+};
+} // namespace
+
+void Environment::applyInfluences(const time::TickData & /*data*/)
+{
+  std::vector<InfluenceWrapper> influences;
+
+  m_registry.applyWithId<AnimatComponent>(
+    [&influences](const Uuid entityId, AnimatComponent &component) {
+      for (auto &influence : component.animat().consumeInfluences())
+      {
+        influences.emplace_back(entityId, std::move(influence));
+      }
+    });
+
+  for (const auto &[emitter, influence] : influences)
+  {
+    influence->apply(emitter, *this);
+  }
 }
 
 } // namespace swarms::core
