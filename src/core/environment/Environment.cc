@@ -8,9 +8,15 @@
 
 namespace swarms::core {
 
-Environment::Environment()
+Environment::Environment(IRandomNumberGeneratorPtr rng)
   : AbstractEnvironment()
+  , m_rng(std::move(rng))
 {
+  if (m_rng == nullptr)
+  {
+    throw std::invalid_argument("Expected non null random number generator");
+  }
+
   initialize();
 }
 
@@ -65,9 +71,14 @@ void Environment::computePreAgentsStep(const time::TickData & /*data*/) {}
 
 void Environment::computeAgentsStep(const time::TickData &data)
 {
+  BehaviorData stepData{
+    .data = data,
+    .rng  = *m_rng,
+  };
+
   for (const auto &[_, agent] : m_agents)
   {
-    agent->live(data);
+    agent->live(stepData);
   }
 }
 

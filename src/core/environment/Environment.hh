@@ -4,6 +4,7 @@
 #include "AbstractEnvironment.hh"
 #include "EntityRegistry.hh"
 #include "IAgent.hh"
+#include "IRandomNumberGenerator.hh"
 #include "ISystem.hh"
 #include "Uuid.hh"
 #include <unordered_map>
@@ -13,7 +14,7 @@ namespace swarms::core {
 class Environment : public AbstractEnvironment
 {
   public:
-  Environment();
+  Environment(IRandomNumberGeneratorPtr rng);
   ~Environment() override = default;
 
   auto createEntity() -> Uuid override;
@@ -36,6 +37,9 @@ class Environment : public AbstractEnvironment
   void computePostAgentsStep(const time::TickData &data) override;
 
   private:
+  /// @brief - Holds the random number generator used in the simulation.
+  IRandomNumberGeneratorPtr m_rng{};
+
   /// @brief - Holds the collection of agents currently living in the world.
   std::unordered_map<Uuid, IAgentShPtr> m_agents{};
 
