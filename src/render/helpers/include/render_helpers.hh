@@ -1,0 +1,8 @@
+//
+// Created by mgrus on 14.05.2026.
+//
+
+#ifndef SWARMS_RENDER_HELPERS_HH
+#define SWARMS_RENDER_HELPERS_HH
+
+#endif //SWARMS_RENDER_HELPERS_HH

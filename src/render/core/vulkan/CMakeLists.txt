@@ -56,7 +56,7 @@ if (USE_VULKAN)
     foreach(SHADER ${SHADER_SOURCES})
         #get_filename_component(SHADER_NAME ${SHADER} NAME)
         file(RELATIVE_PATH SHADER_REL ${SHADER_SOURCE_DIR} ${SHADER})
-        string(REPLACE "/" "_" SHADER_SAFE_NAME ${SHADER_REL})
+        string(REPLACE "." "_" SHADER_SAFE_NAME ${SHADER_REL})
         set(SHADER_OUTPUT ${SHADER_BINARY_DIR}/${SHADER_SAFE_NAME}.spv)
 
         message(STATUS "SHADER: ${SHADER}")

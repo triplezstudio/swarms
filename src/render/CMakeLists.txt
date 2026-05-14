@@ -41,5 +41,6 @@ endforeach ()
 
 add_custom_target(copy_assets ALL DEPENDS ${ASSET_OUTPUT_FILES})
 
-add_subdirectory(vulkan)
-add_subdirectory(text)
+add_subdirectory(core/vulkan)
+add_subdirectory(core/text)
+add_subdirectory(helpers)

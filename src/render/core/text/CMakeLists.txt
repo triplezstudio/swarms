@@ -9,4 +9,4 @@ target_link_libraries(text_render_lib PRIVATE
         render_vulkan_lib
 )
 
-target_compile_definitions(render_vulkan_lib PRIVATE EXPORT_TZ_LIB)
+target_compile_definitions(text_render_lib PRIVATE EXPORT_TZ_LIB)

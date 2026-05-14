@@ -2,7 +2,7 @@ add_library(app SHARED)
 
 target_include_directories(app PUBLIC include)
 
-target_sources(app PRIVATE app.cpp text_rendering.cpp)
+target_sources(app PRIVATE app.cpp ../render/helpers/text_render_helper.cpp ../render/helpers/shape_render_helper.cpp)
 
 target_link_libraries(app PUBLIC window_sdl2_lib render_lib render_vulkan_lib window_lib text_render_lib input_sdl2_lib)
 
