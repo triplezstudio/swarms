@@ -118,6 +118,7 @@ void Renderer::createInstance()
   createInfo.setPApplicationInfo(&appInfo);
   createInfo.setPEnabledExtensionNames(extensions);
   createInfo.setPEnabledLayerNames(requiredLayers);
+  createInfo.setFlags(vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR);
 
   VULKAN_HPP_DEFAULT_DISPATCHER.init(
     reinterpret_cast<PFN_vkGetInstanceProcAddr>(vkGetInstanceProcAddr));
@@ -195,14 +196,18 @@ void Renderer::createLogicalDevice()
   float queuePrio = 0.5;
   queueCreateInfo.setQueuePriorities(queuePrio);
 
-  std::vector<const char*> requiredDeviceExtension = {
+  std::vector<const char*> requiredDeviceExtensions = {
     vk::KHRSwapchainExtensionName,
-    vk::KHRShaderDrawParametersExtensionName};
+    vk::KHRShaderDrawParametersExtensionName
+  };
+#ifdef __APPLE__
+    requiredDeviceExtensions.push_back(vk::KHRPortabilitySubsetExtensionName);
+#endif
 
   vk::DeviceCreateInfo deviceCreateInfo;
   deviceCreateInfo.setPNext(&deviceFeatures.get<vk::PhysicalDeviceFeatures2>())
     .setQueueCreateInfos(queueCreateInfo)
-    .setPEnabledExtensionNames(requiredDeviceExtension);
+    .setPEnabledExtensionNames(requiredDeviceExtensions);
 
   device = vk::raii::Device(physicalDevice, deviceCreateInfo);
   VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);
@@ -213,15 +218,35 @@ void Renderer::createLogicalDevice()
 bool Renderer::isDeviceSuitable(const vk::raii::PhysicalDevice& physicalDevice)
 {
   auto deviceProperties = physicalDevice.getProperties();
+
+  std::cout << "Inspecting device: " << deviceProperties.deviceName << "\n";
+  std::cout << "  Type: " << vk::to_string(deviceProperties.deviceType) << "\n";
+  std::cout << "  API: " << VK_API_VERSION_MAJOR(deviceProperties.apiVersion) << "."
+            << VK_API_VERSION_MINOR(deviceProperties.apiVersion) << "."
+            << VK_API_VERSION_PATCH(deviceProperties.apiVersion) << "\n";
+
   auto queueFamilies = physicalDevice.getQueueFamilyProperties();
-  deviceFeatures = physicalDevice.template getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
-                                                               vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
-                                                               vk::PhysicalDeviceShaderDrawParameterFeatures,
-                                                               vk::PhysicalDeviceVulkan12Features>();
+  deviceFeatures = physicalDevice.template getFeatures2<vk::PhysicalDeviceFeatures2,
+                       vk::PhysicalDeviceVulkan13Features,
+                       vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
+                       vk::PhysicalDeviceShaderDrawParameterFeatures,
+                       vk::PhysicalDeviceVulkan12Features>();
 
+  auto& v12 = deviceFeatures.get<vk::PhysicalDeviceVulkan12Features>();
+  auto& v13 = deviceFeatures.get<vk::PhysicalDeviceVulkan13Features>();
 
-  // We want a discrete GPU with version >= 1.3:
-  if (deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu &&
+  std::cout << "  descriptorIndexing: " << v12.descriptorIndexing << "\n";
+  std::cout << "  descriptorBindingPartiallyBound: " << v12.descriptorBindingPartiallyBound << "\n";
+  std::cout << "  runtimeDescriptorArray: " << v12.runtimeDescriptorArray << "\n";
+  std::cout << "  descriptorBindingSampledImageUpdateAfterBind: "
+            << v12.descriptorBindingSampledImageUpdateAfterBind << "\n";
+  std::cout << "  dynamicRendering: " << v13.dynamicRendering << "\n";
+
+  // The device type is ideally discrete, but also integrated is accepted.
+  // Apple M devices all report as integrated GPUs.
+  bool acceptableType = deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu ||
+                        deviceProperties.deviceType == vk::PhysicalDeviceType::eIntegratedGpu;
+  if (acceptableType &&
       deviceFeatures.get<vk::PhysicalDeviceVulkan12Features>().descriptorIndexing &&
       deviceFeatures.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingPartiallyBound &&
       deviceFeatures.get<vk::PhysicalDeviceVulkan12Features>().runtimeDescriptorArray &&
@@ -263,6 +288,7 @@ void Renderer::pickPhysicalDevice()
     }
   }
 
+  if (physicalDevice == nullptr) throw std::runtime_error("failed to find GPUs with Vulkan support!");
   vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
   minUniformBufferOffsetAlignment = properties.limits.minUniformBufferOffsetAlignment;
 }
@@ -419,12 +445,13 @@ vk::raii::ShaderModule Renderer::createSlangShaderModule(const std::string& shad
 
 void Renderer::createGraphicsPipeline()
 {
-  auto shaderModule = createSlangShaderModule("shader_binaries/default_shader.slang.spv");
+  auto defaultVS = createSlangShaderModule("shader_binaries/default_vs.slang.spv");
+  auto defaultFS = createSlangShaderModule("shader_binaries/default_fs.slang.spv");
 
   vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
-  vertShaderStageInfo.setStage(vk::ShaderStageFlagBits::eVertex).setModule(shaderModule).setPName("main");
+  vertShaderStageInfo.setStage(vk::ShaderStageFlagBits::eVertex).setModule(defaultVS).setPName("main");
   vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
-  fragShaderStageInfo.setStage(vk::ShaderStageFlagBits::eFragment).setModule(shaderModule).setPName("main");
+  fragShaderStageInfo.setStage(vk::ShaderStageFlagBits::eFragment).setModule(defaultFS).setPName("main");
   vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
 

@@ -221,10 +221,11 @@ void App::buildPSOCache()
 rv::PipelineStateObject* App::createColorOnlyPSO()
 {
 
-  auto spvPath = "shader_binaries/default_colored_transform.slang.spv";
+  auto vsPath = "shader_binaries/default_colored_transform_vs.slang.spv";
+  auto fsPath = "shader_binaries/default_colored_transform_fs.slang.spv";
 
-  auto vs = renderer->createShaderModule(rv::ShaderType::Vertex, spvPath);
-  auto fs = renderer->createShaderModule(rv::ShaderType::Fragment, spvPath);
+  auto vs = renderer->createShaderModule(rv::ShaderType::Vertex, vsPath);
+  auto fs = renderer->createShaderModule(rv::ShaderType::Fragment, fsPath);
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
 
   auto renderState = rv::RenderState {};
@@ -322,10 +323,11 @@ rv::PipelineStateObject* App::createTextPSO()
 rv::PipelineStateObject* App::createTexturedPSO()
 {
 
-  auto spvPath = "shader_binaries/default_textured.slang.spv";
+  auto vsPath = "shader_binaries/default_textured_vs.slang.spv";
+  auto fsPath = "shader_binaries/default_textured_fs.slang.spv";
 
-  auto vs = renderer->createShaderModule(rv::ShaderType::Vertex, spvPath);
-  auto fs = renderer->createShaderModule(rv::ShaderType::Fragment, spvPath);
+  auto vs = renderer->createShaderModule(rv::ShaderType::Vertex, vsPath);
+  auto fs = renderer->createShaderModule(rv::ShaderType::Fragment, fsPath);
   auto shaderPipeline = renderer->createShaderPipeline({vs, fs});
 
   auto renderState = rv::RenderState {};

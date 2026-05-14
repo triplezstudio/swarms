@@ -15,6 +15,9 @@ if (USE_VULKAN)
             PUBLIC include
     )
 
+    if(APPLE)
+        target_compile_definitions(render_vulkan_lib PRIVATE VK_ENABLE_BETA_EXTENSIONS)
+    endif()
 
     target_link_libraries(render_vulkan_lib PUBLIC
             Vulkan::Vulkan  Eigen3::Eigen render_lib)
@@ -22,7 +25,7 @@ if (USE_VULKAN)
     # --------------------------------------------------------------------------
     # Shader compilation (GLSL -> SPIR-V)
     # --------------------------------------------------------------------------
-    find_program(SLANGC slang HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin")
+    find_program(SLANGC slangc HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin")
 
     if(NOT SLANGC)
         # Try the PATH as fallback
@@ -63,6 +66,8 @@ if (USE_VULKAN)
         add_custom_command(
                 OUTPUT ${SHADER_OUTPUT}
                 COMMAND ${SLANGC} ${SHADER}
+                        -target spirv
+                        -entry main
                         -o ${SHADER_OUTPUT}
                 DEPENDS ${SHADER}
                 COMMENT "Compiling shader: ${SHADER_NAME}"
