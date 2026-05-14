@@ -47,11 +47,11 @@ const time::TimeStep SIMULATION_TIME_STEP{1, time::Duration{time::Unit::SECONDS,
 
 void Server::initialize()
 {
-  m_environment = std::make_shared<core::Environment>();
+  m_environment = std::make_shared<core::Environment>(std::make_unique<core::RNG>());
   m_processor   = std::make_unique<core::EnvironmentProcessor>(
     m_environment, std::make_unique<time::TimeManager>(INITIAL_TICK, SIMULATION_TIME_STEP));
 
-  core::RNG rng;
+  core::RNG rng{};
   simulation::RandomInitializer initializer(simulation::InitializationConfig{});
   initializer.setup(*m_environment, rng);
 }

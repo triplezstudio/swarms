@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <memory>
+
 namespace swarms::core {
 
 class IRandomNumberGenerator
@@ -31,5 +33,7 @@ class IRandomNumberGenerator
   /// @return - a random angle
   virtual auto randomAngle(const double min = 0.0, const double max = 6.283185307) -> double = 0;
 };
+
+using IRandomNumberGeneratorPtr = std::unique_ptr<IRandomNumberGenerator>;
 
 } // namespace swarms::core
