@@ -1,6 +1,16 @@
 
 find_package(SDL2 CONFIG REQUIRED)
 
+if (APPLE)
+    get_target_property(_sdl2_inc SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
+    if (_sdl2_inc)
+        get_filename_component(_sdl2_inc_parent "${_sdl2_inc}" DIRECTORY)
+        set_property(TARGET SDL2::SDL2 APPEND PROPERTY
+                        INTERFACE_INCLUDE_DIRECTORIES "${_sdl2_inc_parent}")
+
+    endif()
+endif()
+
 add_library(window_sdl2_lib SHARED)
 
 set (CMAKE_POSITION_INDEPENDENT_CODE ON)
