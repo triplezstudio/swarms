@@ -196,15 +196,18 @@ void Renderer::createLogicalDevice()
   float queuePrio = 0.5;
   queueCreateInfo.setQueuePriorities(queuePrio);
 
-  std::vector<const char*> requiredDeviceExtension = {
+  std::vector<const char*> requiredDeviceExtensions = {
     vk::KHRSwapchainExtensionName,
-    vk::KHRShaderDrawParametersExtensionName,
-    vk::KHRPortabilitySubsetExtensionName};
+    vk::KHRShaderDrawParametersExtensionName
+  };
+#ifdef __APPLE__
+    requiredDeviceExtensions.push_back(vk::KHRPortabilitySubsetExtensionName);
+#endif
 
   vk::DeviceCreateInfo deviceCreateInfo;
   deviceCreateInfo.setPNext(&deviceFeatures.get<vk::PhysicalDeviceFeatures2>())
     .setQueueCreateInfos(queueCreateInfo)
-    .setPEnabledExtensionNames(requiredDeviceExtension);
+    .setPEnabledExtensionNames(requiredDeviceExtensions);
 
   device = vk::raii::Device(physicalDevice, deviceCreateInfo);
   VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);
