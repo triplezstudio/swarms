@@ -1654,6 +1654,8 @@ vk::raii::PipelineLayout Renderer::createPipelineLayout(std::vector<vk::Descript
   auto customPipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutCreateInfo);
   return customPipelineLayout;
 }
+
+
 void Renderer::updateTextureDescriptorSet(DescriptorSet *descriptorSet,
                                                                     int binding,
                                                                     int index,

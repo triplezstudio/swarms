@@ -10,6 +10,7 @@ add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
 
 add_library(render_lib INTERFACE)
+target_include_directories(render_lib INTERFACE include)
 
 target_link_libraries(render_lib INTERFACE window_lib Eigen3::Eigen stb)
 
@@ -44,3 +45,4 @@ add_custom_target(copy_assets ALL DEPENDS ${ASSET_OUTPUT_FILES})
 add_subdirectory(core/vulkan)
 add_subdirectory(core/text)
 add_subdirectory(helpers)
+add_subdirectory(scene)

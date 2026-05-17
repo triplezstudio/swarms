@@ -2,6 +2,8 @@
 #include <iostream>
 #include <sdl2.hh>
 #include <text_render.hh>
+#include <texture_manager.hh>
+#include <render_helpers.hh>
 #include <vulkan_renderer.hh>
 #include <window_system.hh>
 #include <sdl2.hh>
@@ -13,6 +15,7 @@ namespace rv = render::vulkan;
 App::App() :inputSystem(tz::input::SDL2InputSystem::getInstance())
 {
   renderer = new rv::Renderer();
+  textRenderHelper = new tz::render::helpers::TextRenderHelper(*renderer);
   windowSystem = new tz::SDL2WindowSystem();
 
   auto winDesc = renderer->getRequiredWindowDesc();
@@ -24,8 +27,8 @@ App::App() :inputSystem(tz::input::SDL2InputSystem::getInstance())
   buildPSOCache();
   commandBuffer = renderer->createCommandBuffer();
 
-  default3DCamera = new Camera({0, 2, 3}, {0, 0, 0 }, CameraType::Perspective);
-  defaultUICamera = new Camera({0, 0, 1}, {0, 0, 0}, CameraType::Ortho);
+  default3DCamera = new tz::scene::Camera({0, 2, 3}, {0, 0, 0 }, tz::scene::CameraType::Perspective);
+  defaultUICamera = new tz::scene::Camera({0, 0, 1}, {0, 0, 0}, tz::scene::CameraType::Ortho);
 
 }
 
@@ -51,13 +54,12 @@ void App::createMasterPipelineLayout()
 
   // Diffuse textures at set2, binding0.
   // We allow up to 1000 textures
-  auto textureDescBinding = renderer->createDescriptorBinding(0, rv::DescriptorResourceType::Sampler,
-                                                              rv::ShaderType::Fragment, 1000, nullptr, nullptr);
+  auto diffuseTextureRegistry = new tz::render::BindlessTextureRegistry(*renderer, 2,0, 1000);
+  diffuseTextureDescriptorSet = diffuseTextureRegistry->getDescriptorSet();
 
-  auto diffuseTextureDescriptorSetLayout = renderer->createDescriptorSetLayout({textureDescBinding}, true);
-  diffuseTextureDescriptorSet = renderer->createMultiframeDescriptorSet(diffuseTextureDescriptorSetLayout);
-
-  masterPipelineLayout = renderer->createPipelineLayout({cameraDescriptorSetLayout, perObjectDescriptorSetLayout, diffuseTextureDescriptorSetLayout});
+  masterPipelineLayout = renderer->createPipelineLayout({cameraDescriptorSetLayout,
+                                                         perObjectDescriptorSetLayout,
+                                                         diffuseTextureRegistry->getDescriptorSetLayout()});
 
 
 }
@@ -180,9 +182,7 @@ void App::prepareRenderPrimitives()
 
 
 
-    textRenderer = new tz::text::TextRenderer(*renderer);
-    uiFont = textRenderer->createFont("assets/consola.ttf", 12);
-    uiFontAtlasTextureIndex = globalTextureIndex;
+
     renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex++, textRenderer->getAtlasTextureForFont(uiFont));
 }
 
@@ -198,6 +198,7 @@ tz::render::vulkan::Renderer * App::vulkanRenderer()
  */
 void App::buildPSOCache()
 {
+  using namespace tz::scene;
   colorOnlyPSO = createColorOnlyPSO();
   RenderHints colorOnlyHints;
   colorOnlyHints.materialType = MaterialType::SingleColor;
@@ -396,9 +397,11 @@ void App::updateInputListeners()
   }
 }
 
-std::vector<tz::PrimitiveRenderData> App::getRenderPrimitivesByCamera(Camera* camera)
+std::vector<tz::scene::PrimitiveRenderData> App::getRenderPrimitivesByCamera(tz::scene::Camera* camera)
 {
-  std::vector<PrimitiveRenderData> filteredPrimitiveData;
+  std::vector<tz::scene::PrimitiveRenderData> filteredPrimitiveData;
+  // TODO: gather frame primitives from helpers, which may provide their own frame primitives
+  // or alternatively:
   for (auto& rp : framePrimitives)
   {
     if (rp.associatedCamera == camera)
@@ -411,7 +414,7 @@ std::vector<tz::PrimitiveRenderData> App::getRenderPrimitivesByCamera(Camera* ca
 
 }
 
-void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, uint32_t& primitiveCounter)
+void App::renderPrimitives(const std::vector<tz::scene::PrimitiveRenderData>& primitives, uint32_t& primitiveCounter)
 {
 
   for (auto& prd : primitives)
@@ -504,8 +507,9 @@ float App::getLastFrameTime()
 {
   return 16.667f;
 }
-void App::renderCube(Transform transform, RenderHints renderHints)
+void App::renderCube(tz::scene::Transform transform, tz::scene::RenderHints renderHints)
 {
+  using namespace tz::scene;
   PrimitiveRenderData prd;
   prd.transform = transform;
   prd.geometryType = PrimitiveGeometryType::Cube;
@@ -517,8 +521,9 @@ void App::renderCube(Transform transform, RenderHints renderHints)
   framePrimitives.push_back(prd);
 
 }
-void App::renderQuad(Transform transform, RenderHints renderHints)
+void App::renderQuad(tz::scene::Transform transform, tz::scene::RenderHints renderHints)
 {
+  using namespace tz::scene;
   PrimitiveRenderData prd;
   prd.transform = transform;;
   prd.geometryType     = PrimitiveGeometryType::Quad;
@@ -588,12 +593,12 @@ void App::activateUICamera(Eigen::Vector3f position)
   defaultUICamera->pos = position;
   defaultUICamera->lookAt = Eigen::Vector3f (position.x(), position.y(), -position.z());
 }
-void App::renderSphere(Transform transform, RenderHints renderHints)
+void App::renderSphere(tz::scene::Transform transform, tz::scene::RenderHints renderHints)
 {
   throw std::runtime_error("not yet implemented: renderSphere!");
 }
 
-void App::renderCylinder(Transform transform, RenderHints renderHints)
+void App::renderCylinder(tz::scene::Transform transform, tz::scene::RenderHints renderHints)
 {
   throw std::runtime_error("not yet implemented: renderCylinder!");
 }
@@ -604,6 +609,11 @@ uint32_t App::createTexture(const std::string &imagePath)
   auto texture = renderer->createTexture(image);
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
   return globalTextureIndex++;
+}
+
+tz::render::helpers::TextRenderHelper &App::getTextRenderHelper()
+{
+  return *textRenderHelper;
 }
 
 }

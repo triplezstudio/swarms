@@ -62,15 +62,24 @@ auto tz::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fo
       throw std::runtime_error(msg);
     }
 
+
+
     auto atlasImage = renderer.createImage(atlasBitmapData);
     font->atlas = renderer.createTexture(atlasImage);
+    textureManager.registerTexture(fontFile, font->atlas);
+    textureRegistry.registerTexture(font->atlas);
 
     static uint16_t fontId = 0;
     fonts[fontId] = font;
     return fontId++;
 
 }
-tz::text::TextRenderer::TextRenderer(tz::render::vulkan::Renderer &renderer) :renderer(renderer)
+tz::text::TextRenderer::TextRenderer(tz::render::vulkan::Renderer &renderer,
+                                     tz::render::TextureManager& textureManager,
+                                     tz::render::BindlessTextureRegistry& textureRegistry)
+  :renderer(renderer),
+  textureManager(textureManager),
+  textureRegistry(textureRegistry)
 {
 
 }

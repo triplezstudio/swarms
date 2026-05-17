@@ -9,6 +9,7 @@ if (USE_VULKAN)
     target_sources(render_vulkan_lib
             PRIVATE
             vulkan.cpp
+            texture_manager.cpp
     )
 
     target_include_directories(render_vulkan_lib

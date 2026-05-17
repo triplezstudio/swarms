@@ -1,6 +1,7 @@
 #include <Eigen/Dense>
 #include <app.hh>
 #include <iostream>
+#include <render_helpers.hh>
 
 uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
@@ -8,9 +9,10 @@ int titleFont = -1;
 
 void initialize(tz::App* app)
 {
+
   testImageTexture = app->createTexture("assets/test_image.png");
   testImage2Texture = app->createTexture("assets/test_image2.png");
-  titleFont = app->createFont("assets/consolab.ttf", 40);
+  titleFont = app->getTextRenderHelper()->createFont("assets/consolab.ttf", 40);
 }
 
 void gatherInput(const tz::input::SDL2InputSystem& inputSystem)
@@ -69,14 +71,14 @@ void doFrame(tz::App* app)
   app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   app->renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
-                  tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
-                                            .vertexShaderType =tz::VertexShaderType::Static,
+                  tz::scene::RenderHints{.materialType = tz::scene::MaterialType::DiffuseNormal,
+                                            .vertexShaderType =tz::scene::VertexShaderType::Static,
                                             .texture = testImageTexture });
 
   for (int i = 0; i < 12; i++) {
     app->renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
-                    tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
-                                    .vertexShaderType =tz::VertexShaderType::Static,
+                    tz::scene::RenderHints{.materialType = tz::scene::MaterialType::DiffuseNormal,
+                                    .vertexShaderType =tz::scene::VertexShaderType::Static,
                                     .texture = testImage2Texture });
   }
 

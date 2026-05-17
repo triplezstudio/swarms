@@ -3,6 +3,7 @@
 #include <string>
 #include <cinttypes>
 #include <vulkan_renderer.hh>
+#include <texture_manager.hh>
 #include <stb_truetype.h>
 #include <map>
 
@@ -33,7 +34,9 @@ struct TextGeometry
 class TZ_API TextRenderer
 {
   public:
-  explicit TextRenderer(tz::render::vulkan::Renderer& renderer);
+  explicit TextRenderer(tz::render::vulkan::Renderer& renderer,
+                            tz::render::TextureManager& textureManager,
+                            tz::render::BindlessTextureRegistry& textureRegistry);
   auto createFont(const std::string& fontFile, uint16_t size) -> int;
   TextGeometry getGeometryForText(const std::string& text, uint32_t fontId);
 
@@ -42,6 +45,8 @@ class TZ_API TextRenderer
   private:
       tz::render::vulkan::Renderer& renderer;
       std::map<int, Font*> fonts;
+      tz::render::TextureManager& textureManager;
+      render::BindlessTextureRegistry &textureRegistry;
 };
 
 
