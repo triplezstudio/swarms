@@ -18,21 +18,13 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #include <vulkan_renderer.hh>
 
-#include "window_system.hh"
+#include "window.hh"
 #include <algorithm>
 #include <fstream>
 #include <limits>
 
 namespace tz::render::vulkan
 {
-tz::WindowDesc Renderer::getRequiredWindowDesc()
-{
-  WindowDesc wd;
-  wd.api = tz::WindowDesc::GraphicsAPI::Vulkan;
-  wd.width = 1280;
-  wd.height = 720;
-  return wd;
-}
 
 
 void tz::render::vulkan::Renderer::beginFrame()
@@ -87,10 +79,8 @@ void Renderer::submitCommandBuffer(CommandBuffer* cb)
 
 void Renderer::initSurface()
 {
-  GraphicsInstance gi;
-  gi.handle = reinterpret_cast<void*>(static_cast<VkInstance>(*instance));
-  auto rawSurface = window->surfaceCreationFunc(gi, getRequiredWindowDesc());
-  auto surfKHR = reinterpret_cast<VkSurfaceKHR>(rawSurface.handle);
+  auto rawSurface = window->createSurface(*instance);
+  auto surfKHR = reinterpret_cast<VkSurfaceKHR>(rawSurface);
   surface = vk::raii::SurfaceKHR(instance, surfKHR);
 }
 
@@ -135,7 +125,7 @@ vk::Extent2D Renderer::selectSwapExtent(vk::SurfaceCapabilitiesKHR const & capab
     return capabilities.currentExtent;
   }
   int width, height;
-  window->displaySizeFunc(&width, &height);
+  window->getDisplaySize(width, height);
 
   return {
     std::clamp<uint32_t>(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
@@ -739,17 +729,13 @@ void Renderer::createSyncObjects()
   // Create fences per frame for CPU-GPU synchronization
   for (size_t i = 0; i < maxFramesInFlight; i++)
   {
-    drawFences.emplace_back(device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
-
+    drawFences.emplace_back(device,
+                            vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
   }
-
 }
 
-
-
-void Renderer::init(tz::Window* window)
+Renderer::Renderer(tz::Window* window) : window(window)
 {
-  this->window = window;
   createInstance();
   setupDebugMessenger();
   initSurface();
@@ -757,10 +743,10 @@ void Renderer::init(tz::Window* window)
   createLogicalDevice();
   createSwapChain();
   createImageViews();
-  createGraphicsPipeline();
+  //createGraphicsPipeline();
   createCommandPool();
   createDescriptorPool();
-  createDefaultCommandBuffer();
+  //createDefaultCommandBuffer();
   createSyncObjects();
 }
 

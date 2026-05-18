@@ -20,7 +20,7 @@ if (USE_VULKAN)
     endif()
 
     target_link_libraries(render_vulkan_lib PUBLIC
-            Vulkan::Vulkan  Eigen3::Eigen render_lib)
+            Vulkan::Vulkan  Eigen3::Eigen render_lib window)
 
     # --------------------------------------------------------------------------
     # Shader compilation (GLSL -> SPIR-V)

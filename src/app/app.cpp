@@ -1,23 +1,19 @@
 #include <app.hh>
 #include <iostream>
-#include <sdl2.hh>
 #include <text_render.hh>
 #include <vulkan_renderer.hh>
-#include <window_system.hh>
-#include <sdl2.hh>
+#include <window.hh>
+
 
 namespace tz
 {
 namespace rv = render::vulkan;
 
-App::App() :inputSystem(tz::input::SDL2InputSystem::getInstance())
+App::App(int width, int height, const std::string& title) :inputSystem(tz::input::SDL2InputSystem::getInstance())
 {
-  renderer = new rv::Renderer();
-  windowSystem = new tz::SDL2WindowSystem();
 
-  auto winDesc = renderer->getRequiredWindowDesc();
-  auto window = windowSystem->createWindow(winDesc);
-  renderer->init(window);
+  window = new tz::Window(width, height, title);
+  renderer = new rv::Renderer(window);
 
   createMasterPipelineLayout();
   prepareRenderPrimitives();
@@ -379,8 +375,8 @@ void tz::App::run()
 {
   while (true)
   {
-    windowSystem->pollEvents();
-    inputSystem.update(reinterpret_cast<SDL2WindowSystem*>(windowSystem)->getFrameEvents());
+    window->pollEvents();
+    //inputSystem.update(window->getFrameEvents());
     updateFrameListeners(16.66f);
     updateInputListeners();
     renderFrame();

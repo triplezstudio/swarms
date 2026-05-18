@@ -4,7 +4,7 @@
 #include <string>
 #include <text_render.hh>
 #include <vulkan_renderer.hh>
-#include <window_system.hh>
+#include <window.hh>
 #include <input.hh>
 
 namespace tz {
@@ -245,7 +245,7 @@ struct PrimitiveRenderData
 
 
     public:
-      App();
+      App(int width, int height, const std::string& title);
       virtual void run();
       virtual void setUpdateFunction(FrameListener frameListener);
       virtual void setInputListenerFunc(InputListener inputListener);
@@ -267,7 +267,6 @@ struct PrimitiveRenderData
       void renderText(Transform transform, const std::string& text, int fontId = -1);
 
   private:
-      WindowSystem* windowSystem = nullptr;
       tz::input::SDL2InputSystem& inputSystem;
       rv::Renderer* renderer = nullptr;
       tz::text::TextRenderer* textRenderer = nullptr;
@@ -331,6 +330,7 @@ struct PrimitiveRenderData
       int uiFont = -1;
       uint32_t uiFontAtlasTextureIndex = 0;
       void updateInputListeners();
+      Window *window = nullptr;
   };
 
 

@@ -11,7 +11,7 @@ target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
 
 add_library(render_lib INTERFACE)
 
-target_link_libraries(render_lib INTERFACE window_lib Eigen3::Eigen stb)
+target_link_libraries(render_lib INTERFACE window Eigen3::Eigen stb)
 
 # --------------------------------------------------------------------------
 # Assets copying

@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace client_common {
+namespace tz {
 
 // Helper struct to hold whatever the platform needs
 struct NativeHandles

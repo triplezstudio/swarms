@@ -92,7 +92,7 @@ void doFrame(tz::App* app)
 
 void runApp()
 {
-  auto app = tz::App();
+  auto app = tz::App(800, 600, "swarms");
 
   app.setUpdateFunction(doFrame);
   app.setInputListenerFunc(gatherInput);

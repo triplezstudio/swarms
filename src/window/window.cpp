@@ -3,19 +3,13 @@
 
 #include <vector>
 
-#include "src/input/include/input.hh"
+#include <window.hh>
 #include <SDL_vulkan.h>
 #include <common.hh>
 #include <iostream>
-#include <sdl2.hh>
 #include <stdexcept>
 
 namespace tz {
-
-SDL2WindowSystem::SDL2WindowSystem()
-{
-  init();
-}
 
 static bool isInputEvent(SDL_Event event)
 {
@@ -24,7 +18,7 @@ static bool isInputEvent(SDL_Event event)
 }
 
 
-void SDL2WindowSystem::pollEvents()
+void Window::pollEvents()
 {
   frameInputEvents.clear();
   SDL_Event event;
@@ -45,12 +39,8 @@ void SDL2WindowSystem::pollEvents()
 
 
 
-void SDL2WindowSystem::present()
-{
 
-}
-
-void SDL2WindowSystem::init()
+tz::Window::Window(int width, int height, const std::string& title)
 {
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
   {
@@ -64,56 +54,43 @@ void SDL2WindowSystem::init()
   SDL_Event event;
   bool run = true;
 
-}
-
-tz::Window* tz::SDL2WindowSystem::createWindow(tz::WindowDesc desc)
-{
-  this->windowDesc = desc;
   int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN;
 
-  window = SDL_CreateWindow("swarms v0.0.1",
+  _window = SDL_CreateWindow(title.c_str(),
                             SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED,
-                            640,
-                            480,
+                            width,
+                            height,
                           windowFlags);
   
 
-  return new tz::Window { getNativeHandles().window, 640, 480, 
-    [this](GraphicsInstance& inst, WindowDesc desc) -> GraphicsSurface {
-      return createSurface(inst, desc);
-    }, 
-    [this](int *width, int *height) {
-      SDL_Vulkan_GetDrawableSize(this->window, width, height);
-    }};
+
+
 
 }
 
-GraphicsSurface tz::SDL2WindowSystem::createSurface(GraphicsInstance& instance, WindowDesc desc) {
-  if (desc.api == WindowDesc::GraphicsAPI::Vulkan)
-  {
-    auto vkInst = reinterpret_cast<VkInstance>(instance.handle);
+VkSurfaceKHR tz::Window::createSurface(VkInstance instance) {
+
     VkSurfaceKHR rawSurface;
-    if (!SDL_Vulkan_CreateSurface(window, vkInst, &rawSurface))
+    if (!SDL_Vulkan_CreateSurface(_window, instance, &rawSurface))
     {
       std::cerr << "surface error: " << std::string(SDL_GetError()) << std::endl;
       throw std::runtime_error("Could not create surface!" + std::string(SDL_GetError()));
     }
-    return {rawSurface};
-  }
-  else {
-    // We only support surface creation for vulkan now.
-    return {};
-  }
-
+    return rawSurface;
 }
 
-client_common::NativeHandles SDL2WindowSystem::getNativeHandles()
+void tz::Window::getDisplaySize(int &width, int &height)
+{
+  SDL_Vulkan_GetDrawableSize(_window, &width, &height);
+}
+
+tz::NativeHandles Window::getNativeHandles()
 {
   SDL_SysWMinfo wmInfo;
   SDL_VERSION(&wmInfo.version); // Initialize version info
 
-  if (SDL_GetWindowWMInfo(window, &wmInfo))
+  if (SDL_GetWindowWMInfo(_window, &wmInfo))
   {
 #if defined(_WIN32)
     // Windows: connection is HINSTANCE, window is HWND
@@ -133,11 +110,6 @@ client_common::NativeHandles SDL2WindowSystem::getNativeHandles()
   }
 
   return {nullptr, nullptr};
-}
-
-const std::vector<SDL_Event> SDL2WindowSystem::getFrameEvents() const
-{
-  return frameInputEvents;
 }
 
 }
