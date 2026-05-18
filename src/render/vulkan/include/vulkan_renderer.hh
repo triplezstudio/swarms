@@ -1,12 +1,12 @@
 #pragma once
-#include "common.hh"
-#include "defines.h"
+#include <common.hh>
+#include <defines.h>
 #include <Eigen/Dense>
 #include <functional>
-#include <optional>
 #include <map>
+#include <optional>
 #include <vulkan/vulkan_raii.hpp>
-#include <window_system.hh>
+#include <common.hh>
 
 namespace tz::render::vulkan {
 
@@ -489,7 +489,7 @@ class Buffer
 
 struct VulkanInitData
 {
-  client_common::NativeHandles nativeHandles;
+  NativeHandles nativeHandles;
   std::vector<const char*> extensions;
   std::optional<std::function<vk::raii::SurfaceKHR(vk::raii::Instance&)>> surfaceCreationFunc;
   std::function<void(int* width, int* height)> displaySizeFunc;
@@ -645,6 +645,7 @@ struct VertexPosTexCoords
 };
 
 
+
 /**
  * Renderer .
  *
@@ -653,8 +654,6 @@ class TZ_API Renderer
 {
   public:
   void init(tz::Window *window);
-
-  WindowDesc getRequiredWindowDesc() ;
 
   void beginFrame() ;
   void endFrame() ;
@@ -758,7 +757,7 @@ class TZ_API Renderer
   std::vector<vk::Image> swapChainImages;
   std::vector<vk::raii::ImageView> swapChainImageViews;
   std::vector<const char*> extensions;
-  client_common::NativeHandles nativeHandles;
+  NativeHandles nativeHandles;
   VulkanInitData vulkanInitData;
   std::vector<char const*> requiredLayers;
   vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;

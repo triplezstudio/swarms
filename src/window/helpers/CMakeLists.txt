@@ -1,0 +1,10 @@
+
+add_library(window_helpers SHARED)
+
+target_sources(window_helpers PRIVATE window_helpers.cpp)
+
+target_include_directories(window_helpers PUBLIC include)
+
+target_link_libraries(window_helpers PRIVATE render_lib window_lib render_vulkan_lib window_sdl2_lib)
+
+target_compile_definitions(window_helpers INTERFACE EXPORT_TZ_LIB)

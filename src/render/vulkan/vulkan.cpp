@@ -1,4 +1,5 @@
 #include <iostream>
+#include <common.hh>
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #include <vulkan/vulkan_raii.hpp>
@@ -14,25 +15,15 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include <string>
-
-
+#include <common.hh>
 #include <vulkan_renderer.hh>
 
-#include "window_system.hh"
 #include <algorithm>
 #include <fstream>
 #include <limits>
 
 namespace tz::render::vulkan
 {
-tz::WindowDesc Renderer::getRequiredWindowDesc()
-{
-  WindowDesc wd;
-  wd.api = tz::WindowDesc::GraphicsAPI::Vulkan;
-  wd.width = 1280;
-  wd.height = 720;
-  return wd;
-}
 
 
 void tz::render::vulkan::Renderer::beginFrame()
@@ -89,7 +80,7 @@ void Renderer::initSurface()
 {
   GraphicsInstance gi;
   gi.handle = reinterpret_cast<void*>(static_cast<VkInstance>(*instance));
-  auto rawSurface = window->surfaceCreationFunc(gi, getRequiredWindowDesc());
+  auto rawSurface = window->surfaceCreationFunc(gi);
   auto surfKHR = reinterpret_cast<VkSurfaceKHR>(rawSurface.handle);
   surface = vk::raii::SurfaceKHR(instance, surfKHR);
 }

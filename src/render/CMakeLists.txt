@@ -1,17 +1,13 @@
-find_package(Eigen3 CONFIG REQUIRED)
-FetchContent_Declare(
-        stb
-        GIT_REPOSITORY https://github.com/nothings/stb.git
-        GIT_TAG 31c1ad37456438565541f4919958214b6e762fb4
-)
-FetchContent_MakeAvailable(stb)
 
-add_library(stb INTERFACE)
-target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
 
-add_library(render_lib INTERFACE)
 
-target_link_libraries(render_lib INTERFACE window_lib Eigen3::Eigen stb)
+add_library(render_lib SHARED
+        drawing.cpp)
+
+target_link_libraries(render_lib PRIVATE window_lib window_sdl2_lib
+        stb client_common render_vulkan_lib text_render_lib Eigen3::Eigen)
+target_include_directories(render_lib PUBLIC include)
+target_compile_definitions(render_lib PUBLIC EXPORT_TZ_LIB)
 
 # --------------------------------------------------------------------------
 # Assets copying

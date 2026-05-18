@@ -15,50 +15,18 @@ App::App() :inputSystem(tz::input::SDL2InputSystem::getInstance())
   renderer = new rv::Renderer();
   windowSystem = new tz::SDL2WindowSystem();
 
-  auto winDesc = renderer->getRequiredWindowDesc();
+  auto winDesc = tz::WindowDesc();
+  winDesc.width = 800;
+  winDesc.height = 600;
   auto window = windowSystem->createWindow(winDesc);
   renderer->init(window);
 
-  createMasterPipelineLayout();
   prepareRenderPrimitives();
   buildPSOCache();
   commandBuffer = renderer->createCommandBuffer();
 
   default3DCamera = new Camera({0, 2, 3}, {0, 0, 0 }, CameraType::Perspective);
   defaultUICamera = new Camera({0, 0, 1}, {0, 0, 0}, CameraType::Ortho);
-
-}
-
-void App::createMasterPipelineLayout()
-{
-
-  // Camera is set0, binding0
-  auto cameraBuffer = renderer->createMultiframeUniformBuffer(2, sizeof(tz::CameraUniformBufferObject));
-  auto cameraUBOBinding = vulkanRenderer()->createDescriptorBinding(0,
-                                                                    rv::DescriptorResourceType::Ubo,
-                                                                    rv::ShaderType::Vertex, 1,
-                                                                    cameraBuffer);
-  auto cameraDescriptorSetLayout =  (vulkanRenderer()->createDescriptorSetLayout({cameraUBOBinding}));
-  cameraDescriptorSet = vulkanRenderer()->createMultiframeDescriptorSet(cameraDescriptorSetLayout);
-
-  // PerObject is set1, binding0
-  auto perObjectBuffer = renderer->createMultiframeUniformBuffer(10000, sizeof(tz::PerObjectUniformBufferObject));
-  auto perObjectUBOBinding = renderer->createDescriptorBinding(0, rv::DescriptorResourceType::Ubo,
-                                                               rv::ShaderType::Vertex, 1,
-                                                               perObjectBuffer);
-  auto perObjectDescriptorSetLayout = renderer->createDescriptorSetLayout({perObjectUBOBinding});
-  perObjectDescriptorSet = renderer->createMultiframeDescriptorSet(perObjectDescriptorSetLayout);
-
-  // Diffuse textures at set2, binding0.
-  // We allow up to 1000 textures
-  auto textureDescBinding = renderer->createDescriptorBinding(0, rv::DescriptorResourceType::Sampler,
-                                                              rv::ShaderType::Fragment, 1000, nullptr, nullptr);
-
-  auto diffuseTextureDescriptorSetLayout = renderer->createDescriptorSetLayout({textureDescBinding}, true);
-  diffuseTextureDescriptorSet = renderer->createMultiframeDescriptorSet(diffuseTextureDescriptorSetLayout);
-
-  masterPipelineLayout = renderer->createPipelineLayout({cameraDescriptorSetLayout, perObjectDescriptorSetLayout, diffuseTextureDescriptorSetLayout});
-
 
 }
 
@@ -414,75 +382,12 @@ std::vector<tz::PrimitiveRenderData> App::getRenderPrimitivesByCamera(Camera* ca
 void App::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, uint32_t& primitiveCounter)
 {
 
-  for (auto& prd : primitives)
-  {
-    auto pso = psoCache[prd.renderHints.getHash()];
-    renderer->recordCommand(commandBuffer,new rv::CmdBindPipeline (pso));
 
-    auto transform = Eigen::Affine3f::Identity();  
-    transform.translate(prd.transform.position);
-    transform.scale(prd.transform.scale);
-    Eigen::Matrix4f tm = transform.matrix();
-    tz::PerObjectUniformBufferObject perObjectUBO;
-    perObjectUBO.model = tm;
-    perObjectUBO.textureId = prd.renderHints.texture;
-    renderer->updateBuffer(perObjectDescriptorSet->layout->descriptorBindings[0]->buffer, &perObjectUBO, sizeof(tz::PerObjectUniformBufferObject),
-                           primitiveCounter);
-    renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({perObjectDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
-
-    renderer->recordCommand(commandBuffer, new rv::CmdSetViewPorts({{0, 0, 640, 480}}));
-    renderer->recordCommand(commandBuffer, new rv::CmdSetScissors({{0, 0, 640, 480}}));
-
-    renderer->recordCommand(commandBuffer,new rv::CmdBindVertexBuffers({prd.vertexBuffer}));
-    renderer->recordCommand(commandBuffer, new rv::CmdBindIndexBuffer(prd.indexBuffer, 0));
-    renderer->recordCommand(commandBuffer, new rv::CmdDrawIndexed(prd.indexCount, 1,0, 0, 0));
-
-    primitiveCounter++;
-  }
 }
 
 void App::renderFrame()
 {
-  renderer->beginFrame();
-  renderer->beginCommandBuffer(commandBuffer);
 
-  // We can bind our diffuseTextureDescriptorSet once at the beginning of the frame.
-  // This descriptorSet contains slots for up to 1000 textures.
-  // The actual texture is then just indexed by the individual rendered object (see renderPrimitives)
-  renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({diffuseTextureDescriptorSet}, masterPipelineLayout, {0}, 2));
-
-  // We are rendering the scene ordered by "camera".
-  // First everything which has the 3d scene camera,
-  // then the 2d ui camera.
-  // This is more efficient in terms of pipeline-binding and alos
-  // makes sure, UI always renders on top of everything else.
-  auto camera3DPrimitives = getRenderPrimitivesByCamera(default3DCamera);
-  tz::CameraUniformBufferObject cameraUBO;
-  cameraUBO.view = default3DCamera->lookAtRH();
-  cameraUBO.proj = default3DCamera->getProjectionMatrix(640, 480);
-  renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {0}, 0));
-  renderer->updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(tz::CameraUniformBufferObject),
-                         0);
-
-  uint32_t primitiveCounter = 0;
-  renderPrimitives(camera3DPrimitives, primitiveCounter);
-
-  // Next UI:
-  auto cameraUIPrimitives = getRenderPrimitivesByCamera(defaultUICamera);
-  cameraUBO.view = defaultUICamera->lookAtRH();
-  cameraUBO.proj = defaultUICamera->getProjectionMatrix(640, 480);
-  renderer->recordCommand(commandBuffer, new rv::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {1}, 0));
-
-  renderer->updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO,
-                         sizeof(tz::CameraUniformBufferObject),
-                         1);
-  renderPrimitives(cameraUIPrimitives, primitiveCounter);
-
-  renderer->endCommandBuffer(commandBuffer);
-  renderer->submitCommandBuffer(commandBuffer);
-  renderer->endFrame();
-
-  framePrimitives.clear();
 }
 
 void App::setUpdateFunction(tz::FrameListener frameListener)

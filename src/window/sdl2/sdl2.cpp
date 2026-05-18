@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "src/input/include/input.hh"
+#include <../../client_common/include/common.hh>
 #include <SDL_vulkan.h>
-#include <common.hh>
 #include <iostream>
 #include <sdl2.hh>
 #include <stdexcept>
@@ -80,8 +80,8 @@ tz::Window* tz::SDL2WindowSystem::createWindow(tz::WindowDesc desc)
   
 
   return new tz::Window { getNativeHandles().window, 640, 480, 
-    [this](GraphicsInstance& inst, WindowDesc desc) -> GraphicsSurface {
-      return createSurface(inst, desc);
+    [this](GraphicsInstance& inst) -> GraphicsSurface {
+      return createSurface(inst);
     }, 
     [this](int *width, int *height) {
       SDL_Vulkan_GetDrawableSize(this->window, width, height);
@@ -89,26 +89,20 @@ tz::Window* tz::SDL2WindowSystem::createWindow(tz::WindowDesc desc)
 
 }
 
-GraphicsSurface tz::SDL2WindowSystem::createSurface(GraphicsInstance& instance, WindowDesc desc) {
-  if (desc.api == WindowDesc::GraphicsAPI::Vulkan)
+GraphicsSurface tz::SDL2WindowSystem::createSurface(GraphicsInstance& instance) {
+  auto vkInst = reinterpret_cast<VkInstance>(instance.handle);
+  VkSurfaceKHR rawSurface;
+  if (!SDL_Vulkan_CreateSurface(window, vkInst, &rawSurface))
   {
-    auto vkInst = reinterpret_cast<VkInstance>(instance.handle);
-    VkSurfaceKHR rawSurface;
-    if (!SDL_Vulkan_CreateSurface(window, vkInst, &rawSurface))
-    {
-      std::cerr << "surface error: " << std::string(SDL_GetError()) << std::endl;
-      throw std::runtime_error("Could not create surface!" + std::string(SDL_GetError()));
-    }
-    return {rawSurface};
+    std::cerr << "surface error: " << std::string(SDL_GetError()) << std::endl;
+    throw std::runtime_error("Could not create surface!" + std::string(SDL_GetError()));
   }
-  else {
-    // We only support surface creation for vulkan now.
-    return {};
-  }
+  return {rawSurface};
+
 
 }
 
-client_common::NativeHandles SDL2WindowSystem::getNativeHandles()
+tz::NativeHandles SDL2WindowSystem::getNativeHandles()
 {
   SDL_SysWMinfo wmInfo;
   SDL_VERSION(&wmInfo.version); // Initialize version info

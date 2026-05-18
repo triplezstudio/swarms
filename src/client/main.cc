@@ -99,10 +99,13 @@ void runApp()
   app.run();
 }
 
+extern void runAppWithStateApi();
+
 
 int main(int argc, char* argv[])
 {
-  runApp();
+  //runApp();
+  runAppWithStateApi();
 
   return 0;
 }

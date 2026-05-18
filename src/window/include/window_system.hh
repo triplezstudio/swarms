@@ -1,7 +1,7 @@
 #pragma once
-#include "common.hh"
-#include <string>
+#include "../../client_common/include/common.hh"
 #include <functional>
+#include <string>
 
 namespace tz {
 
@@ -79,32 +79,6 @@ enum class MouseButton
 };
 
 
-struct GraphicsSurface {
-  void* handle;
-};
-
-struct GraphicsInstance
-{
-  void* handle;
-};
-
-
-struct WindowDesc {
-  int width;
-  int height;
-  std::string title;
-
-  enum class GraphicsAPI {
-    Vulkan,
-  } api;
-
-  struct {
-    bool enableValidation;
-  } vk;
-
-
-};
-
 enum class FrameInputType
 {
   KeyDown,
@@ -121,14 +95,6 @@ struct FrameInputEvent
 
 };
 
-struct Window
-{
-  void* nativeHandle = nullptr;
-  int width;
-  int height;
-  std::function<GraphicsSurface (GraphicsInstance&, WindowDesc windowDesc)> surfaceCreationFunc;
-  std::function<void(int* width, int* height)> displaySizeFunc;
-};
 
 
   class WindowSystem {
@@ -137,10 +103,11 @@ struct Window
   virtual void pollEvents() = 0;
   virtual Window* createWindow(WindowDesc desc) = 0;
   virtual void present() = 0;
-  virtual GraphicsSurface createSurface(GraphicsInstance& instance, WindowDesc desc) = 0;
+  virtual GraphicsSurface createSurface(GraphicsInstance& instance) = 0;
 
 
   };
+
 }
 
 

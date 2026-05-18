@@ -1,10 +1,9 @@
 #pragma once
-#include <defines.h>
+#include <../../../client_common/include/defines.h>
 #include <SDL2/SDL.h>
 
+#include "../../../client_common/include/common.hh"
 #include "window_system.hh"
-#include "common.hh"
-
 
 namespace tz {
 
@@ -23,12 +22,12 @@ class TZ_API SDL2WindowSystem : public WindowSystem
   void present() override;
   Window * createWindow(WindowDesc desc) override;
 
-  GraphicsSurface createSurface(GraphicsInstance& instance, WindowDesc desc) override;
+  GraphicsSurface createSurface(GraphicsInstance& instance) override;
 
   [[nodiscard]] const std::vector<SDL_Event> getFrameEvents() const;
 
   private:
-  client_common::NativeHandles getNativeHandles();
+  NativeHandles getNativeHandles();
 
 
   private:
