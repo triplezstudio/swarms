@@ -176,10 +176,9 @@ void App::prepareRenderPrimitives()
 
 
 
-    textRenderer = new tz::text::TextRenderer(*renderer);
-    uiFont = textRenderer->createFont("assets/consola.ttf", 12);
-    uiFontAtlasTextureIndex = globalTextureIndex;
-    renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex++, textRenderer->getAtlasTextureForFont(uiFont));
+
+
+
 }
 
 tz::render::vulkan::Renderer * App::vulkanRenderer()
@@ -600,6 +599,10 @@ uint32_t App::createTexture(const std::string &imagePath)
   auto texture = renderer->createTexture(image);
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
   return globalTextureIndex++;
+}
+void App::addScene(const std::string &name, Scene &scene)
+{
+  scenes.insert({name, scene});
 }
 
 }

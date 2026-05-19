@@ -28,7 +28,8 @@ set (CMAKE_VERBOSE_MAKEFILE OFF)
 
 set (CMAKE_BUILD_RPATH_USE_ORIGIN true)
 
-add_library (swarms-interface-library INTERFACE)
+add_library (swarms-interface-library INTERFACE
+        src/helpers/include/text_helper.hh)
 target_compile_options (swarms-interface-library INTERFACE
 		$<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
 		$<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wall -Wextra -Werror>

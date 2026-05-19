@@ -1,11 +1,21 @@
+#include "text_render.hh"
+#include "texture_asset_manager.hh"
 #include <functional>
-#include <app.hh>
+#include <text_helper.hh>
 #include <vulkan_renderer.hh>
-#include <window.hh>
 
 namespace tz
 {
-void App::renderText(Transform transform, const std::string &text, int fontId)
+
+TextHelper::TextHelper(render::TextRenderer& textRenderer, TextureAssetManager& textureAssetManager)
+    : textureAssetManager(textureAssetManager)
+{
+
+  textRenderer = new tz::render::TextRenderer(renderer);
+
+}
+
+void TextHelper::renderText(Transform transform, const std::string &text, int fontId)
 {
 
   RenderHints textRenderHints;
@@ -16,12 +26,21 @@ void App::renderText(Transform transform, const std::string &text, int fontId)
   prd.transform = transform;;
   prd.geometryType     = PrimitiveGeometryType::Quad;
   prd.renderHints = textRenderHints;
+
+  // This is a bigger challenge. Where to get this activeRenderCamera here?
+  // Having this here suggests there is some global state which is tracking
+  // the current activated camera.
+  // Then here we would need access to this global state.
+  // This could be a scene.
+  // Or we pass the current camera into this function. More verbose but
+  // avoding global state.
+  // As this is a helper, maybe it is easier for the user to rely on the camera activation.
   prd.associatedCamera = activeRenderCamera;
 
 
   if (textVertexBuffers.find(text) == textVertexBuffers.end())
   {
-    auto textGeometry = textRenderer->getGeometryForText(text, fontId == -1 ? uiFont : fontId);
+    auto textGeometry = textRenderer->renderTextAsGeometry(text, fontId == -1 ? uiFont : fontId);
     textGeometries[text]= textGeometry;
 
     std::vector<rv::VertexPosTexCoords> vertices;
@@ -51,15 +70,13 @@ void App::renderText(Transform transform, const std::string &text, int fontId)
   framePrimitives.push_back(prd);
 
 }
-int App::createFont(const std::string &fileName, int size)
+int TextHelper::createFont(const std::string &fileName, int size)
 {
+
   auto fontId = textRenderer->createFont(fileName, size);
-  fontTextureMap[fontId] = globalTextureIndex;
+
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex++, textRenderer->getAtlasTextureForFont(fontId));
   return fontId;
 }
-void App::setInputListenerFunc(InputListener inputListener)
-{
-  inputListeners.push_back(inputListener);
-}
+
 }

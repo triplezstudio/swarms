@@ -6,7 +6,7 @@
 #include <stb_truetype.h>
 #include <map>
 
-namespace tz::text
+namespace tz::render::text
 {
 
 struct Font {
@@ -35,9 +35,9 @@ class TZ_API TextRenderer
   public:
   explicit TextRenderer(tz::render::vulkan::Renderer& renderer);
   auto createFont(const std::string& fontFile, uint16_t size) -> int;
-  TextGeometry getGeometryForText(const std::string& text, uint32_t fontId);
+  TextGeometry renderTextAsGeometry(const std::string& text, uint32_t fontId);
 
-  render::vulkan::Texture *getAtlasTextureForFont(int fontId);
+  //render::vulkan::Texture *getAtlasTextureForFont(int fontId);
 
   private:
       tz::render::vulkan::Renderer& renderer;

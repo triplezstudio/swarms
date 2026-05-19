@@ -1,16 +1,21 @@
+#include "text_helper.hh"
 #include <Eigen/Dense>
 #include <app.hh>
 #include <iostream>
+#include <texture_asset_manager.hh>
 
 uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
 int titleFont = -1;
+static tz::Tex
 
 void initialize(tz::App* app)
 {
   testImageTexture = app->createTexture("assets/test_image.png");
   testImage2Texture = app->createTexture("assets/test_image2.png");
-  titleFont = app->createFont("assets/consolab.ttf", 40);
+
+  auto textHelper = new tz::TextHelper();
+  titleFont = textHelper->createFont("assets/consolab.ttf", 40);
 }
 
 void gatherInput(const tz::input::SDL2InputSystem& inputSystem)

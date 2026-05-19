@@ -4,7 +4,7 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-auto tz::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fontSize) -> int
+auto tz::render::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fontSize) -> int
 {
 
     // Read font file
@@ -70,11 +70,11 @@ auto tz::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fo
     return fontId++;
 
 }
-tz::text::TextRenderer::TextRenderer(tz::render::vulkan::Renderer &renderer) :renderer(renderer)
+tz::render::text::TextRenderer::TextRenderer(tz::render::vulkan::Renderer &renderer) :renderer(renderer)
 {
 
 }
-tz::text::TextGeometry tz::text::TextRenderer::getGeometryForText(const std::string &text,
+tz::render::text::TextGeometry tz::render::text::TextRenderer::renderTextAsGeometry(const std::string &text,
                                                                   uint32_t fontId)
 {
   std::vector<Eigen::Vector3f> positions;
@@ -149,10 +149,7 @@ tz::text::TextGeometry tz::text::TextRenderer::getGeometryForText(const std::str
     maxY = std::max(maxY, q.y1);
   }
 
-  return tz::text::TextGeometry {positions, texCoords, indices};
+  return tz::render::text::TextGeometry {positions, texCoords, indices};
 }
 
-tz::render::vulkan::Texture *tz::text::TextRenderer::getAtlasTextureForFont(int fontId)
-{
-  return fonts[fontId]->atlas;
-}
+
