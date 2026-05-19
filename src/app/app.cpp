@@ -376,7 +376,7 @@ void tz::App::run()
   while (true)
   {
     window->pollEvents();
-    //inputSystem.update(window->getFrameEvents());
+    inputSystem.update(window->frameInputEvents);
     updateFrameListeners(16.66f);
     updateInputListeners();
     renderFrame();
