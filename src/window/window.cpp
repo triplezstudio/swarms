@@ -69,7 +69,7 @@ tz::Window::Window(int width, int height, const std::string& title)
 
 }
 
-VkSurfaceKHR tz::Window::createSurface(VkInstance instance) {
+VkSurfaceKHR Window::createSurface(VkInstance instance) {
 
     VkSurfaceKHR rawSurface;
     if (!SDL_Vulkan_CreateSurface(_window, instance, &rawSurface))
@@ -80,37 +80,11 @@ VkSurfaceKHR tz::Window::createSurface(VkInstance instance) {
     return rawSurface;
 }
 
-void tz::Window::getDisplaySize(int &width, int &height)
+void Window::getDisplaySize(int &width, int &height)
 {
   SDL_Vulkan_GetDrawableSize(_window, &width, &height);
 }
 
-tz::NativeHandles Window::getNativeHandles()
-{
-  SDL_SysWMinfo wmInfo;
-  SDL_VERSION(&wmInfo.version); // Initialize version info
-
-  if (SDL_GetWindowWMInfo(_window, &wmInfo))
-  {
-#if defined(_WIN32)
-    // Windows: connection is HINSTANCE, window is HWND
-    return {(void *) wmInfo.info.win.hinstance, (void *) wmInfo.info.win.window, "windows"};
-
-#elif defined(__linux__)
-    // Linux: Check if we are running under X11 or Wayland
-    if (wmInfo.subsystem == SDL_SYSWM_X11)
-    {
-      return {(void *) wmInfo.info.x11.display, (void *) (uintptr_t) wmInfo.info.x11.window, "x11"};
-    }
-    else if (wmInfo.subsystem == SDL_SYSWM_WAYLAND)
-    {
-      return {(void *) wmInfo.info.wl.display, (void *) wmInfo.info.wl.surface, "wayland"};
-    }
-#endif
-  }
-
-  return {nullptr, nullptr};
-}
 
 }
 

@@ -121,7 +121,6 @@ struct TZ_API Window
   void pollEvents();
   void getDisplaySize(int& width, int& height);
   VkSurfaceKHR createSurface(VkInstance vkInstance);
-  tz::NativeHandles getNativeHandles();
 
   SDL_Window* _window = nullptr;
   std::vector<SDL_Event> frameInputEvents;
