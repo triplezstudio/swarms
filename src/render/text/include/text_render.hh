@@ -39,6 +39,7 @@ class TZ_API TextRenderer
   auto createFont(const std::string& fontFile, uint16_t size) -> Font*;
   TextGeometry createGeometryForText(const std::string& text, Font& font);
 
+
   private:
     TextureAssetManager textureAssetManager;
     vulkan::Renderer& renderer;

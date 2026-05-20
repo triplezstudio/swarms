@@ -123,28 +123,6 @@ class Camera
     return view;
   }
 
-  Eigen::Matrix4f getViewMatrix()
-  {
-    Eigen::Vector3f up = {0, 1, 0};
-    Eigen::Vector3f f = (lookAt - pos).normalized();
-    Eigen::Vector3f s = f.cross(up).normalized();
-    Eigen::Vector3f u = s.cross(f);
-
-    Eigen::Matrix4f mat = Eigen::Matrix4f::Identity();
-
-    // Set Columns (Eigen is Column-Major)
-    mat.col(0).head<3>() = s;
-    mat.col(1).head<3>() = u;
-    mat.col(2).head<3>() = -f;
-
-    // Translation part
-    mat(0,3) = -s.dot(pos);
-    mat(1,3) = -u.dot(pos);
-    mat(2,3) =  f.dot(pos);
-
-    return mat;
-  }
-
   Eigen::Matrix4f getProjectionMatrix(float width, float height)
   {
     if (type == CameraType::Perspective)

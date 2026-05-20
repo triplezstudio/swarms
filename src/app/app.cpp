@@ -604,6 +604,9 @@ void App::addScene(const std::string &name, Scene &scene)
 {
   scenes.insert({name, scene});
 }
+void tz::App::setInputListenerFunc(InputListener il) {
+  this->inputListener = il;
+}
 
 }
 

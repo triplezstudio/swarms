@@ -1,4 +1,5 @@
-#include "text_helper.hh"
+#include <scene_helper.hh>
+#include <render_helpers.hh>
 #include <texture_asset_manager.hh>
 #include <text_render.hh>
 #include <vulkan_renderer.hh>
@@ -10,12 +11,27 @@ uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
 tz::render::vulkan::Renderer* renderer = nullptr;
 tz::render::TextRenderer* textRenderer = nullptr;
+tz::Scene* main3DScene = nullptr;
+tz::Scene* uiScene = nullptr;
+tz::Camera* main3DCamera = nullptr;
+tz::Camera* uiCamera = nullptr;
+
+
+
 int titleFont = -1;
 
 void initialize(tz::App* app)
 {
   testImageTexture = app->createTexture("assets/test_image.png");
   testImage2Texture = app->createTexture("assets/test_image2.png");
+
+  main3DCamera= new tz::Camera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0), tz::CameraType::Perspective);
+  main3DScene = new tz::Scene(*main3DCamera);
+  uiCamera = new tz::Camera(Eigen::Vector3f(0, 0, 4), {0, 0, 0}, tz::CameraType::Ortho);
+  uiScene = new tz::Scene(*uiCamera);
+
+  app->addScene("main3DScene", *main3DScene);
+  app->addScene("uiScene", *uiScene);
 
 }
 
@@ -26,13 +42,6 @@ void gatherInput(const tz::input::SDL2InputSystem& inputSystem)
 
 void doFrame(tz::App* app)
 {
-
-  static bool firstTime = true;
-  if (firstTime)
-  {
-    initialize(app);
-    firstTime = false;
-  }
 
   if (tz::input::SDL2InputSystem::getInstance().isMouseButtonClicked(tz::input::MouseButton::LEFT))
   {
@@ -52,7 +61,7 @@ void doFrame(tz::App* app)
     for (int z = 0; z < 5; z++) {
        app->renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
     }
-  
+
   }
 
   // This allows us to place our objects in screen space coordinates
@@ -91,17 +100,19 @@ void doFrame(tz::App* app)
   // this is just temporary demo code...
   frame++;
   frame = frame % 100;
-  app->renderText({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
-  app->renderText({{8, 400, 0.5}}, "SWARMS", titleFont);
+
+  //app->getTextRenderer().create({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
+  //app->renderText({{8, 400, 0.5}}, "SWARMS", titleFont);
 
 }
 
 void runApp()
 {
   auto app = tz::App(800, 600, "swarms");
+  initialize(&app);
 
   app.setUpdateFunction(doFrame);
-  app.setInputListenerFunc(gatherInput);
+  //app.setInputListenerFunc(gatherInput);
   app.run();
 }
 

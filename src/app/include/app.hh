@@ -58,7 +58,7 @@ struct alignas(16) PerObjectUniformBufferObject
 
     virtual void run();
     virtual void setUpdateFunction(FrameListener frameListener);
-    virtual void setInputListenerFunc(InputListener inputListener);
+    virtual void setInputListenerFunc(InputListener il);
     virtual float getLastFrameTime();
 
     virtual void activate3DCamera();
@@ -141,6 +141,8 @@ struct alignas(16) PerObjectUniformBufferObject
       Window *window = nullptr;
 
       std::map<std::string, Scene> scenes;
+
+      InputListener inputListener;
   };
 
 

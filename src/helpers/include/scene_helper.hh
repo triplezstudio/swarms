@@ -33,7 +33,7 @@ class SceneNode
  * For the example above, the top-down-scene would render into a texture,
  * which the 2d ui scene would then use to draw the mini-map in a certain are of the screen.
  */
-class Scene
+class TZ_API Scene
 {
 public:
   Scene(Camera& camera);

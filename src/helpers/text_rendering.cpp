@@ -1,11 +1,10 @@
-#include "../render/text/include/texture_asset_manager.hh"
-#include "text_render.hh"
+
 #include <text_helper.hh>
 #include <vulkan_renderer.hh>
 
 namespace tz
 {
-
+/*
 TextHelper::TextHelper(TextureAssetManager& textureAssetManager)
     : textureAssetManager(textureAssetManager), textRenderer(textRenderer)
 {
@@ -13,7 +12,8 @@ TextHelper::TextHelper(TextureAssetManager& textureAssetManager)
 
 
 }
-
+*/
+/*
 void TextHelper::renderText(Transform transform, const std::string &text, int fontId)
 {
 
@@ -69,14 +69,5 @@ void TextHelper::renderText(Transform transform, const std::string &text, int fo
   framePrimitives.push_back(prd);
 
 }
-
-int TextHelper::createFont(const std::string &fileName, int size)
-{
-
-  auto fontId = textRenderer->createFont(fileName, size);
-
-  renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex++, textRenderer->getAtlasTextureForFont(fontId));
-  return fontId;
-}
-
+*/
 }

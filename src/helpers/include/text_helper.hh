@@ -4,12 +4,11 @@
 
 #ifndef SWARMS_TEXT_HELPER_HH
 #define SWARMS_TEXT_HELPER_HH
-#include <../../render/text/include/texture_asset_manager.hh>
 #include <render_helpers.hh>
 
 namespace tz
 {
-
+/*
 class TextHelper
 {
 public:
@@ -21,9 +20,10 @@ private:
   int uiFont = -1;
   uint32_t uiFontAtlasTextureIndex = 0;
   render::vulkan::Renderer& renderer;
-  render::text::TextRenderer& textRenderer;
+  //render::TextRenderer& textRenderer;
   TextureAssetManager& textureAssetManager;
 };
+ */
 }
 
 
