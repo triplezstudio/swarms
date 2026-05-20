@@ -14,6 +14,8 @@ App::App(int width, int height, const std::string& title) :inputSystem(tz::input
 
   window = new tz::Window(width, height, title);
   renderer = new rv::Renderer(window);
+  textureAssetManager = new tz::TextureAssetManager(*renderer);
+  textRenderer = new tz::render::TextRenderer(*renderer, *textureAssetManager);
 
   createMasterPipelineLayout();
   prepareRenderPrimitives();
@@ -600,12 +602,20 @@ uint32_t App::createTexture(const std::string &imagePath)
   renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
   return globalTextureIndex++;
 }
-void App::addScene(const std::string &name, Scene &scene)
-{
-  scenes.insert({name, scene});
-}
+
 void tz::App::setInputListenerFunc(InputListener il) {
   this->inputListener = il;
+}
+
+
+void App::addScene(const std::string &name, Scene* scene, uint32_t layer)
+{
+  scenes.insert({name, scene});
+  layerSortedScenes.push_back(scene);
+  std::sort(layerSortedScenes.begin(), layerSortedScenes.end(), [this](Scene* a, Scene* b)
+             {
+               return sceneLayerMap[a] < sceneLayerMap[b];
+             });
 }
 
 }

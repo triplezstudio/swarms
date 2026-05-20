@@ -40,6 +40,7 @@ public:
   void addNode(SceneNode& node);
   void removeNode(SceneNode& node);
 
+
 private:
   Camera& camera;
   std::vector<SceneNode> nodes;

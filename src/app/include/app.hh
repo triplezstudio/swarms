@@ -73,11 +73,24 @@ struct alignas(16) PerObjectUniformBufferObject
 
     uint32_t createTexture(const std::string& imagePath);
 
-    void addScene(const std::string& name, Scene& scene);
+    /**
+     * Adds a scene under a given name and assigns it to a layer.
+     * Layers are numbered front to back, so layer 1 is in front of layer 2.
+     * To achieve the desired effect, scenes are rendered back to front,
+     * so higher layers are rendered before lower numbers.
+     * Scenes with identical layer numbers are rendered in an undefined sequence
+     * relative to each other.
+     *
+     * @param name
+     * @param scene
+     * @param layer
+     */
+    void addScene(const std::string& name, Scene* scene, uint32_t layer);
 
   private:
       tz::input::SDL2InputSystem& inputSystem;
       rv::Renderer* renderer = nullptr;
+      tz::TextureAssetManager* textureAssetManager = nullptr;
       tz::render::TextRenderer* textRenderer = nullptr;
 
       std::vector<FrameListener> frameListeners;
@@ -140,9 +153,12 @@ struct alignas(16) PerObjectUniformBufferObject
       void updateInputListeners();
       Window *window = nullptr;
 
-      std::map<std::string, Scene> scenes;
+      std::map<std::string, Scene*> scenes;
+      std::vector<Scene*> layerSortedScenes;
 
       InputListener inputListener;
+
+      std::map<Scene*, uint32_t> sceneLayerMap;
   };
 
 
