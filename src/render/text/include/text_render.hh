@@ -1,16 +1,16 @@
 #ifndef SWARMS_TEXT_RENDER_HH
 #define SWARMS_TEXT_RENDER_HH
-#include <string>
-#include <cinttypes>
-#include <vulkan_renderer.hh>
 #include <stb_truetype.h>
-#include <map>
+#include <string>
+#include <texture_asset_manager.hh>
+#include <vulkan_renderer.hh>
 
-namespace tz::render::text
+namespace tz::render
 {
 
 struct Font {
-  tz::render::vulkan::Texture* atlas;
+  uint32_t textureId;
+  vulkan::Texture* atlas;
   float maxDescent = std::numeric_limits<float>::max();
   float lineHeight = std::numeric_limits<float>::min();
   float baseLine = 0.0f;
@@ -25,6 +25,8 @@ struct TextGeometry
   std::vector<uint32_t> indices;
 };
 
+
+
 /**
  * This class manages fonts and offers functions to render
  * text to a vertex buffer.
@@ -33,15 +35,13 @@ struct TextGeometry
 class TZ_API TextRenderer
 {
   public:
-  explicit TextRenderer(tz::render::vulkan::Renderer& renderer);
-  auto createFont(const std::string& fontFile, uint16_t size) -> int;
-  TextGeometry renderTextAsGeometry(const std::string& text, uint32_t fontId);
-
-  //render::vulkan::Texture *getAtlasTextureForFont(int fontId);
+  explicit TextRenderer(vulkan::Renderer & renderer, TextureAssetManager& textureAssetManager);
+  auto createFont(const std::string& fontFile, uint16_t size) -> Font*;
+  TextGeometry createGeometryForText(const std::string& text, Font& font);
 
   private:
-      tz::render::vulkan::Renderer& renderer;
-      std::map<int, Font*> fonts;
+    TextureAssetManager textureAssetManager;
+    vulkan::Renderer& renderer;
 };
 
 

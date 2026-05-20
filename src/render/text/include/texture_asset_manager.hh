@@ -29,13 +29,13 @@ public:
 
   }
 
-  void loadTexture(const std::string& imagePath)
+  int loadTexture(const std::string& imagePath)
   {
 
     auto existingIndex = getIndexForTexture(imagePath);
     if (existingIndex > -1)
     {
-      return;
+      return -1;
     }
 
     auto bmData = render::vulkan::loadBitmapDataFromPath(imagePath);
@@ -45,7 +45,6 @@ public:
     textureArray[idx] = texture;
   }
 
-private:
   int registerTexture(const std::string& name)
   {
     if (textureIndexMap.contains(name))

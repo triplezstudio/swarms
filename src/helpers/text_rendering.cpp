@@ -1,17 +1,16 @@
+#include "../render/text/include/texture_asset_manager.hh"
 #include "text_render.hh"
-#include "texture_asset_manager.hh"
-#include <functional>
 #include <text_helper.hh>
 #include <vulkan_renderer.hh>
 
 namespace tz
 {
 
-TextHelper::TextHelper(render::TextRenderer& textRenderer, TextureAssetManager& textureAssetManager)
-    : textureAssetManager(textureAssetManager)
+TextHelper::TextHelper(TextureAssetManager& textureAssetManager)
+    : textureAssetManager(textureAssetManager), textRenderer(textRenderer)
 {
 
-  textRenderer = new tz::render::TextRenderer(renderer);
+
 
 }
 
@@ -40,7 +39,7 @@ void TextHelper::renderText(Transform transform, const std::string &text, int fo
 
   if (textVertexBuffers.find(text) == textVertexBuffers.end())
   {
-    auto textGeometry = textRenderer->renderTextAsGeometry(text, fontId == -1 ? uiFont : fontId);
+    auto textGeometry = textRenderer->createGeometryForText(text, fontId == -1 ? uiFont : fontId);
     textGeometries[text]= textGeometry;
 
     std::vector<rv::VertexPosTexCoords> vertices;
@@ -70,6 +69,7 @@ void TextHelper::renderText(Transform transform, const std::string &text, int fo
   framePrimitives.push_back(prd);
 
 }
+
 int TextHelper::createFont(const std::string &fileName, int size)
 {
 

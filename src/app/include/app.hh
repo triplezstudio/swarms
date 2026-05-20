@@ -50,25 +50,30 @@ struct alignas(16) PerObjectUniformBufferObject
 
 
     public:
-      App(int width, int height, const std::string& title);
-      virtual void run();
-      virtual void setUpdateFunction(FrameListener frameListener);
-      virtual void setInputListenerFunc(InputListener inputListener);
-      virtual float getLastFrameTime();
+    App(int width, int height, const std::string& title);
 
-      virtual void activate3DCamera();
-      virtual void activate3DCamera(Eigen::Vector3f position, Eigen::Vector3f lookAt);
-      virtual void activateUICamera();
-      virtual void activateUICamera(Eigen::Vector3f position);
+    render::vulkan::Renderer& getRenderer();
+    render::TextRenderer& getTextRenderer();
+    TextureAssetManager& getTextureAssetManager();
 
-      virtual void renderQuad(Transform transform, RenderHints renderHints = {});
-      virtual void renderCube(Transform transform, RenderHints renderHints = {});
-      virtual void renderSphere(Transform transform, RenderHints renderHints = {});
-      virtual void renderCylinder(Transform transform, RenderHints renderHints = {});
+    virtual void run();
+    virtual void setUpdateFunction(FrameListener frameListener);
+    virtual void setInputListenerFunc(InputListener inputListener);
+    virtual float getLastFrameTime();
 
-      uint32_t createTexture(const std::string& imagePath);
+    virtual void activate3DCamera();
+    virtual void activate3DCamera(Eigen::Vector3f position, Eigen::Vector3f lookAt);
+    virtual void activateUICamera();
+    virtual void activateUICamera(Eigen::Vector3f position);
 
-      void addScene(const std::string& name, Scene& scene);
+    virtual void renderQuad(Transform transform, RenderHints renderHints = {});
+    virtual void renderCube(Transform transform, RenderHints renderHints = {});
+    virtual void renderSphere(Transform transform, RenderHints renderHints = {});
+    virtual void renderCylinder(Transform transform, RenderHints renderHints = {});
+
+    uint32_t createTexture(const std::string& imagePath);
+
+    void addScene(const std::string& name, Scene& scene);
 
   private:
       tz::input::SDL2InputSystem& inputSystem;
