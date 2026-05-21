@@ -30,8 +30,9 @@ void initialize(tz::App* app)
   uiCamera = new tz::Camera(Eigen::Vector3f(0, 0, 4), {0, 0, 0}, tz::CameraType::Ortho);
   uiScene = new tz::Scene(*uiCamera);
 
-  app->addScene("main3DScene", *main3DScene);
-  app->addScene("uiScene", *uiScene);
+  app->addScene("uiScene", uiScene, 1);
+  app->addScene("main3DScene", main3DScene, 2);
+
 
 }
 
