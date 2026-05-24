@@ -41,7 +41,7 @@ class TZ_API TextRenderer
 
 
   private:
-    TextureAssetManager textureAssetManager;
+    TextureAssetManager& textureAssetManager;
     vulkan::Renderer& renderer;
 };
 

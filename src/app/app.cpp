@@ -15,12 +15,10 @@ App::App(int width, int height, const std::string& title) :inputSystem(tz::input
   window = new tz::Window(width, height, title);
   renderer = new rv::Renderer(window);
   masterPipelineLayout = new MasterPipelineLayout(*renderer);
-  immediateCommandProcessor = new ImmediateCommandProcessor(*renderer, *masterPipelineLayout);
-
   textureAssetManager = new tz::TextureAssetManager(*renderer, masterPipelineLayout->getDiffuseTextureDescriptorSet());
   textRenderer = new tz::render::TextRenderer(*renderer, *textureAssetManager);
 
-
+  immediateCommandProcessor = new ImmediateCommandProcessor(*renderer, *textRenderer, *masterPipelineLayout);
 
 }
 

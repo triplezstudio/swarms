@@ -62,7 +62,9 @@ auto tz::render::TextRenderer::createFont(const std::string& fontFile, uint16_t 
       throw std::runtime_error(msg);
     }
 
-    font->textureId = textureAssetManager.loadTexture(fontFile);
+    auto image = renderer.createImage(atlasBitmapData);
+    auto fontTexture = renderer.createTexture(image);
+    font->textureId = textureAssetManager.registerTexture(fontFile, fontTexture);
     return font;
 
 }

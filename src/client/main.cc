@@ -14,10 +14,8 @@ tz::Scene* main3DScene = nullptr;
 tz::Scene* uiScene = nullptr;
 tz::Camera* main3DCamera = nullptr;
 tz::Camera* uiCamera = nullptr;
-
-
-
-int titleFont = -1;
+tz::render::Font* titleFont = nullptr;
+tz::render::Font* smallUIFont = nullptr;
 
 void initialize(tz::App* app)
 {
@@ -26,9 +24,9 @@ void initialize(tz::App* app)
 
   auto& renderer = app->getRenderer();
   main3DCamera= new tz::Camera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0), tz::CameraType::Perspective);
-  main3DScene = new tz::Scene(*main3DCamera, renderer);
+  main3DScene = new tz::Scene(*main3DCamera, renderer, app->getTextRenderer());
   uiCamera = new tz::Camera(Eigen::Vector3f(0, 0, 4), {0, 0, 0}, tz::CameraType::Ortho);
-  uiScene = new tz::Scene(*uiCamera, renderer);
+  uiScene = new tz::Scene(*uiCamera, renderer, app->getTextRenderer());
 
   app->addScene("uiScene", uiScene, 1);
   app->addScene("main3DScene", main3DScene, 2);
@@ -36,6 +34,8 @@ void initialize(tz::App* app)
   auto buttonNode = new tz::SceneNode({{500, 300, -3}, {128, 128, 1}}, tz::PrimitiveGeometryType::Quad);
   uiScene->addNode(*buttonNode);
 
+  titleFont = app->getTextRenderer().createFont("assets/consolab.ttf", 58);
+  smallUIFont = app->getTextRenderer().createFont("assets/consola.ttf", 14);
 
 }
 
@@ -109,7 +109,8 @@ void doFrame(tz::App* app)
   frame = frame % 100;
 
   //app->getTextRenderer().create({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
-  //app->renderText({{8, 400, 0.5}}, "SWARMS", titleFont);
+  app->getImmediateCommandProcessor().renderText("Frame: " + std::to_string(frame), *smallUIFont, {{8, 8, 0.5}});
+  app->getImmediateCommandProcessor().renderText("SWARMS", *titleFont, {{8, 400, 0.5}});
 
 }
 

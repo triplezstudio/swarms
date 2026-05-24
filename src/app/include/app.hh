@@ -77,11 +77,7 @@ struct alignas(16) TransformUniformBufferObject
       std::vector<FrameListener> frameListeners;
       std::vector<InputListener> inputListeners;
 
-      rv::Buffer* tzLabelVertexBuffer = nullptr;
-      rv::Buffer* tzLabelIndexBuffer = nullptr;
-      std::map<std::string, tz::render::TextGeometry> textGeometries;
-      std::map<std::string, rv::Buffer*> textVertexBuffers;
-      std::map<std::string, rv::Buffer*> textIndexBuffers;
+
       std::map<int, uint32_t> fontTextureMap;
       uint32_t tzLabelIndexCount = 0;
 

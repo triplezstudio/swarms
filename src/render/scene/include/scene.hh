@@ -39,7 +39,7 @@ class SceneNode
 class TZ_API Scene
 {
 public:
-  Scene(Camera& camera, rv::Renderer& renderer);
+  Scene(Camera& camera, rv::Renderer& renderer, tz::render::TextRenderer& textRenderer);
   void addNode(SceneNode& node);
   void removeNode(SceneNode& node);
 
@@ -55,6 +55,7 @@ public:
 private:
   Camera& camera;
   rv::Renderer &renderer;
+  render::TextRenderer &textRenderer;
 
   std::vector<SceneNode> nodes;
 
@@ -91,6 +92,7 @@ private:
   Camera* activeRenderCamera = nullptr;
 
   ImmediateCommandProcessor *immediateCommandProcessor = nullptr;
+
 
 };
 

@@ -6,11 +6,12 @@
  * We prepare all needed vulkan and other render helper objects
  * we need later when rendering a frame.
  */
-tz::Scene::Scene(Camera &camera, rv::Renderer& renderer) : camera(camera), renderer(renderer)
+tz::Scene::Scene(Camera &camera, rv::Renderer& renderer, tz::render::TextRenderer& textRenderer)
+  : camera(camera), renderer(renderer), textRenderer(textRenderer)
 {
 
   masterPipelineLayout = new MasterPipelineLayout(renderer);
-  immediateCommandProcessor = new tz::ImmediateCommandProcessor(renderer, *masterPipelineLayout);
+  immediateCommandProcessor = new tz::ImmediateCommandProcessor(renderer, textRenderer,  *masterPipelineLayout);
 
 }
 

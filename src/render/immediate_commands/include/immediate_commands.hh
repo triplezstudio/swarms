@@ -4,6 +4,7 @@
 
 #ifndef SWARMS_IMMEDIATE_COMMANDS_HH
 #define SWARMS_IMMEDIATE_COMMANDS_HH
+#include "text_render.hh"
 #include <Eigen/Dense>
 #include <render_helpers.hh>
 
@@ -14,7 +15,8 @@ class TZ_API ImmediateCommandProcessor
 {
 
   public:
-  ImmediateCommandProcessor(tz::render::vulkan::Renderer& renderer, MasterPipelineLayout& masterPipelineLayout);
+  ImmediateCommandProcessor(tz::render::vulkan::Renderer& renderer,
+                                tz::render::TextRenderer& textRenderer, MasterPipelineLayout& masterPipelineLayout);
   void activate3DCamera();
   void activate3DCamera(Eigen::Vector3f position, Eigen::Vector3f lookAt);
   void activateUICamera();
@@ -24,6 +26,9 @@ class TZ_API ImmediateCommandProcessor
   void renderCube(Transform transform, RenderHints renderHints = {});
   void renderSphere(Transform transform, RenderHints renderHints = {});
   void renderCylinder(Transform transform, RenderHints renderHints = {});
+  void renderText(const std::string &text,
+                  render::Font &font,
+                  Transform transform);
 
   void recordAndSubmitFrameCommandBuffer();
   render::vulkan::CommandBuffer &recordFrameCommandBuffer();
@@ -41,6 +46,9 @@ class TZ_API ImmediateCommandProcessor
       rv::Buffer* quadIndexBuffer = nullptr;
       rv::Buffer* cubeIndexBuffer = nullptr;
       rv::Buffer* cubeTexIndexBuffer = nullptr;
+      std::map<std::string, tz::render::TextGeometry> textGeometries;
+      std::map<std::string, rv::Buffer*> textVertexBuffers;
+      std::map<std::string, rv::Buffer*> textIndexBuffers;
 
       rv::PipelineStateObjectCache psoCache;
       rv::PipelineStateObject* colorOnlyPSO = nullptr;
@@ -50,6 +58,7 @@ class TZ_API ImmediateCommandProcessor
       MasterPipelineLayout& masterPipelineLayout;
 
       render::vulkan::Renderer &renderer;
+      render::TextRenderer& textRenderer;
 
       void buildPSOCache();
       std::vector<PrimitiveRenderData> getRenderPrimitivesByCamera(Camera *camera);

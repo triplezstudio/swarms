@@ -43,20 +43,18 @@ public:
     auto bmData = render::vulkan::loadBitmapDataFromPath(imagePath);
     auto image = renderer.createImage(bmData);
     auto texture = renderer.createTexture(image);
-    auto idx = registerTexture(imagePath);
-    renderer.updateTextureDescriptorSet(&diffuseTextureDescriptorSet, 0, idx, texture);
-
-
-    textureArray[idx] = texture;
+    auto idx = registerTexture(imagePath, texture);
     return idx;
   }
 
-  int registerTexture(const std::string& name)
+  int registerTexture(const std::string& name, tz::render::vulkan::Texture* texture)
   {
     if (!textureIndexMap.contains(name))
     {
       const auto id = textureIndex++;
       textureIndexMap[name] = id;
+      textureArray[id] = texture;
+      renderer.updateTextureDescriptorSet(&diffuseTextureDescriptorSet, 0, id, texture);
       return id;
     }
 

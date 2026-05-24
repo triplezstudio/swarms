@@ -1,4 +1,5 @@
 #include <immediate_commands.hh>
+#include <render_helpers.hh>
 
 void tz::ImmediateCommandProcessor::renderCube(tz::Transform transform, tz::RenderHints renderHints)
 {
@@ -13,6 +14,51 @@ void tz::ImmediateCommandProcessor::renderCube(tz::Transform transform, tz::Rend
   framePrimitives.push_back(prd);
   
 }
+
+
+void tz::ImmediateCommandProcessor::renderText(const std::string& text, tz::render::Font& font, Transform transform)
+{
+  RenderHints textRenderHints;
+  textRenderHints.materialType = rv::MaterialType::Text;
+  textRenderHints.vertexShaderType = rv::VertexShaderType::Static;
+  textRenderHints.texture = font.textureId;
+  tz::PrimitiveRenderData prd;
+  prd.transform = transform;;
+  prd.geometryType     = PrimitiveGeometryType::Quad;
+  prd.renderHints = textRenderHints;
+  prd.associatedCamera = activeRenderCamera;
+
+
+  if (textVertexBuffers.find(text) == textVertexBuffers.end())
+  {
+    auto textGeometry = textRenderer.createGeometryForText(text, font);
+    textGeometries[text]= textGeometry;
+
+    std::vector<rv::VertexPosTexCoords> vertices;
+    for (int i = 0; i < textGeometry.positions.size();i++)
+    {
+      rv::VertexPosTexCoords vertex;
+      vertex.pos = textGeometry.positions[i];
+      vertex.texCoords = textGeometry.texCoords[i];
+      vertices.push_back(vertex);
+    }
+
+    textVertexBuffers[text] = renderer.createBuffer(vertices.data(),
+                                                     vertices.size() * sizeof (rv::VertexPosTexCoords),
+                                                     rv::BufferUsage::Vertex);
+
+    textIndexBuffers[text] = renderer.createBuffer(textGeometry.indices.data(),
+                                                    textGeometry.indices.size() * sizeof(uint32_t),
+                                                    rv::BufferUsage::Index);
+  }
+
+  prd.vertexBuffer = textVertexBuffers[text];
+  prd.indexBuffer = textIndexBuffers[text];
+  prd.indexCount = textGeometries[text].indices.size();
+  framePrimitives.push_back(prd);
+
+}
+
 void tz::ImmediateCommandProcessor::renderQuad(Transform transform, RenderHints renderHints)
 {
   PrimitiveRenderData prd;
@@ -56,8 +102,9 @@ void tz::ImmediateCommandProcessor::renderCylinder(Transform transform, RenderHi
   throw std::runtime_error("not yet implemented: renderCylinder!");
 }
 tz::ImmediateCommandProcessor::ImmediateCommandProcessor(tz::render::vulkan::Renderer& renderer,
+                                                         tz::render::TextRenderer& textRenderer,
                                                          MasterPipelineLayout& masterPipelineLayout)
-    : renderer(renderer), masterPipelineLayout(masterPipelineLayout)
+    : renderer(renderer), textRenderer(textRenderer), masterPipelineLayout(masterPipelineLayout)
 {
 
   buildPSOCache();
