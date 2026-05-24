@@ -14,7 +14,7 @@ class TZ_API ImmediateCommandProcessor
 {
 
   public:
-  ImmediateCommandProcessor(tz::render::vulkan::Renderer& renderer);
+  ImmediateCommandProcessor(tz::render::vulkan::Renderer& renderer, MasterPipelineLayout& masterPipelineLayout);
   void activate3DCamera();
   void activate3DCamera(Eigen::Vector3f position, Eigen::Vector3f lookAt);
   void activateUICamera();
@@ -45,15 +45,12 @@ class TZ_API ImmediateCommandProcessor
       rv::PipelineStateObject* colorOnlyPSO = nullptr;
       rv::CommandBuffer* commandBuffer = nullptr;
 
-      rv::DescriptorSet* cameraDescriptorSet = nullptr;
       rv::DescriptorSet* perObjectDescriptorSet = nullptr;
-      rv::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
-      rv::PipelineLayout* masterPipelineLayout = nullptr;
+      MasterPipelineLayout& masterPipelineLayout;
 
       render::vulkan::Renderer &renderer;
 
       void buildPSOCache();
-      void createMasterPipelineLayout();
       std::vector<PrimitiveRenderData> getRenderPrimitivesByCamera(Camera *camera);
       void renderPrimitives(const std::vector<PrimitiveRenderData> &primitives,
                             uint32_t &primitiveCounter);

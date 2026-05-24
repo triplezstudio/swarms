@@ -55,10 +55,11 @@ void tz::ImmediateCommandProcessor::renderCylinder(Transform transform, RenderHi
 {
   throw std::runtime_error("not yet implemented: renderCylinder!");
 }
-tz::ImmediateCommandProcessor::ImmediateCommandProcessor(tz::render::vulkan::Renderer& renderer) : renderer(renderer)
+tz::ImmediateCommandProcessor::ImmediateCommandProcessor(tz::render::vulkan::Renderer& renderer,
+                                                         MasterPipelineLayout& masterPipelineLayout)
+    : renderer(renderer), masterPipelineLayout(masterPipelineLayout)
 {
 
-  createMasterPipelineLayout();
   buildPSOCache();
   commandBuffer = renderer.createCommandBuffer();
 
@@ -111,37 +112,6 @@ tz::ImmediateCommandProcessor::ImmediateCommandProcessor(tz::render::vulkan::Ren
                                                 rv::BufferUsage::Index);
   }
 }
-void tz::ImmediateCommandProcessor::createMasterPipelineLayout() {
-
-    // Camera is set0, binding0
-    auto cameraBuffer = renderer.createMultiframeUniformBuffer(2, sizeof(rv::CameraUniformBufferObject));
-    auto cameraUBOBinding = renderer.createDescriptorBinding(0,
-                                                                      rv::DescriptorResourceType::Ubo,
-                                                                      rv::ShaderType::Vertex, 1,
-                                                                      cameraBuffer);
-    auto cameraDescriptorSetLayout =  (renderer.createDescriptorSetLayout({cameraUBOBinding}));
-    cameraDescriptorSet = renderer.createMultiframeDescriptorSet(cameraDescriptorSetLayout);
-
-    // PerObject is set1, binding0
-    auto perObjectBuffer = renderer.createMultiframeUniformBuffer(10000, sizeof(rv::PerObjectUniformBufferObject));
-    auto perObjectUBOBinding = renderer.createDescriptorBinding(0, rv::DescriptorResourceType::Ubo,
-                                                                 rv::ShaderType::Vertex, 1,
-                                                                 perObjectBuffer);
-    auto perObjectDescriptorSetLayout = renderer.createDescriptorSetLayout({perObjectUBOBinding});
-    perObjectDescriptorSet = renderer.createMultiframeDescriptorSet(perObjectDescriptorSetLayout);
-
-    // Diffuse textures at set2, binding0.
-    // We allow up to 1000 textures
-    auto textureDescBinding = renderer.createDescriptorBinding(0, rv::DescriptorResourceType::Sampler,
-                                                                rv::ShaderType::Fragment, 1000, nullptr, nullptr);
-
-    auto diffuseTextureDescriptorSetLayout = renderer.createDescriptorSetLayout({textureDescBinding}, true);
-    diffuseTextureDescriptorSet = renderer.createMultiframeDescriptorSet(diffuseTextureDescriptorSetLayout);
-
-    masterPipelineLayout = renderer.createPipelineLayout({cameraDescriptorSetLayout, perObjectDescriptorSetLayout, diffuseTextureDescriptorSetLayout});
-
-}
-
 
 std::vector<tz::PrimitiveRenderData> tz::ImmediateCommandProcessor::getRenderPrimitivesByCamera(Camera* camera)
 {
@@ -202,7 +172,7 @@ tz::render::vulkan::PipelineStateObject* tz::ImmediateCommandProcessor::createCo
   auto pso = renderer.createPipelineStateObject(renderState,
                                                  shaderPipeline,
                                                  vertexLayout,
-                                                 masterPipelineLayout);
+                                                 masterPipelineLayout.getPipelineLayoutPtr());
 
   return pso;
 }
@@ -256,7 +226,7 @@ tz::render::vulkan::PipelineStateObject* tz::ImmediateCommandProcessor::createTe
   auto pso = renderer.createPipelineStateObject(renderState,
                                                  shaderPipeline,
                                                  vertexLayout,
-                                                 masterPipelineLayout);
+                                                 masterPipelineLayout.getPipelineLayoutPtr());
   return pso;
 }
 
@@ -311,7 +281,7 @@ tz::render::vulkan::PipelineStateObject* tz::ImmediateCommandProcessor::createTe
   auto pso = renderer.createPipelineStateObject(renderState,
                                                  shaderPipeline,
                                                  vertexLayout,
-                                                 masterPipelineLayout);
+                                                 masterPipelineLayout.getPipelineLayoutPtr());
   return pso;
 }
 
@@ -359,9 +329,9 @@ void tz::ImmediateCommandProcessor::renderPrimitives(const std::vector<Primitive
     rv::PerObjectUniformBufferObject perObjectUBO;
     perObjectUBO.model = tm;
     perObjectUBO.textureId = prd.renderHints.texture;
-    renderer.updateBuffer(perObjectDescriptorSet->layout->descriptorBindings[0]->buffer, &perObjectUBO, sizeof(rv::PerObjectUniformBufferObject),
+    renderer.updateBuffer(masterPipelineLayout.getPerObjectDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &perObjectUBO, sizeof(rv::PerObjectUniformBufferObject),
                            primitiveCounter);
-    renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({perObjectDescriptorSet}, masterPipelineLayout, {primitiveCounter}, 1));
+    renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getPerObjectDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {primitiveCounter}, 1));
 
     renderer.recordCommand(commandBuffer, new rv::CmdSetViewPorts({{0, 0, 640, 480}}));
     renderer.recordCommand(commandBuffer, new rv::CmdSetScissors({{0, 0, 640, 480}}));
@@ -383,7 +353,7 @@ void tz::ImmediateCommandProcessor::render() {
   // We can bind our diffuseTextureDescriptorSet once at the beginning of the frame.
   // This descriptorSet contains slots for up to 1000 textures.
   // The actual texture is then just indexed by the individual rendered object (see renderPrimitives)
-  renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({diffuseTextureDescriptorSet}, masterPipelineLayout, {0}, 2));
+  renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getDiffuseTextureDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {0}, 2));
 
 
   // We are rendering the scene ordered by "camera".
@@ -395,8 +365,8 @@ void tz::ImmediateCommandProcessor::render() {
   rv::CameraUniformBufferObject cameraUBO;
   cameraUBO.view = default3DCamera->lookAtRH();
   cameraUBO.proj = default3DCamera->getProjectionMatrix(640, 480);
-  renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {0}, 0));
-  renderer.updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(rv::CameraUniformBufferObject),
+  renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getCameraDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {0}, 0));
+  renderer.updateBuffer(masterPipelineLayout.getCameraDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(rv::CameraUniformBufferObject),
                          0);
   
   uint32_t primitiveCounter = 0;
@@ -406,9 +376,9 @@ void tz::ImmediateCommandProcessor::render() {
   auto cameraUIPrimitives = getRenderPrimitivesByCamera(defaultUICamera);
   cameraUBO.view = defaultUICamera->lookAtRH();
   cameraUBO.proj = defaultUICamera->getProjectionMatrix(640, 480);
-  renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({cameraDescriptorSet}, masterPipelineLayout, {1}, 0));
+  renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getCameraDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {1}, 0));
 
-  renderer.updateBuffer(cameraDescriptorSet->layout->descriptorBindings[0]->buffer, &cameraUBO,
+  renderer.updateBuffer(masterPipelineLayout.getCameraDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &cameraUBO,
                          sizeof(rv::CameraUniformBufferObject),
                          1);
   renderPrimitives(cameraUIPrimitives, primitiveCounter);

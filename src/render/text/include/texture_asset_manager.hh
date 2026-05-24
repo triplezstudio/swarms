@@ -24,7 +24,9 @@ namespace tz {
 class TextureAssetManager
 {
 public:
-  explicit TextureAssetManager(render::vulkan::Renderer& renderer): renderer(renderer)
+  explicit TextureAssetManager(render::vulkan::Renderer& renderer,
+                                 render::vulkan::DescriptorSet& textureDescriptorSet): renderer(renderer),
+      diffuseTextureDescriptorSet(textureDescriptorSet)
   {
 
   }
@@ -42,6 +44,9 @@ public:
     auto image = renderer.createImage(bmData);
     auto texture = renderer.createTexture(image);
     auto idx = registerTexture(imagePath);
+    renderer.updateTextureDescriptorSet(&diffuseTextureDescriptorSet, 0, idx, texture);
+
+
     textureArray[idx] = texture;
     return idx;
   }
@@ -88,6 +93,7 @@ public:
   std::map<std::string, int> textureIndexMap;
   std::array<render::vulkan::Texture*, 1000> textureArray {};
   render::vulkan::Renderer& renderer;
+  render::vulkan::DescriptorSet& diffuseTextureDescriptorSet;
 
 };
 

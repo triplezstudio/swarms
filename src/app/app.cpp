@@ -14,9 +14,11 @@ App::App(int width, int height, const std::string& title) :inputSystem(tz::input
 
   window = new tz::Window(width, height, title);
   renderer = new rv::Renderer(window);
-  textureAssetManager = new tz::TextureAssetManager(*renderer);
+  masterPipelineLayout = new MasterPipelineLayout(*renderer);
+  immediateCommandProcessor = new ImmediateCommandProcessor(*renderer, *masterPipelineLayout);
+
+  textureAssetManager = new tz::TextureAssetManager(*renderer, masterPipelineLayout->getDiffuseTextureDescriptorSet());
   textRenderer = new tz::render::TextRenderer(*renderer, *textureAssetManager);
-  immediateCommandProcessor = new ImmediateCommandProcessor(*renderer);
 
 
 
@@ -99,14 +101,6 @@ void App::updateFrameListeners(float frameTime)
 float App::getLastFrameTime()
 {
   return 16.667f;
-}
-uint32_t App::createTexture(const std::string &imagePath)
-{
-  auto bitmapData = rv::loadBitmapDataFromPath(imagePath);
-  auto image = renderer->createImage(bitmapData);
-  auto texture = renderer->createTexture(image);
-  renderer->updateTextureDescriptorSet(diffuseTextureDescriptorSet, 0, globalTextureIndex, texture);
-  return globalTextureIndex++;
 }
 
 void tz::App::setInputListenerFunc(InputListener il) {

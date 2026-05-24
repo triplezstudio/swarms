@@ -72,6 +72,7 @@ struct alignas(16) TransformUniformBufferObject
       rv::Renderer* renderer = nullptr;
       tz::TextureAssetManager* textureAssetManager = nullptr;
       tz::render::TextRenderer* textRenderer = nullptr;
+      tz::MasterPipelineLayout* masterPipelineLayout = nullptr;
 
       std::vector<FrameListener> frameListeners;
       std::vector<InputListener> inputListeners;
@@ -84,16 +85,7 @@ struct alignas(16) TransformUniformBufferObject
       std::map<int, uint32_t> fontTextureMap;
       uint32_t tzLabelIndexCount = 0;
 
-
-      rv::DescriptorSet* cameraDescriptorSet = nullptr;
-      rv::DescriptorSet* perObjectDescriptorSet = nullptr;
-      rv::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
-      rv::PipelineLayout* masterPipelineLayout = nullptr;
-
-      uint32_t globalTextureIndex = 0;
-
       void updateFrameListeners(float frameTime);
-      rv::PipelineStateObject* createColorOnlyPSO();
 
       void renderFrame();
       render::vulkan::Renderer *vulkanRenderer();

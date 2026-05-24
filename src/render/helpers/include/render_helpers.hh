@@ -235,7 +235,80 @@ class Camera
 };
 
 
+class MasterPipelineLayout
+{
+  public:
+  MasterPipelineLayout(rv::Renderer& renderer)
+  {
+    // Camera is set0, binding0
+    auto cameraBuffer = renderer.createMultiframeUniformBuffer(2, sizeof(rv::CameraUniformBufferObject));
+    auto cameraUBOBinding = renderer.createDescriptorBinding(0,
+                                                             rv::DescriptorResourceType::Ubo,
+                                                             rv::ShaderType::Vertex, 1,
+                                                             cameraBuffer);
+    auto cameraDescriptorSetLayout =  (renderer.createDescriptorSetLayout({cameraUBOBinding}));
+    cameraDescriptorSet = renderer.createMultiframeDescriptorSet(cameraDescriptorSetLayout);
 
+    // PerObject is set1, binding0
+    auto perObjectBuffer = renderer.createMultiframeUniformBuffer(10000, sizeof(rv::PerObjectUniformBufferObject));
+    auto perObjectUBOBinding = renderer.createDescriptorBinding(0, rv::DescriptorResourceType::Ubo,
+                                                                rv::ShaderType::Vertex, 1,
+                                                                perObjectBuffer);
+    auto perObjectDescriptorSetLayout = renderer.createDescriptorSetLayout({perObjectUBOBinding});
+    perObjectDescriptorSet = renderer.createMultiframeDescriptorSet(perObjectDescriptorSetLayout);
+
+    // Diffuse textures at set2, binding0.
+    // We allow up to 1000 textures
+    auto textureDescBinding = renderer.createDescriptorBinding(0, rv::DescriptorResourceType::Sampler,
+                                                               rv::ShaderType::Fragment, 1000, nullptr, nullptr);
+
+    auto diffuseTextureDescriptorSetLayout = renderer.createDescriptorSetLayout({textureDescBinding}, true);
+    diffuseTextureDescriptorSet = renderer.createMultiframeDescriptorSet(diffuseTextureDescriptorSetLayout);
+
+    masterPipelineLayout = renderer.createPipelineLayout({cameraDescriptorSetLayout, perObjectDescriptorSetLayout, diffuseTextureDescriptorSetLayout});
+
+  }
+
+  rv::DescriptorSet* getPerObjectDescriptorSetPtr()
+  {
+    return perObjectDescriptorSet;
+  }
+
+  rv::DescriptorSet& getDiffuseTextureDescriptorSet() {
+    return *diffuseTextureDescriptorSet;
+  }
+
+  rv::DescriptorSet* getDiffuseTextureDescriptorSetPtr() {
+    return diffuseTextureDescriptorSet;
+  }
+
+  rv::PipelineLayout& getPipelineLayout() {
+    return *masterPipelineLayout;
+  }
+
+  rv::PipelineLayout* getPipelineLayoutPtr()
+  {
+    return masterPipelineLayout;
+  }
+
+  rv::DescriptorSet& getCameraDescriptorSet()
+  {
+    return *cameraDescriptorSet;
+  }
+
+  rv::DescriptorSet* getCameraDescriptorSetPtr()
+  {
+    return cameraDescriptorSet;
+  }
+
+  private:
+  rv::DescriptorSet* cameraDescriptorSet = nullptr;
+  rv::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
+  rv::DescriptorSet* perObjectDescriptorSet = nullptr;
+  rv::PipelineLayout* masterPipelineLayout = nullptr;
+
+
+};
 
 
 struct PrimitiveRenderData
