@@ -33,6 +33,9 @@ void initialize(tz::App* app)
   app->addScene("uiScene", uiScene, 1);
   app->addScene("main3DScene", main3DScene, 2);
 
+  auto buttonNode = new tz::SceneNode({{500, 300, -3}, {128, 128, 1}}, tz::PrimitiveGeometryType::Quad);
+  uiScene->addNode(*buttonNode);
+
 
 }
 

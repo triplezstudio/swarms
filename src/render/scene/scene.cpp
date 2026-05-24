@@ -1,5 +1,6 @@
 
 #include "include/scene.hh"
+#include <immediate_commands.hh>
 
 /*
  * We prepare all needed vulkan and other render helper objects
@@ -8,19 +9,8 @@
 tz::Scene::Scene(Camera &camera, rv::Renderer& renderer) : camera(camera), renderer(renderer)
 {
 
-  createMasterPipelineLayout();
-  //prepareRenderPrimitives();
-  psoCache = new tz::render::vulkan::PipelineStateObjectCache();
-  commandBuffer = renderer.createCommandBuffer();
-
-
-}
-
-
-
-void tz::Scene::createMasterPipelineLayout()
-{
-
+  masterPipelineLayout = new MasterPipelineLayout(renderer);
+  immediateCommandProcessor = new tz::ImmediateCommandProcessor(renderer, *masterPipelineLayout);
 
 }
 
@@ -30,17 +20,43 @@ void tz::Scene::addNode(SceneNode &node)
   nodes.push_back(node);
 }
 
-
-/**
- * This method creates render commands based on the current nodes, lights and camera.
- * @return A list of commands which should be self-contained to be sent as is to the GPU
- *         for rendering.
- */
-std::vector<tz::render::vulkan::Command> tz::Scene::getRenderCommands()
+tz::render::vulkan::CommandBuffer& tz::Scene::recordFrameCommandBuffer()
 {
-  for (auto& sn : nodes)
+  if (camera.type == CameraType::Perspective)
   {
-    auto pos = sn.transform.position;
+    immediateCommandProcessor->activate3DCamera(camera.pos, camera.lookAt);
   }
-  return std::vector<tz::render::vulkan::Command>();
+  else
+  {
+    immediateCommandProcessor->activateUICamera(camera.pos);
+  }
+
+  // We create immediate_mode commands based on the nodes in our scene.
+  // So we can reuse the capabilities of the immediate-command-processor
+  // to create actual vulkan render commands.
+  for (auto& node : nodes)
+  {
+    if (node.geometryType == PrimitiveGeometryType::Quad) {
+      immediateCommandProcessor->renderQuad(node.transform);
+    }
+    else if (node.geometryType == PrimitiveGeometryType::Cube)
+    {
+      immediateCommandProcessor->renderCube(node.transform);
+    }
+  }
+
+  auto& frameCommandBuffer = immediateCommandProcessor->recordFrameCommandBuffer();
+  framePrimitives.clear();
+  return frameCommandBuffer;
+
 }
+
+void tz::Scene::render()
+{
+
+  immediateCommandProcessor->recordAndSubmitFrameCommandBuffer();
+  framePrimitives.clear();
+
+}
+
+

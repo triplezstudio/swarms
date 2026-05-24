@@ -28,7 +28,7 @@ struct TextGeometry
 
 
 /**
- * This class manages fonts and offers functions to render
+ * This class manages fonts and offers functions to recordAndSubmitFrameCommandBuffer
  * text to a vertex buffer.
  *
  */

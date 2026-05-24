@@ -4,6 +4,7 @@
 
 #ifndef SWARMS_SCENE_HH
 #define SWARMS_SCENE_HH
+#include "immediate_commands.hh"
 #include <render_helpers.hh>
 #include <text_render.hh>
 
@@ -29,10 +30,10 @@ class SceneNode
  * and maybe another one in 3d, which "films" the world from above
  * to produce a top-down mini-map.
  *
- * Each scene has a render target, either the main framebuffer,
+ * Each scene has a recordAndSubmitFrameCommandBuffer target, either the main framebuffer,
  * so it would just show up directly on the display, or a
- * render-texture.
- * For the example above, the top-down-scene would render into a texture,
+ * recordAndSubmitFrameCommandBuffer-texture.
+ * For the example above, the top-down-scene would recordAndSubmitFrameCommandBuffer into a texture,
  * which the 2d ui scene would then use to draw the mini-map in a certain are of the screen.
  */
 class TZ_API Scene
@@ -42,7 +43,13 @@ public:
   void addNode(SceneNode& node);
   void removeNode(SceneNode& node);
 
-  std::vector<tz::render::vulkan::Command> getRenderCommands();
+  void render();
+
+  // Records the commands into the commandbuffer for the current frame,
+  // but does not submit the cmdbuffer to the queue.
+  // This allows for deferred submission and collecting different comandbuffers
+  // and submit them in a batch.
+  render::vulkan::CommandBuffer &recordFrameCommandBuffer();
 
 
 private:
@@ -76,15 +83,14 @@ private:
   rv::DescriptorSet* cameraDescriptorSet = nullptr;
   rv::DescriptorSet* perObjectDescriptorSet = nullptr;
   rv::DescriptorSet* diffuseTextureDescriptorSet = nullptr;
-  rv::PipelineLayout* masterPipelineLayout = nullptr;
+  MasterPipelineLayout* masterPipelineLayout = nullptr;
   rv::PipelineStateObjectCache *psoCache = nullptr;
 
   Camera* default3DCamera = nullptr;
   Camera* defaultUICamera = nullptr;
   Camera* activeRenderCamera = nullptr;
 
-  void createMasterPipelineLayout();
-
+  ImmediateCommandProcessor *immediateCommandProcessor = nullptr;
 
 };
 

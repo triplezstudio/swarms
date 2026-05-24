@@ -745,7 +745,7 @@ class TZ_API Renderer
   Image * createImage(BitmapData bitmapData);
   ImageView * createImageView(Image* image) ;
   Sampler * createSampler() ;
-  void beginCommandBuffer(CommandBuffer *cb);
+  void beginCommandBuffer(CommandBuffer *cb, bool clearBackBuffer = false);
   void endCommandBuffer(CommandBuffer *cb);
   void recordCommand(CommandBuffer* cb, Command *cmd);
   PipelineLayout * createPipelineLayout(std::vector<DescriptorSetLayout *> descriptorSetLayouts);
@@ -754,6 +754,8 @@ class TZ_API Renderer
   vk::raii::PipelineLayout createPipelineLayout(std::vector<vk::DescriptorSetLayout> descriptorSetLayouts);
 
   void updateBuffer(Buffer *buffer, void *data, size_t sizeInBytes, uint32_t offset);
+
+  void submitCommandBuffers(std::vector<CommandBuffer *> &commandBuffers);
 
   private:
   void initSurface();
@@ -859,6 +861,8 @@ class TZ_API Renderer
   uint32_t getAlignedStride(size_t size, uint32_t minAlignment);
   vk::FrontFace toVulkanFrontFace(FrontFace frontFace);
   vk::CullModeFlags toVulkanCullMode(CullMode cullMode);
+  std::vector<vk::CommandBuffer> getCommandBuffersForCurrentFrame(
+    std::vector<CommandBuffer *> &cbs);
 };
 
 vk::DescriptorType toVulkanDescriptorType(DescriptorResourceType resourceType);

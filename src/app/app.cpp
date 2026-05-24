@@ -55,20 +55,29 @@ void App::renderScenes()
 {
   for (auto& scene: layerSortedScenes)
   {
-    auto renderCommands = scene->getRenderCommands();
-    for (auto& rc : renderCommands)
-    {
-
-    }
+    scene->render();
   }
+}
+
+std::vector<tz::render::vulkan::CommandBuffer*> App::recordCommandBuffesForScenes()
+{
+  std::vector<tz::render::vulkan::CommandBuffer*> frameCommandBuffers;
+  for (auto& scene: layerSortedScenes)
+  {
+    frameCommandBuffers.push_back(&scene->recordFrameCommandBuffer());
+  }
+
+  return frameCommandBuffers;
+}
+
+render::vulkan::CommandBuffer &App::recordImmediateCommandBuffers()
+{
+  return immediateCommandProcessor->recordFrameCommandBuffer();
 }
 
 void App::renderImmediateCommands()
 {
-
-  immediateCommandProcessor->render();
-
-
+  immediateCommandProcessor->recordAndSubmitFrameCommandBuffer();
 }
 
 
@@ -76,8 +85,23 @@ void App::renderFrame()
 {
   renderer->beginFrame();
 
-  renderScenes();
-  renderImmediateCommands();
+  // Currently this "mainFrameCommandBuffer" just does the main backbuffer clearing:
+  static rv::CommandBuffer* mainFrameCommandBuffer = renderer->createCommandBuffer();
+  renderer->beginCommandBuffer(mainFrameCommandBuffer, true);
+  renderer->endCommandBuffer(mainFrameCommandBuffer);
+
+  std::vector<rv::CommandBuffer*> frameCommandBuffers;
+  frameCommandBuffers.push_back(mainFrameCommandBuffer);
+
+  auto sceneCommandBuffers = recordCommandBuffesForScenes();
+  auto& immediateCommandBuffer = recordImmediateCommandBuffers();
+  sceneCommandBuffers.push_back(&immediateCommandBuffer);
+  for (auto & cb: sceneCommandBuffers)
+  {
+    frameCommandBuffers.push_back(cb);
+  }
+
+  renderer->submitCommandBuffers(frameCommandBuffers);
 
   renderer->endFrame();
 

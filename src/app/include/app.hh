@@ -101,6 +101,8 @@ struct alignas(16) TransformUniformBufferObject
       std::map<Scene*, uint32_t> sceneLayerMap;
       void renderScenes();
       void renderImmediateCommands();
+      std::vector<render::vulkan::CommandBuffer *> recordCommandBuffesForScenes();
+      render::vulkan::CommandBuffer &recordImmediateCommandBuffers();
   };
 
 

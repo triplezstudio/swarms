@@ -46,9 +46,30 @@ void tz::render::vulkan::Renderer::beginFrame()
 
 void tz::render::vulkan::Renderer::endFrame()
 {
+  const vk::PresentInfoKHR presentInfoKhr {
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &*renderFinishedSemaphores[currentFrameIndex],
+    .swapchainCount = 1,
+    .pSwapchains = &*swapChain,
+    .pImageIndices = &imageIndex};
 
+  auto result = graphicsQueue.presentKHR(presentInfoKhr);
 }
 
+void Renderer::submitCommandBuffers(std::vector<CommandBuffer*>& commandBuffers)
+{
+  auto currentFrameCommandBuffers = getCommandBuffersForCurrentFrame(commandBuffers);
+  vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+  const vk::SubmitInfo submitInfo {.waitSemaphoreCount = 1,
+                                  .pWaitSemaphores = &*presentCompleteSemaphores[currentFrameIndex],
+                                  .pWaitDstStageMask = &waitDestinationStageMask,
+                                  .commandBufferCount = static_cast<uint32_t>(commandBuffers.size()),
+                                  .pCommandBuffers = currentFrameCommandBuffers.data(),
+                                  .signalSemaphoreCount = 1,
+                                  .pSignalSemaphores = &*renderFinishedSemaphores[currentFrameIndex]};
+
+  graphicsQueue.submit(submitInfo, *drawFences[currentFrameIndex]);
+}
 
 void Renderer::submitCommandBuffer(CommandBuffer* cb)
 {
@@ -64,14 +85,7 @@ void Renderer::submitCommandBuffer(CommandBuffer* cb)
 
   graphicsQueue.submit(submitInfo, *drawFences[currentFrameIndex]);
 
-  const vk::PresentInfoKHR presentInfoKhr {
-    .waitSemaphoreCount = 1,
-    .pWaitSemaphores = &*renderFinishedSemaphores[currentFrameIndex],
-    .swapchainCount = 1,
-    .pSwapchains = &*swapChain,
-    .pImageIndices = &imageIndex};
 
-  auto result = graphicsQueue.presentKHR(presentInfoKhr);
 
 
 }
@@ -843,6 +857,17 @@ CommandBuffer *Renderer::createCommandBuffer()
 
 }
 
+std::vector<vk::CommandBuffer> Renderer::getCommandBuffersForCurrentFrame(std::vector<CommandBuffer*>& cbs)
+{
+  std::vector<vk::CommandBuffer> vkCommandBuffers;
+  for (auto& cb : cbs)
+  {
+    auto& cfb = dynamic_cast<CommandBuffer *>(cb)->getCommandBufferForImage(currentFrameIndex);
+    vkCommandBuffers.push_back(cfb);
+  }
+  return vkCommandBuffers;
+}
+
 vk::raii::CommandBuffer& Renderer::getCommandBufferForCurrentFrame(CommandBuffer* cb)
 {
   auto& cfb = dynamic_cast<CommandBuffer *>(cb)->getCommandBufferForImage(currentFrameIndex);
@@ -856,13 +881,13 @@ vk::raii::CommandBuffer& Renderer::getCommandBufferForCurrentFrame(CommandBuffer
  * vulkan command buffers as we have "framesInFlight".
  * So for example 2 for double buffering, 3 for triple buffering and so on.
  * First thing is always to grab the actual current vulkan commandbuffer to
- * render into.
+ * recordAndSubmitFrameCommandBuffer into.
  *
- * We are also currently implicitely clearing the main swapchain "framebuffer" now.
+ * We are also currently implicitly clearing the main swapChain "framebuffer" now.
  *
- * @param cb    The "logical" API commandbuffer object. Wrapper for the real vulkan command buffers.
+ * @param cb    The "logical" API commandBuffer object. Wrapper for the real vulkan command buffers.
  */
-void Renderer::beginCommandBuffer(CommandBuffer *cb)
+void Renderer::beginCommandBuffer(CommandBuffer *cb, bool clearBackBuffer)
 {
 
   auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
@@ -883,7 +908,7 @@ void Renderer::beginCommandBuffer(CommandBuffer *cb)
   vk::RenderingAttachmentInfo attachmentInfo;
   attachmentInfo.setImageView(swapChainImageViews[imageIndex])
     .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
-    .setLoadOp(vk::AttachmentLoadOp::eClear)
+    .setLoadOp(clearBackBuffer ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad)
     .setStoreOp(vk::AttachmentStoreOp::eStore)
     .setClearValue(clearColor);
 

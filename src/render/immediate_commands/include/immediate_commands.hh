@@ -25,7 +25,8 @@ class TZ_API ImmediateCommandProcessor
   void renderSphere(Transform transform, RenderHints renderHints = {});
   void renderCylinder(Transform transform, RenderHints renderHints = {});
 
-  void render();
+  void recordAndSubmitFrameCommandBuffer();
+  render::vulkan::CommandBuffer &recordFrameCommandBuffer();
 
   private:
       Camera* default3DCamera = nullptr;
@@ -58,6 +59,7 @@ class TZ_API ImmediateCommandProcessor
       render::vulkan::PipelineStateObject *createTextPSO();
       render::vulkan::PipelineStateObject *createTexturedPSO();
       render::vulkan::PipelineStateObject *createColorOnlyPSO();
+
 };
 }
 

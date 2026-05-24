@@ -344,10 +344,13 @@ void tz::ImmediateCommandProcessor::renderPrimitives(const std::vector<Primitive
   }
 }
 
-
-void tz::ImmediateCommandProcessor::render() {
-
-
+/**
+ * Records the commands for the current frame into the commandbuffer
+ * and returns a reference to it.
+ * @return
+ */
+tz::render::vulkan::CommandBuffer& tz::ImmediateCommandProcessor::recordFrameCommandBuffer()
+{
   renderer.beginCommandBuffer(commandBuffer);
 
   // We can bind our diffuseTextureDescriptorSet once at the beginning of the frame.
@@ -367,8 +370,8 @@ void tz::ImmediateCommandProcessor::render() {
   cameraUBO.proj = default3DCamera->getProjectionMatrix(640, 480);
   renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getCameraDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {0}, 0));
   renderer.updateBuffer(masterPipelineLayout.getCameraDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(rv::CameraUniformBufferObject),
-                         0);
-  
+                        0);
+
   uint32_t primitiveCounter = 0;
   renderPrimitives(camera3DPrimitives, primitiveCounter);
 
@@ -379,13 +382,20 @@ void tz::ImmediateCommandProcessor::render() {
   renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getCameraDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {1}, 0));
 
   renderer.updateBuffer(masterPipelineLayout.getCameraDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &cameraUBO,
-                         sizeof(rv::CameraUniformBufferObject),
-                         1);
+                        sizeof(rv::CameraUniformBufferObject),
+                        1);
   renderPrimitives(cameraUIPrimitives, primitiveCounter);
 
   renderer.endCommandBuffer(commandBuffer);
-  renderer.submitCommandBuffer(commandBuffer);
-
 
   framePrimitives.clear();
+
+  return *commandBuffer;
+
+}
+void tz::ImmediateCommandProcessor::recordAndSubmitFrameCommandBuffer()
+{
+  recordFrameCommandBuffer();
+  renderer.submitCommandBuffer(commandBuffer);
+
 }
