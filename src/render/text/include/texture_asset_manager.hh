@@ -43,11 +43,12 @@ public:
     auto texture = renderer.createTexture(image);
     auto idx = registerTexture(imagePath);
     textureArray[idx] = texture;
+    return idx;
   }
 
   int registerTexture(const std::string& name)
   {
-    if (textureIndexMap.contains(name))
+    if (!textureIndexMap.contains(name))
     {
       const auto id = textureIndex++;
       textureIndexMap[name] = id;

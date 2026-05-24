@@ -6,6 +6,7 @@
 #define SWARMS_RENDER_HELPERS_HH
 #include <Eigen/Dense>
 #include <vulkan_renderer.hh>
+#include <text_helper.hh>
 
 namespace tz
 {
@@ -36,20 +37,6 @@ struct Transform
   Eigen::Quaternionf orientation;
 };
 
-enum class VertexShaderType : int
-{
-  Static,
-  Skeletal
-};
-
-enum class MaterialType
-{
-  SingleColor,
-  DiffuseNormal,
-  PBR,
-  Text,
-};
-
 namespace rv = render::vulkan;
 /**
  * Intended use is for selecting PSOs efficiently.
@@ -60,30 +47,98 @@ namespace rv = render::vulkan;
 struct RenderHints
 {
 
-  MaterialType materialType = MaterialType::SingleColor;
-  VertexShaderType vertexShaderType = VertexShaderType::Static;
+  rv::MaterialType materialType = rv::MaterialType::SingleColor;
+  rv::VertexShaderType vertexShaderType = rv::VertexShaderType::Static;
   bool wireframe = false;
   bool depthTest = true;
   bool blending = true;
   rv::CullMode cullMode = rv::CullMode::Back;
   uint32_t texture;
 
-  uint64_t getHash() const
+  rv::PSOCacheKey toCacheKey() const
   {
-    uint64_t key = 0;
-    key |= (static_cast<int>(materialType) & 0xFF);
-    key |= (static_cast<int>(vertexShaderType) & 0xFF) << 8;
-    key |= (wireframe? 1 : 0) << 16;
-    key |= (depthTest? 1 : 0) << 17;
-    key |= (blending? 1: 0)  << 18;
-    key |= (static_cast<int>(cullMode) & 0xFF) << 19;
+    rv::PSOCacheKey ck;
+    ck.materialType = materialType;
+    ck.vertexShaderType = vertexShaderType;
+    ck.wireframe = wireframe;
+    ck.depthTest = depthTest;
+    ck.blending = blending;
+    ck.cullMode = cullMode;
 
-    return key;
-
-
+    return ck;
   }
+
 };
 
+
+inline void fillWithQuadVertices(std::vector<rv::VertexPos>& out)
+{
+  out = {{{-0.5, 0.5, 0.5}},
+         {{-0.5, -0.5, 0.5}},
+         {{0.5, -0.5, 0.5}},
+         {{0.5, 0.5, 0.5}}};
+}
+
+
+inline void fillWithQuadVertices(std::vector<rv::VertexPosTexCoords>& out)
+{
+
+  out =
+    {
+      {{-0.5, 0.5, 0.5}, {0, 1}},
+      {{-0.5, -0.5, 0.5}, {0, 0}},
+      {{0.5, -0.5, 0.5},  {1, 0}},
+      {{0.5, 0.5, 0.5}, {1, 1}}
+    };
+
+}
+
+inline void fillWithCubeVertices(std::vector<rv::VertexPosTexCoords>& out)
+{
+  out = {
+    // Front face (Z = 1.0f)
+    {{-.5f, -.5f,  .5f}, {0.0f, 0.0f}}, {{ .5f, -.5f,  .5f}, {1.0f, 0.0f}},
+    {{ .5f,  .5f,  .5f}, {1.0f, 1.0f}}, {{-.5f,  .5f,  .5f}, {0.0f, 1.0f}},
+
+    // Back face (Z = -1.0f)
+    {{ .5f, -.5f, -.5f}, {0.0f, 0.0f}}, {{-.5f, -.5f, -.5f}, {1.0f, 0.0f}},
+    {{-.5f,  .5f, -.5f}, {1.0f, 1.0f}}, {{ .5f,  .5f, -.5f}, {0.0f, 1.0f}},
+
+    // Left face (X = -1.0f)
+    {{-.5f, -.5f, -.5f}, {0.0f, 0.0f}}, {{-.5f, -.5f,  .5f}, {1.0f, 0.0f}},
+    {{-.5f,  .5f,  .5f}, {1.0f, 1.0f}}, {{-.5f,  .5f, -.5f}, {0.0f, 1.0f}},
+
+    // Right face (X = 1.0f)
+    {{ .5f, -.5f,  .5f}, {0.0f, 0.0f}}, {{ .5f, -.5f, -.5f}, {1.0f, 0.0f}},
+    {{ .5f,  .5f, -.5f}, {1.0f, 1.0f}}, {{ .5f,  .5f,  .5f}, {0.0f, 1.0f}},
+
+    // Top face (Y = 1.0f)
+    {{-.5f,  .5f,  .5f}, {0.0f, 0.0f}}, {{ .5f,  .5f,  .5f}, {1.0f, 0.0f}},
+    {{ .5f,  .5f, -.5f}, {1.0f, 1.0f}}, {{-.5f,  .5f, -.5f}, {0.0f, 1.0f}},
+
+    // Bottom face (Y = -1.0f)
+    {{-.5f, -.5f, -.5f}, {0.0f, 0.0f}}, {{ .5f, -.5f, -.5f}, {1.0f, 0.0f}},
+    {{ .5f, -.5f,  .5f}, {1.0f, 1.0f}}, {{-.5f, -.5f,  .5f}, {0.0f, 1.0f}}
+  };
+}
+
+inline void fillWithCubeVertices(std::vector<rv::VertexPos>& out)
+{
+   out = {
+    {{-.5f, -.5f,  .50f}}, // 0: Front-Bottom-Left
+    {{ .5f, -.5f,  .5f}}, // 1: Front-Bottom-Right
+    {{ .5f,  .5f,  .5f}}, // 2: Front-Top-Right
+    {{-.5f,  .5f,  .5f}}, // 3: Front-Top-Left
+    {{-.5f, -.5f, -.5f}}, // 4: Back-Bottom-Left
+    {{ .5f, -.5f, -.5f}}, // 5: Back-Bottom-Right
+    {{ .5f,  .5f, -.5f}}, // 6: Back-Top-Right
+    {{-.5f,  .5f, -.5f}}  // 7: Back-Top-Left
+  };
+}
+
+std::array<uint32_t, 6> TZ_API getQuadIndices();
+std::array<uint32_t, 36> TZ_API getCubeIndices();
+std::array<uint32_t, 36> TZ_API getCubeIndicesPosTex();
 
 enum class CameraType
 {
@@ -145,7 +200,7 @@ class Camera
 
       return m;
     }
-    else if (type == CameraType::Ortho)
+    else
     {
       float left = 0;
       float right = width;

@@ -43,3 +43,6 @@ add_custom_target(copy_assets ALL DEPENDS ${ASSET_OUTPUT_FILES})
 
 add_subdirectory(vulkan)
 add_subdirectory(text)
+add_subdirectory(helpers)
+add_subdirectory(scene)
+add_subdirectory(immediate_commands)

@@ -644,6 +644,73 @@ struct VertexPosTexCoords
   Eigen::Vector2f texCoords;
 };
 
+enum class VertexShaderType : int
+{
+  Static,
+  Skeletal
+};
+
+enum class MaterialType
+{
+  SingleColor,
+  DiffuseNormal,
+  PBR,
+  Text,
+};
+
+struct PSOCacheKey
+{
+  MaterialType materialType = MaterialType::SingleColor;
+  VertexShaderType vertexShaderType = VertexShaderType::Static;
+  bool wireframe = false;
+  bool depthTest = true;
+  bool blending = true;
+  CullMode cullMode = CullMode::Back;
+
+  uint64_t toHash() const
+  {
+    uint64_t key = 0;
+    key |= (static_cast<int>(materialType) & 0xFF);
+    key |= (static_cast<int>(vertexShaderType) & 0xFF) << 8;
+    key |= (wireframe? 1 : 0) << 16;
+    key |= (depthTest? 1 : 0) << 17;
+    key |= (blending? 1: 0)  << 18;
+    key |= (static_cast<int>(cullMode) & 0xFF) << 19;
+
+    return key;
+
+
+  }
+
+
+};
+
+struct PipelineStateObjectCache
+{
+
+  void put(PSOCacheKey key, PipelineStateObject* pso)
+  {
+    cacheMap[key.toHash()] = pso;
+  }
+
+  PipelineStateObject* get(PSOCacheKey key)
+  {
+
+    auto itty = cacheMap.find(key.toHash());
+    if (itty != cacheMap.end())
+    {
+      return itty->second;
+    }
+
+    return nullptr;
+
+  }
+
+  std::map<uint64_t, PipelineStateObject*> cacheMap;
+
+
+};
+
 
 /**
  * Renderer .
@@ -652,7 +719,7 @@ struct VertexPosTexCoords
 class TZ_API Renderer
 {
   public:
-      Renderer(tz::Window* window);
+  Renderer(tz::Window* window);
 
   void beginFrame() ;
   void endFrame() ;
@@ -796,4 +863,24 @@ class TZ_API Renderer
 
 vk::DescriptorType toVulkanDescriptorType(DescriptorResourceType resourceType);
 vk::ShaderStageFlagBits toShaderStageFlags(ShaderType shaderType);
+
+PipelineLayout* createMasterPipelineLayout(Renderer& renderer);
+
+struct CameraUniformBufferObject
+{
+  Eigen::Matrix4f view;
+  Eigen::Matrix4f proj;
+};
+
+struct alignas(16) PerObjectUniformBufferObject
+{
+  Eigen::Matrix4f model;
+  uint32_t textureId;
+  uint32_t padding[3];
+
+};
+
+
+
+
 } // namespace tz::render::vulkan

@@ -1,15 +1,14 @@
-#include <scene_helper.hh>
-#include <render_helpers.hh>
-#include <texture_asset_manager.hh>
-#include <text_render.hh>
-#include <vulkan_renderer.hh>
+#include "../render/scene/include/scene.hh"
 #include <Eigen/Dense>
 #include <app.hh>
 #include <iostream>
+#include <render_helpers.hh>
+#include <text_render.hh>
+#include <texture_asset_manager.hh>
+#include <vulkan_renderer.hh>
 
 uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
-tz::render::vulkan::Renderer* renderer = nullptr;
 tz::render::TextRenderer* textRenderer = nullptr;
 tz::Scene* main3DScene = nullptr;
 tz::Scene* uiScene = nullptr;
@@ -22,13 +21,14 @@ int titleFont = -1;
 
 void initialize(tz::App* app)
 {
-  testImageTexture = app->createTexture("assets/test_image.png");
-  testImage2Texture = app->createTexture("assets/test_image2.png");
+  testImageTexture = app->getTextureAssetManager().loadTexture("assets/test_image.png");
+  testImage2Texture = app->getTextureAssetManager().loadTexture("assets/test_image2.png");
 
+  auto& renderer = app->getRenderer();
   main3DCamera= new tz::Camera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0), tz::CameraType::Perspective);
-  main3DScene = new tz::Scene(*main3DCamera);
+  main3DScene = new tz::Scene(*main3DCamera, renderer);
   uiCamera = new tz::Camera(Eigen::Vector3f(0, 0, 4), {0, 0, 0}, tz::CameraType::Ortho);
-  uiScene = new tz::Scene(*uiCamera);
+  uiScene = new tz::Scene(*uiCamera, renderer);
 
   app->addScene("uiScene", uiScene, 1);
   app->addScene("main3DScene", main3DScene, 2);
@@ -44,6 +44,8 @@ void gatherInput(const tz::input::SDL2InputSystem& inputSystem)
 void doFrame(tz::App* app)
 {
 
+  auto& immCmdProc = app->getImmediateCommandProcessor();
+
   if (tz::input::SDL2InputSystem::getInstance().isMouseButtonClicked(tz::input::MouseButton::LEFT))
   {
     std::cout << "left mb clicked" << std::endl;
@@ -51,24 +53,24 @@ void doFrame(tz::App* app)
 
   // This allows us to "see" our scene through a camera in a 3d world
   // and place objects in world coordinates.
-  app->activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));
+  immCmdProc.activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));
   for (int i = 0; i < 8; i++) {
-    app->renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
+    immCmdProc.renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
   }
 
-  app->renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
-  app->renderCube({Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)});
+  immCmdProc.renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
+  immCmdProc.renderCube({Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)});
   for (int i = 0; i < 5; i++) {
     for (int z = 0; z < 5; z++) {
-       app->renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
+      immCmdProc.renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
     }
 
   }
 
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
-  app->activateUICamera(Eigen::Vector3f(0, 00, 4));
-  app->renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
+  immCmdProc.activateUICamera(Eigen::Vector3f(0, 00, 4));
+  immCmdProc.renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
 
   static float mover = 24;
   static float dir = 1;
@@ -82,17 +84,18 @@ void doFrame(tz::App* app)
   if (mover > 616 || mover < 0 ) {
     dir *= -1;
   }
-  app->renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
+  immCmdProc.renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
 
-  app->renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
-                  tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
-                                            .vertexShaderType =tz::VertexShaderType::Static,
+  namespace rv = tz::render::vulkan;
+  immCmdProc.renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
+                  tz::RenderHints{.materialType = rv::MaterialType::DiffuseNormal,
+                                            .vertexShaderType =rv::VertexShaderType::Static,
                                             .texture = testImageTexture });
 
   for (int i = 0; i < 12; i++) {
-    app->renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
-                    tz::RenderHints{.materialType = tz::MaterialType::DiffuseNormal,
-                                    .vertexShaderType =tz::VertexShaderType::Static,
+    immCmdProc.renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
+                    tz::RenderHints{.materialType = rv::MaterialType::DiffuseNormal,
+                                    .vertexShaderType = rv::VertexShaderType::Static,
                                     .texture = testImage2Texture });
   }
 

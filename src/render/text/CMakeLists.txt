@@ -7,7 +7,7 @@ target_sources(text_render_lib PUBLIC text_render.cpp)
 target_link_libraries(text_render_lib PRIVATE
         stb
         render_vulkan_lib
-        helpers
+
 )
 
 target_compile_definitions(render_vulkan_lib PRIVATE EXPORT_TZ_LIB)
