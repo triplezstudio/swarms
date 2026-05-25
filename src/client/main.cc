@@ -76,7 +76,7 @@ void doFrame(tz::App* app)
   for (int i = 0; i < 10; i++) {
     for (int z = 0; z < 10; z++) {
       cubeTransforms.push_back({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5),
-       Eigen::Vector3f(.2, .1, .2)});
+       Eigen::Vector3f(1, 1.5, 1)});
     }
 
   }
