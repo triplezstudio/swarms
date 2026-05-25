@@ -16,12 +16,15 @@ void tz::ImmediateCommandProcessor::renderCube(tz::Transform transform, tz::Rend
 }
 
 
-void tz::ImmediateCommandProcessor::renderText(const std::string& text, tz::render::Font& font, Transform transform)
+void tz::ImmediateCommandProcessor::renderText(const std::string& text, tz::render::Font& font,
+                                               Transform transform,
+                                               Eigen::Vector4f color)
 {
   RenderHints textRenderHints;
   textRenderHints.materialType = rv::MaterialType::Text;
   textRenderHints.vertexShaderType = rv::VertexShaderType::Static;
   textRenderHints.texture = font.textureId;
+  textRenderHints.color = color;
   tz::PrimitiveRenderData prd;
   prd.transform = transform;;
   prd.geometryType     = PrimitiveGeometryType::Quad;
@@ -376,6 +379,7 @@ void tz::ImmediateCommandProcessor::renderPrimitives(const std::vector<Primitive
     rv::PerObjectUniformBufferObject perObjectUBO;
     perObjectUBO.model = tm;
     perObjectUBO.textureId = prd.renderHints.texture;
+    perObjectUBO.color = prd.renderHints.color;
     renderer.updateBuffer(masterPipelineLayout.getPerObjectDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &perObjectUBO, sizeof(rv::PerObjectUniformBufferObject),
                            primitiveCounter);
     renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getPerObjectDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {primitiveCounter}, 1));

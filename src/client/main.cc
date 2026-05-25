@@ -46,7 +46,7 @@ void gatherInput(const tz::input::SDL2InputSystem& inputSystem)
 
 void doFrame(tz::App* app)
 {
-
+  namespace rv = tz::render::vulkan;
   auto& immCmdProc = app->getImmediateCommandProcessor();
 
   if (tz::input::SDL2InputSystem::getInstance().isMouseButtonClicked(tz::input::MouseButton::LEFT))
@@ -73,7 +73,11 @@ void doFrame(tz::App* app)
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
   immCmdProc.activateUICamera(Eigen::Vector3f(0, 00, 4));
-  immCmdProc.renderQuad({Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)});
+  immCmdProc.renderQuad({Eigen::Vector3f(100, 100, 0.2),
+                          Eigen::Vector3f(48, 48, 1)},
+                      tz::RenderHints{.materialType = rv::MaterialType::SingleColor,
+                                        .vertexShaderType =rv::VertexShaderType::Static,
+                                        .color = {0.25, 0.5, 0.7, 1} });
 
   static float mover = 24;
   static float dir = 1;
@@ -87,9 +91,12 @@ void doFrame(tz::App* app)
   if (mover > 616 || mover < 0 ) {
     dir *= -1;
   }
-  immCmdProc.renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)});
+  immCmdProc.renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)},
+                        tz::RenderHints{.materialType = rv::MaterialType::SingleColor,
+                                        .vertexShaderType =rv::VertexShaderType::Static,
+                                        .color = {0, 0.5, 0, 1} });
 
-  namespace rv = tz::render::vulkan;
+
   immCmdProc.renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
                   tz::RenderHints{.materialType = rv::MaterialType::DiffuseNormal,
                                             .vertexShaderType =rv::VertexShaderType::Static,
@@ -99,7 +106,8 @@ void doFrame(tz::App* app)
     immCmdProc.renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
                     tz::RenderHints{.materialType = rv::MaterialType::DiffuseNormal,
                                     .vertexShaderType = rv::VertexShaderType::Static,
-                                    .texture = testImage2Texture });
+                                    .texture = testImage2Texture,
+                                    .color = {(float)i * 0.2f, (float)i * 0.1f, 0.5, 1}});
   }
 
   static int frame = 0;
@@ -109,8 +117,8 @@ void doFrame(tz::App* app)
   frame = frame % 100;
 
   //app->getTextRenderer().create({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
-  app->getImmediateCommandProcessor().renderText("Frame: " + std::to_string(frame), *smallUIFont, {{8, 8, 0.5}});
-  app->getImmediateCommandProcessor().renderText("SWARMS", *titleFont, {{8, 400, 0.5}});
+  app->getImmediateCommandProcessor().renderText("Frame: " + std::to_string(frame), *smallUIFont, {{8, 8, 0.5}}, {0.5, 0.1, 0.1, 1});
+  app->getImmediateCommandProcessor().renderText("SWARMS", *titleFont, {{8, 400, 0.5}}, {0, 0.9, 0, 1});
 
 }
 

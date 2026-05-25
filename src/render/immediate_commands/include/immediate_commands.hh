@@ -28,7 +28,8 @@ class TZ_API ImmediateCommandProcessor
   void renderCylinder(Transform transform, RenderHints renderHints = {});
   void renderText(const std::string &text,
                   render::Font &font,
-                  Transform transform);
+                  Transform transform,
+                  Eigen::Vector4f color = {1, 1, 1, 1});
 
   void recordAndSubmitFrameCommandBuffer();
   render::vulkan::CommandBuffer &recordFrameCommandBuffer();

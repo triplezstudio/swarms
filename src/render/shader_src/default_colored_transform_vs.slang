@@ -1,4 +1,4 @@
-
+import shader_interfaces;
 
 struct VSInput
 {
@@ -7,40 +7,11 @@ struct VSInput
 };
 
 
-struct CameraData
-{
-
-     float4x4 view;
-     float4x4 proj;
-
-};
-[[vk::binding(0,0)]]
-ConstantBuffer<CameraData> cameraUBO;
-
-
-struct PerObjectData
-{
-     float4x4 model;
-     uint textureId;
-     uint pad0;
-     uint pad1;
-     uint pad2;
-};
-[[vk::binding(0,1)]]
-ConstantBuffer<PerObjectData> perObjectUBO;
-
-
-
-
-struct VSOutput
-{
-    float4 pos : SV_Position;
-};
-
 [shader("vertex")]
 VSOutput main(VSInput input)
 {
     VSOutput output;
     output.pos = mul(cameraUBO.proj, mul(cameraUBO.view, mul(perObjectUBO.model, float4(input.inPosition, 1.0))));
+    output.color = perObjectUBO.color;
     return output;
 }

@@ -54,6 +54,7 @@ struct RenderHints
   bool blending = true;
   rv::CullMode cullMode = rv::CullMode::Back;
   uint32_t texture;
+  Eigen::Vector4f color = {1, 1, 1,1};
 
   rv::PSOCacheKey toCacheKey() const
   {

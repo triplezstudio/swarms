@@ -879,6 +879,7 @@ struct CameraUniformBufferObject
 struct alignas(16) PerObjectUniformBufferObject
 {
   Eigen::Matrix4f model;
+  Eigen::Vector4f color;
   uint32_t textureId;
   uint32_t padding[3];
 
