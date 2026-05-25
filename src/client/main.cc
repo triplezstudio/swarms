@@ -57,27 +57,42 @@ void doFrame(tz::App* app)
   // This allows us to "see" our scene through a camera in a 3d world
   // and place objects in world coordinates.
   immCmdProc.activate3DCamera(Eigen::Vector3f(30 ,15, 15), Eigen::Vector3f(0, 0, 0));
-  for (int i = 0; i < 8; i++) {
-    immCmdProc.renderQuad({Eigen::Vector3f(-4 + i * 1.2, 0, 0)});
+  std::vector<tz::Transform> transforms;
+  for (int i = 0; i < 10; i++) {
+    transforms.push_back({Eigen::Vector3f(-7 + i * 1.2, 0, 0)});
   }
+ immCmdProc.renderQuads(transforms,
+                        tz::RenderHints{.materialType = rv::MaterialType::SingleColor,
+                                        .vertexShaderType =rv::VertexShaderType::Static,
+                                        .color = {0.9, 0.0, 0.0, 1} });
 
-  immCmdProc.renderCube({Eigen::Vector3f(.5, 3, 2 ), Eigen::Vector3f(1, 6, 4)});
-  immCmdProc.renderCube({Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)});
-  for (int i = 0; i < 5; i++) {
-    for (int z = 0; z < 5; z++) {
-      immCmdProc.renderCube({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5), Eigen::Vector3f(.1, .01, .1)});
+  immCmdProc.renderQuads({{Eigen::Vector3f(8, 0, -4 )}},
+                         tz::RenderHints{.materialType = rv::MaterialType::SingleColor,
+                                         .vertexShaderType =rv::VertexShaderType::Static,
+                                         .color = {0.9, 0.9, 0.0, 1} });
+  immCmdProc.renderCubes({{Eigen::Vector3f(-2.5, 1.5, 2), Eigen::Vector3f(1, 3, 4)}});
+
+  std::vector<tz::Transform> cubeTransforms;
+  for (int i = 0; i < 10; i++) {
+    for (int z = 0; z < 10; z++) {
+      cubeTransforms.push_back({Eigen::Vector3f(-5 + i * 1.5, 0, -5 + z * 1.5),
+       Eigen::Vector3f(.2, .1, .2)});
     }
 
   }
+  immCmdProc.renderCubes(cubeTransforms,
+                        tz::RenderHints{.materialType = rv::MaterialType::SingleColor,
+                                        .vertexShaderType =rv::VertexShaderType::Static,
+                                        .color = {  0.1f, 0.2f, 0.3f, 1} });
 
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
   immCmdProc.activateUICamera(Eigen::Vector3f(0, 00, 4));
-  immCmdProc.renderQuad({Eigen::Vector3f(100, 100, 0.2),
-                          Eigen::Vector3f(48, 48, 1)},
+  immCmdProc.renderQuads({{Eigen::Vector3f(100, 100, 0.2),
+                          Eigen::Vector3f(48, 48, 1)}},
                       tz::RenderHints{.materialType = rv::MaterialType::SingleColor,
                                         .vertexShaderType =rv::VertexShaderType::Static,
-                                        .color = {0.25, 0.5, 0.7, 1} });
+                                        .color = {0.0, 0.9, 0.0, 1} });
 
   static float mover = 24;
   static float dir = 1;
@@ -91,24 +106,28 @@ void doFrame(tz::App* app)
   if (mover > 616 || mover < 0 ) {
     dir *= -1;
   }
-  immCmdProc.renderQuad({Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)},
+  immCmdProc.renderQuads({{Eigen::Vector3f(24 + mover, 24, 0.2), Eigen::Vector3f(48, 48, 1)}},
                         tz::RenderHints{.materialType = rv::MaterialType::SingleColor,
                                         .vertexShaderType =rv::VertexShaderType::Static,
                                         .color = {0, 0.5, 0, 1} });
 
 
-  immCmdProc.renderQuad({Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)},
+  std::vector<tz::Transform> transformX = {{Eigen::Vector3f(500, 250, -2), Eigen::Vector3f(64, 64, 1)}};
+  immCmdProc.renderQuads(transformX,
                   tz::RenderHints{.materialType = rv::MaterialType::DiffuseNormal,
                                             .vertexShaderType =rv::VertexShaderType::Static,
                                             .texture = testImageTexture });
 
+  std::vector<tz::Transform> transforms2;
   for (int i = 0; i < 12; i++) {
-    immCmdProc.renderQuad({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)},
-                    tz::RenderHints{.materialType = rv::MaterialType::DiffuseNormal,
-                                    .vertexShaderType = rv::VertexShaderType::Static,
-                                    .texture = testImage2Texture,
-                                    .color = {(float)i * 0.2f, (float)i * 0.1f, 0.5, 1}});
+    transforms2.push_back({Eigen::Vector3f(16 + (mover*1.2), 50 + i * 45, 0.2), Eigen::Vector3f(32, 32, 1)});
   }
+
+  immCmdProc.renderQuads(transforms2,
+                        tz::RenderHints{.materialType = rv::MaterialType::DiffuseNormal,
+                                        .vertexShaderType = rv::VertexShaderType::Static,
+                                        .texture = testImage2Texture,
+                                        .color = {0.2f, 0.65f, 0.5, 1}});
 
   static int frame = 0;
   // Just limiting our "framecounter" here to avoid unwanted text-buffer-creation explosion..
@@ -116,7 +135,6 @@ void doFrame(tz::App* app)
   frame++;
   frame = frame % 100;
 
-  //app->getTextRenderer().create({{8, 8, 0.5}}, "Frame: " + std::to_string(frame));
   app->getImmediateCommandProcessor().renderText("Frame: " + std::to_string(frame), *smallUIFont, {{8, 8, 0.5}}, {0.5, 0.1, 0.1, 1});
   app->getImmediateCommandProcessor().renderText("SWARMS", *titleFont, {{8, 400, 0.5}}, {0, 0.9, 0, 1});
 

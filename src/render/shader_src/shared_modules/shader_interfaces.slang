@@ -8,17 +8,17 @@ public struct VSOutput
     public float4 color;
 };
 
-public struct PerObjectData
+public struct PerInstanceData
 {
-     public float4x4 model;
-     public float4 color;
-     public uint textureId;
-     public uint pad0;
-     public uint pad1;
-     public uint pad2;
-};
+    public float4x4 model;
+    public float4 color;
+    public uint textureId;
+    public uint pad0;
+    public uint pad1;
+    public uint pad2;
+}
 [[vk::binding(0,1)]]
-public ConstantBuffer<PerObjectData> perObjectUBO;
+public StructuredBuffer<PerInstanceData> instanceBuffer;
 
 public struct CameraData
 {

@@ -956,6 +956,11 @@ void Renderer::recordCommand(CommandBuffer* cb, Command *cmd)
           auto alignedStride = getAlignedStride(db->buffer->unitSize, minUniformBufferOffsetAlignment);
           alignedOffsets.push_back(c->offsets[counter++] * alignedStride);
         }
+        else if (db->type == DescriptorResourceType::Ssbo)
+        {
+          alignedOffsets = c->offsets;
+        }
+
       }
     }
 
@@ -1247,7 +1252,7 @@ vk::DescriptorType toVulkanDescriptorType(DescriptorResourceType resourceType)
   switch (resourceType)
   {
     case DescriptorResourceType::Ubo: return vk::DescriptorType::eUniformBufferDynamic;
-    case DescriptorResourceType::Ssbo: return vk::DescriptorType::eStorageBuffer;
+    case DescriptorResourceType::Ssbo: return vk::DescriptorType::eStorageBufferDynamic;
     case DescriptorResourceType::Sampler: return vk::DescriptorType::eCombinedImageSampler;
   }
 }
@@ -1323,8 +1328,9 @@ DescriptorBinding *Renderer::createDescriptorBinding(
 
 
 Buffer *Renderer::createMultiframeBuffer(void *initialData,
-                                                                       size_t sizeInBytes,
-                                                                       BufferUsage bufferUsage)
+                                         size_t sizeInBytes,
+                                         size_t unitSize,
+                                         BufferUsage bufferUsage)
 {
   std::vector<vk::raii::Buffer> vulkanBuffers;
   std::vector<vk::raii::DeviceMemory> memories;
@@ -1337,6 +1343,8 @@ Buffer *Renderer::createMultiframeBuffer(void *initialData,
     memories.push_back(std::move(vulkanMemory));
   }
   auto buffer = new Buffer(std::move(vulkanBuffers), std::move(memories));
+  buffer->overallSize = sizeInBytes;
+  buffer->unitSize = unitSize;
   return buffer;
 }
 
@@ -1351,20 +1359,41 @@ uint32_t Renderer::getAlignedStride(size_t size, uint32_t minAlignment)
  * @param buffer
  * @param data
  * @param sizeInBytes
- * @param offset            This is a logical offset (effectively an index; multiplicator) into the buffer which is then transformed into
+ * @param offset
+ *
+ */
+void Renderer::updateBufferWithAbsoluteOffset(Buffer *buffer,
+                                             void *data,
+                                             size_t sizeInBytes, uint32_t offset)
+{
+  size_t alignedStride = getAlignedStride(sizeInBytes, minUniformBufferOffsetAlignment);
+  auto currentFrameBuffer = buffer->getMultiBufferByIndex(currentFrameIndex);
+  auto& currentFrameBufferMem = buffer->getMultiMemoryByIndex(currentFrameIndex);
+  auto targetMemory = currentFrameBufferMem.mapMemory(offset, sizeInBytes);
+  memcpy(targetMemory, data, sizeInBytes);
+  currentFrameBufferMem.unmapMemory();
+
+}
+
+/**
+ *
+ * @param buffer
+ * @param data
+ * @param sizeInBytes
+ * @param logicalOffset     This is a logical offset (effectively an index; multiplicator) into the buffer which is then transformed into
  *                          a correctly aligned offset as: alignedStride * offset.
  *                          The aligned stride is the next boundary keeping the minAlignment properties
  *                          of the GPU and the actual sizeInBytes. e.g. if the minAlignment is 128
  *                          and the size is 192, the alignedStride would be 256.
  */
-void Renderer::updateBuffer(Buffer *buffer,
+void Renderer::updateBufferWithLogicalOffset(Buffer *buffer,
                                                       void *data,
-                                                      size_t sizeInBytes, uint32_t offset)
+                                                      size_t sizeInBytes, uint32_t logicalOffset)
 {
   size_t alignedStride = getAlignedStride(sizeInBytes, minUniformBufferOffsetAlignment);
   auto currentFrameBuffer = buffer->getMultiBufferByIndex(currentFrameIndex);
   auto& currentFrameBufferMem = buffer->getMultiMemoryByIndex(currentFrameIndex);
-  auto targetMemory = currentFrameBufferMem.mapMemory(alignedStride * offset, sizeInBytes);
+  auto targetMemory = currentFrameBufferMem.mapMemory(alignedStride * logicalOffset, sizeInBytes);
   memcpy(targetMemory, data, sizeInBytes);
   currentFrameBufferMem.unmapMemory();
 
@@ -1374,16 +1403,18 @@ void Renderer::updateBuffer(Buffer *buffer,
 
 void Renderer::createDescriptorPool()
 {
-  vk::DescriptorPoolSize poolSizes[3];
+  vk::DescriptorPoolSize poolSizes[4];
   poolSizes[0].setType(vk::DescriptorType::eUniformBufferDynamic)
           .setDescriptorCount(1000);
   poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
           .setDescriptorCount(2000);
   poolSizes[2].setType(vk::DescriptorType::eStorageImage)
           .setDescriptorCount(50);
+  poolSizes[3].setType(vk::DescriptorType::eStorageBufferDynamic)
+    .setDescriptorCount(100);
 
   vk::DescriptorPoolCreateInfo poolInfo;
-  poolInfo.poolSizeCount = 3;
+  poolInfo.poolSizeCount = 4;
   poolInfo.pPoolSizes = poolSizes;
   poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet
                    | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind
@@ -1456,21 +1487,23 @@ DescriptorSet *Renderer::createMultiframeDescriptorSet(DescriptorSetLayout* desc
 
 
       }
-
       else if (binding->type == DescriptorResourceType::Ubo || binding->type == DescriptorResourceType::Ssbo)
       {
+        auto descriptorType = binding->type == DescriptorResourceType::Ubo ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eStorageBufferDynamic;
+        auto range = binding->type == DescriptorResourceType::Ubo ? binding->buffer->unitSize : binding->buffer->unitSize * 10000;
         vk::DescriptorBufferInfo descBufferInfo;
         auto frameIndexBuffer = binding->buffer->getMultiBufferByIndex(i);
         descBufferInfo.setBuffer(frameIndexBuffer)
         .setOffset(0)
-        .setRange(binding->buffer->unitSize);
+        .setRange(range);
+
 
         vk::WriteDescriptorSet writeDescriptorSet;
         writeDescriptorSet.setDstSet(descriptorSets[i])
           .setDstBinding(binding->bindingIndex)
           .setDstArrayElement(0)
           .setDescriptorCount(1)
-            .setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
+          .setDescriptorType(descriptorType)
           .setBufferInfo(descBufferInfo);
         device.updateDescriptorSets(writeDescriptorSet, {});
       }
@@ -1655,6 +1688,8 @@ Sampler *Renderer::createSampler()
     auto samplerWrapper = new tz::render::vulkan::Sampler(std::move(sampler));
     return samplerWrapper;
 }
+
+
 Buffer *Renderer::createMultiframeUniformBuffer(
   uint32_t numberOfPlannedObjects, size_t objectSize)
 {
@@ -1674,6 +1709,8 @@ Buffer *Renderer::createMultiframeUniformBuffer(
   buffer->overallSize = objectSize * numberOfPlannedObjects;
   return buffer;
 }
+
+
 PipelineLayout *Renderer::createPipelineLayout(
   std::vector<DescriptorSetLayout *> descriptorSetLayouts)
 {

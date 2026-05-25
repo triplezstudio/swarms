@@ -6,12 +6,13 @@ struct VSInput
 
 };
 
-
 [shader("vertex")]
-VSOutput main(VSInput input)
+VSOutput main(VSInput input, uint instanceID : SV_InstanceID)
 {
+
     VSOutput output;
-    output.pos = mul(cameraUBO.proj, mul(cameraUBO.view, mul(perObjectUBO.model, float4(input.inPosition, 1.0))));
-    output.color = perObjectUBO.color;
+    PerInstanceData perInstanceData = instanceBuffer[instanceID];
+    output.pos = mul(cameraUBO.proj, mul(cameraUBO.view, mul(perInstanceData.model, float4(input.inPosition, 1.0))));
+    output.color = perInstanceData.color;
     return output;
 }

@@ -88,6 +88,7 @@ class CmdBindDescriptors : public Command
   PipelineLayout* pipelineLayout;
   std::vector<uint32_t> offsets;
   uint32_t setIndex;
+  uint32_t instanceCount = 1;
 };
 
 
@@ -409,7 +410,7 @@ class Buffer
   Buffer(vk::raii::Buffer&& vkBuffer, vk::raii::DeviceMemory&& devMemory)
   {
     buffer = std::move(vkBuffer);
-    devMemory = std::move(memory);
+    memory = std::move(devMemory);
   }
 
   Buffer(std::vector<vk::raii::Buffer>&& multiBuffers, std::vector<vk::raii::DeviceMemory>&& multiMemories)
@@ -726,7 +727,10 @@ class TZ_API Renderer
   void submitCommandBuffer(CommandBuffer*cb);
 
   Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage);
-  Buffer * createMultiframeBuffer(void *initialData, size_t sizeInBytes, BufferUsage bufferUsage);
+  Buffer *createMultiframeBuffer(void *initialData,
+                                 size_t sizeInBytes,
+                                 size_t unitSize,
+                                 BufferUsage bufferUsage);
   Buffer * createMultiframeUniformBuffer(uint32_t numberOfPlannedObjects, size_t objectSize);
   DescriptorBinding * createDescriptorBinding(uint8_t binding,
                                              DescriptorResourceType resourceType,
@@ -749,12 +753,16 @@ class TZ_API Renderer
   void endCommandBuffer(CommandBuffer *cb);
   void recordCommand(CommandBuffer* cb, Command *cmd);
   PipelineLayout * createPipelineLayout(std::vector<DescriptorSetLayout *> descriptorSetLayouts);
-  PipelineStateObject * createPipelineStateObject(RenderState &renderState, ShaderPipeline *shaderPipeline, VertexLayout &vertexLayout,  PipelineLayout* providedPipelineLayout);
+  PipelineStateObject * createPipelineStateObject(RenderState &renderState, ShaderPipeline *shaderPipeline,
+                                                 VertexLayout &vertexLayout,  PipelineLayout* providedPipelineLayout);
 
   vk::raii::PipelineLayout createPipelineLayout(std::vector<vk::DescriptorSetLayout> descriptorSetLayouts);
 
-  void updateBuffer(Buffer *buffer, void *data, size_t sizeInBytes, uint32_t offset);
+  void updateBufferWithLogicalOffset(Buffer *buffer, void *data, size_t sizeInBytes, uint32_t logicalOffset);
 
+  void updateBufferWithAbsoluteOffset(Buffer *buffer,
+                                                void *data,
+                                                size_t sizeInBytes, uint32_t offset);
   void submitCommandBuffers(std::vector<CommandBuffer *> &commandBuffers);
 
   private:
@@ -863,6 +871,7 @@ class TZ_API Renderer
   vk::CullModeFlags toVulkanCullMode(CullMode cullMode);
   std::vector<vk::CommandBuffer> getCommandBuffersForCurrentFrame(
     std::vector<CommandBuffer *> &cbs);
+
 };
 
 vk::DescriptorType toVulkanDescriptorType(DescriptorResourceType resourceType);
@@ -874,6 +883,16 @@ struct CameraUniformBufferObject
 {
   Eigen::Matrix4f view;
   Eigen::Matrix4f proj;
+};
+
+struct alignas(16) PerInstanceBufferObject
+{
+  Eigen::Matrix4f model;
+  Eigen::Vector4f color;
+  uint32_t textureId;
+  uint32_t padding[3];       // We need the padding here as c++ compiler do not round up to 16byte alignment automatically.
+                          // Without this, cpu sends tightly packed 84-byte data, but GPU does the roundup, so we would misalign.
+
 };
 
 struct alignas(16) PerObjectUniformBufferObject

@@ -23,7 +23,9 @@ class TZ_API ImmediateCommandProcessor
   void activateUICamera(Eigen::Vector3f position);
 
   void renderQuad(Transform transform, RenderHints renderHints = {});
+  void renderQuads(const std::vector<Transform> &transform, RenderHints renderHints = {});
   void renderCube(Transform transform, RenderHints renderHints = {});
+  void renderCubes(const std::vector<Transform>& transform, RenderHints renderHints = {});
   void renderSphere(Transform transform, RenderHints renderHints = {});
   void renderCylinder(Transform transform, RenderHints renderHints = {});
   void renderText(const std::string &text,
@@ -69,6 +71,7 @@ class TZ_API ImmediateCommandProcessor
       render::vulkan::PipelineStateObject *createTextPSO();
       render::vulkan::PipelineStateObject *createTexturedPSO();
       render::vulkan::PipelineStateObject *createColorOnlyPSO();
+
 
 };
 }

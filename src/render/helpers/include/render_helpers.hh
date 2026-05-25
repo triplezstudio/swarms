@@ -251,10 +251,11 @@ class MasterPipelineLayout
     cameraDescriptorSet = renderer.createMultiframeDescriptorSet(cameraDescriptorSetLayout);
 
     // PerObject is set1, binding0
-    auto perObjectBuffer = renderer.createMultiframeUniformBuffer(10000, sizeof(rv::PerObjectUniformBufferObject));
-    auto perObjectUBOBinding = renderer.createDescriptorBinding(0, rv::DescriptorResourceType::Ubo,
+    auto perInstanceBuffer = renderer.createMultiframeBuffer(nullptr, 100000 * sizeof(rv::PerInstanceBufferObject), sizeof(rv::PerInstanceBufferObject), rv::BufferUsage::Storage);
+    //auto perObjectBuffer = renderer.createMultiframeUniformBuffer(10000, sizeof(rv::PerObjectUniformBufferObject));
+    auto perObjectUBOBinding = renderer.createDescriptorBinding(0, rv::DescriptorResourceType::Ssbo,
                                                                 rv::ShaderType::Vertex, 1,
-                                                                perObjectBuffer);
+                                                                perInstanceBuffer);
     auto perObjectDescriptorSetLayout = renderer.createDescriptorSetLayout({perObjectUBOBinding});
     perObjectDescriptorSet = renderer.createMultiframeDescriptorSet(perObjectDescriptorSetLayout);
 
@@ -316,7 +317,7 @@ struct PrimitiveRenderData
 {
   PrimitiveGeometryType geometryType;
   RenderHints renderHints;
-  Transform transform;
+  std::vector<Transform> transforms;
   Camera* associatedCamera = nullptr;
   rv::Buffer* vertexBuffer = nullptr;
   rv::Buffer* indexBuffer = nullptr;

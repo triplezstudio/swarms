@@ -1,17 +1,11 @@
 #include <immediate_commands.hh>
 #include <render_helpers.hh>
 
+
+
 void tz::ImmediateCommandProcessor::renderCube(tz::Transform transform, tz::RenderHints renderHints)
 {
-  PrimitiveRenderData prd;
-  prd.transform = transform;
-  prd.geometryType = PrimitiveGeometryType::Cube;
-  prd.renderHints = renderHints;
-  prd.associatedCamera = activeRenderCamera;
-  prd.vertexBuffer = renderHints.materialType == rv::MaterialType::SingleColor ? cubePosVertexBuffer : cubePosTexCoordVertexBuffer;
-  prd.indexBuffer = renderHints.materialType == rv::MaterialType::SingleColor ? cubeIndexBuffer : cubeTexIndexBuffer;
-  prd.indexCount = renderHints.materialType == rv::MaterialType::SingleColor ? getCubeIndices().size() : getCubeIndicesPosTex().size();
-  framePrimitives.push_back(prd);
+  renderCubes({transform}, renderHints);
   
 }
 
@@ -26,7 +20,7 @@ void tz::ImmediateCommandProcessor::renderText(const std::string& text, tz::rend
   textRenderHints.texture = font.textureId;
   textRenderHints.color = color;
   tz::PrimitiveRenderData prd;
-  prd.transform = transform;;
+  prd.transforms = {transform};
   prd.geometryType     = PrimitiveGeometryType::Quad;
   prd.renderHints = textRenderHints;
   prd.associatedCamera = activeRenderCamera;
@@ -62,10 +56,37 @@ void tz::ImmediateCommandProcessor::renderText(const std::string& text, tz::rend
 
 }
 
-void tz::ImmediateCommandProcessor::renderQuad(Transform transform, RenderHints renderHints)
+void tz::ImmediateCommandProcessor::renderCubes(const std::vector<tz::Transform>& transforms, tz::RenderHints renderHints)
 {
   PrimitiveRenderData prd;
-  prd.transform = transform;;
+  prd.transforms = transforms;
+  prd.geometryType = PrimitiveGeometryType::Cube;
+  prd.renderHints = renderHints;
+  prd.associatedCamera = activeRenderCamera;
+  prd.vertexBuffer = renderHints.materialType == rv::MaterialType::SingleColor ? cubePosVertexBuffer : cubePosTexCoordVertexBuffer;
+  prd.indexBuffer = renderHints.materialType == rv::MaterialType::SingleColor ? cubeIndexBuffer : cubeTexIndexBuffer;
+  prd.indexCount = renderHints.materialType == rv::MaterialType::SingleColor ? getCubeIndices().size() : getCubeIndicesPosTex().size();
+  framePrimitives.push_back(prd);
+
+}
+
+void tz::ImmediateCommandProcessor::renderQuads(const std::vector<Transform>& transforms, RenderHints renderHints)
+{
+  PrimitiveRenderData prd;
+  prd.transforms = transforms;
+  prd.geometryType     = PrimitiveGeometryType::Quad;
+  prd.renderHints = renderHints;
+  prd.associatedCamera = activeRenderCamera;
+  prd.vertexBuffer = renderHints.materialType == rv::MaterialType::SingleColor ? quadPosVertexBuffer : quadPosTexCoordVertexBuffer;
+  prd.indexBuffer = quadIndexBuffer;
+  prd.indexCount = getQuadIndices().size();
+  framePrimitives.push_back(prd);
+}
+
+  void tz::ImmediateCommandProcessor::renderQuad(Transform transform, RenderHints renderHints)
+{
+  PrimitiveRenderData prd;
+  prd.transforms = {transform};
   prd.geometryType     = PrimitiveGeometryType::Quad;
   prd.renderHints = renderHints;
   prd.associatedCamera = activeRenderCamera;
@@ -364,34 +385,44 @@ void tz::ImmediateCommandProcessor::buildPSOCache()
 }
 
 
-void tz::ImmediateCommandProcessor::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, uint32_t& primitiveCounter)
+void tz::ImmediateCommandProcessor::renderPrimitives(const std::vector<PrimitiveRenderData>& primitives, uint32_t& offset)
 {
 
-  for (auto& prd : primitives)
+  for (auto&prd : primitives)
   {
     auto pso = psoCache.get(prd.renderHints.toCacheKey());
     renderer.recordCommand(commandBuffer,new rv::CmdBindPipeline (pso));
 
-    auto transform = Eigen::Affine3f::Identity();
-    transform.translate(prd.transform.position);
-    transform.scale(prd.transform.scale);
-    Eigen::Matrix4f tm = transform.matrix();
-    rv::PerObjectUniformBufferObject perObjectUBO;
-    perObjectUBO.model = tm;
-    perObjectUBO.textureId = prd.renderHints.texture;
-    perObjectUBO.color = prd.renderHints.color;
-    renderer.updateBuffer(masterPipelineLayout.getPerObjectDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &perObjectUBO, sizeof(rv::PerObjectUniformBufferObject),
-                           primitiveCounter);
-    renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getPerObjectDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {primitiveCounter}, 1));
+    std::vector<rv::PerInstanceBufferObject> perInstanceBufferObjects;
+    for (auto& t : prd.transforms)
+    {
+      auto transform = Eigen::Affine3f::Identity();
+      transform.translate(t.position);
+      transform.scale(t.scale);
+      Eigen::Matrix4f tm = transform.matrix();
+      rv::PerInstanceBufferObject instanceData;
+      instanceData.model = tm;
+      instanceData.textureId = prd.renderHints.texture;
+      instanceData.color = prd.renderHints.color;
+      perInstanceBufferObjects.push_back(instanceData);
+    }
+
+    renderer.updateBufferWithAbsoluteOffset(
+      masterPipelineLayout.getPerObjectDescriptorSetPtr()->layout->descriptorBindings[0]->buffer,
+      perInstanceBufferObjects.data(),
+      sizeof(rv::PerObjectUniformBufferObject) * prd.transforms.size(),
+      offset);
+    renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getPerObjectDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {offset}, 1));
+    // Move offset forward
+    offset += sizeof(rv::PerObjectUniformBufferObject) * prd.transforms.size();
 
     renderer.recordCommand(commandBuffer, new rv::CmdSetViewPorts({{0, 0, 640, 480}}));
     renderer.recordCommand(commandBuffer, new rv::CmdSetScissors({{0, 0, 640, 480}}));
 
     renderer.recordCommand(commandBuffer,new rv::CmdBindVertexBuffers({prd.vertexBuffer}));
     renderer.recordCommand(commandBuffer, new rv::CmdBindIndexBuffer(prd.indexBuffer, 0));
-    renderer.recordCommand(commandBuffer, new rv::CmdDrawIndexed(prd.indexCount, 1,0, 0, 0));
+    renderer.recordCommand(commandBuffer, new rv::CmdDrawIndexed(prd.indexCount, prd.transforms.size(),0, 0, 0));
 
-    primitiveCounter++;
   }
 }
 
@@ -420,8 +451,11 @@ tz::render::vulkan::CommandBuffer& tz::ImmediateCommandProcessor::recordFrameCom
   cameraUBO.view = default3DCamera->lookAtRH();
   cameraUBO.proj = default3DCamera->getProjectionMatrix(640, 480);
   renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getCameraDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {0}, 0));
-  renderer.updateBuffer(masterPipelineLayout.getCameraDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &cameraUBO, sizeof(rv::CameraUniformBufferObject),
-                        0);
+  renderer.updateBufferWithLogicalOffset(
+    masterPipelineLayout.getCameraDescriptorSetPtr()->layout->descriptorBindings[0]->buffer,
+    &cameraUBO,
+    sizeof(rv::CameraUniformBufferObject),
+    0);
 
   uint32_t primitiveCounter = 0;
   renderPrimitives(camera3DPrimitives, primitiveCounter);
@@ -432,9 +466,11 @@ tz::render::vulkan::CommandBuffer& tz::ImmediateCommandProcessor::recordFrameCom
   cameraUBO.proj = defaultUICamera->getProjectionMatrix(640, 480);
   renderer.recordCommand(commandBuffer, new rv::CmdBindDescriptors({masterPipelineLayout.getCameraDescriptorSetPtr()}, masterPipelineLayout.getPipelineLayoutPtr(), {1}, 0));
 
-  renderer.updateBuffer(masterPipelineLayout.getCameraDescriptorSetPtr()->layout->descriptorBindings[0]->buffer, &cameraUBO,
-                        sizeof(rv::CameraUniformBufferObject),
-                        1);
+  renderer.updateBufferWithLogicalOffset(
+    masterPipelineLayout.getCameraDescriptorSetPtr()->layout->descriptorBindings[0]->buffer,
+    &cameraUBO,
+    sizeof(rv::CameraUniformBufferObject),
+    1);
   renderPrimitives(cameraUIPrimitives, primitiveCounter);
 
   renderer.endCommandBuffer(commandBuffer);
