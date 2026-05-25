@@ -74,10 +74,10 @@ struct RenderHints
 
 inline void fillWithQuadVertices(std::vector<rv::VertexPos>& out)
 {
-  out = {{{-0.5, 0.5, 0.5}},
-         {{-0.5, -0.5, 0.5}},
-         {{0.5, -0.5, 0.5}},
-         {{0.5, 0.5, 0.5}}};
+  out = {{{-0.5, 0.5, 0.5}, {0, 0, 1}},
+         {{-0.5, -0.5, 0.5}, {0, 0, 1}},
+         {{0.5, -0.5, 0.5}, {0, 0, 1}},
+         {{0.5, 0.5, 0.5}, {0, 0, 1}}};
 }
 
 
@@ -125,16 +125,44 @@ inline void fillWithCubeVertices(std::vector<rv::VertexPosTexCoords>& out)
 
 inline void fillWithCubeVertices(std::vector<rv::VertexPos>& out)
 {
-   out = {
-    {{-.5f, -.5f,  .50f}}, // 0: Front-Bottom-Left
-    {{ .5f, -.5f,  .5f}}, // 1: Front-Bottom-Right
-    {{ .5f,  .5f,  .5f}}, // 2: Front-Top-Right
-    {{-.5f,  .5f,  .5f}}, // 3: Front-Top-Left
-    {{-.5f, -.5f, -.5f}}, // 4: Back-Bottom-Left
-    {{ .5f, -.5f, -.5f}}, // 5: Back-Bottom-Right
-    {{ .5f,  .5f, -.5f}}, // 6: Back-Top-Right
-    {{-.5f,  .5f, -.5f}}  // 7: Back-Top-Left
+  out = {// Front face (Z = 1.0f)
+         {{-.5f, -.5f, .5f}, {0.0f, 0.0f, 1}},
+         {{.5f, -.5f, .5f}, {0.0f, 0.0f, 1}},
+         {{.5f, .5f, .5f}, {.0f, 0.0f, 1}},
+         {{-.5f, .5f, .5f}, {0.0f, 0.0f, 1}},
+
+         // Back face (Z = -1.0f)
+         {{.5f, -.5f, -.5f}, {0.0f, 0.0f, -1}},
+         {{-.5f, -.5f, -.5f}, {.0f, 0.0f, -1}},
+         {{-.5f, .5f, -.5f}, {.0f, .0f, -1}},
+         {{.5f, .5f, -.5f}, {0.0f, .0f, -1}},
+
+         // Left face (X = -1.0f)
+         {{-.5f, -.5f, -.5f}, {-1.0f, 0.0f, 0}},
+         {{-.5f, -.5f, .5f}, {-1.0f, 0.0f, 0}},
+         {{-.5f, .5f, .5f}, {-1.0f, 0.0f, 0}},
+         {{-.5f, .5f, -.5f}, {-1.0f, 0.0f, 0}},
+
+         // Right face (X = 1.0f)
+         {{.5f, -.5f, .5f}, {1.0f, 0.0f, 0}},
+         {{.5f, -.5f, -.5f}, {1.0f, 0.0f, 0}},
+         {{.5f, .5f, -.5f}, {1.0f, 0.0f, 0}},
+         {{.5f, .5f, .5f}, {1.0f, 0.0f, 0}},
+
+         // Top face (Y = 1.0f)
+         {{-.5f, .5f, .5f}, {0.0f, 1.0f, 0}},
+         {{.5f, .5f, .5f}, {0.0f, 1.0f, 0}},
+         {{.5f, .5f, -.5f}, {0.0f, 1.0f, 0}},
+         {{-.5f, .5f, -.5f}, {0.0f, 1.0f, 0}},
+
+         // Bottom face (Y = -1.0f)
+         {{-.5f, -.5f, -.5f}, {0.0f, -1.0f, 0}},
+         {{.5f, -.5f, -.5f}, {0.0f, -1.0f, 0}},
+         {{.5f, -.5f, .5f}, {0.0f, -1.0f, 0}},
+         {{-.5f, -.5f, .5f}, {0.0f, -1.0f, 0}}
   };
+
+
 }
 
 std::array<uint32_t, 6> TZ_API getQuadIndices();

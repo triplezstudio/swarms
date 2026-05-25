@@ -631,6 +631,7 @@ struct RenderState
 struct VertexPos
 {
   Eigen::Vector3f pos;
+  Eigen::Vector3f normal;
 };
 
 struct VertexPosColor

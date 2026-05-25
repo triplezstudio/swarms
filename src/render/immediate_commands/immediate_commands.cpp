@@ -233,7 +233,15 @@ tz::render::vulkan::PipelineStateObject* tz::ImmediateCommandProcessor::createCo
       .dataType = rv::DataType::Float,
       .componentCount = 3,
       .offset = 0
-    }
+    },
+    rv::VertexAttribute {
+      .shaderLocation = 1,
+      .bufferSlot = 0,
+      .dataType = rv::DataType::Float,
+      .componentCount = 3,
+      .offset = sizeof(float) * 3
+    },
+
   };
 
   // Descriptor layout and binding for the transformation matrix

@@ -1,18 +1,14 @@
 import shader_interfaces;
 
-struct VSInput
-{
-    float3 inPosition;
 
-};
 
 [shader("vertex")]
-VSOutput main(VSInput input, uint instanceID : SV_InstanceID)
+VSOutputLit main(VSInputPosNormal input, uint instanceID : SV_InstanceID)
 {
-
-    VSOutput output;
+    VSOutputLit output;
     PerInstanceData perInstanceData = instanceBuffer[instanceID];
     output.pos = mul(cameraUBO.proj, mul(cameraUBO.view, mul(perInstanceData.model, float4(input.inPosition, 1.0))));
     output.color = perInstanceData.color;
+    output.normal = input.inNormal;
     return output;
 }

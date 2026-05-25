@@ -1,11 +1,27 @@
 module shader_interfaces;
 
+public struct VSInputPosNormal
+{
+    public float3 inPosition;
+    public float3 inNormal;
+
+};
+
 public struct VSOutput
 {
     public float4 pos : SV_Position;
     public float2 fragTexcoord;
     public uint textureId;
     public float4 color;
+};
+
+public struct VSOutputLit
+{
+    public float4 pos : SV_Position;
+    public float2 fragTexcoord;
+    public uint textureId;
+    public float4 color;
+    public float3 normal;
 };
 
 public struct PerInstanceData
