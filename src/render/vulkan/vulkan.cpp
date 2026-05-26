@@ -1407,7 +1407,7 @@ void Renderer::createDescriptorPool()
   poolSizes[0].setType(vk::DescriptorType::eUniformBufferDynamic)
           .setDescriptorCount(1000);
   poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
-          .setDescriptorCount(2000);
+          .setDescriptorCount(8000);
   poolSizes[2].setType(vk::DescriptorType::eStorageImage)
           .setDescriptorCount(50);
   poolSizes[3].setType(vk::DescriptorType::eStorageBufferDynamic)
