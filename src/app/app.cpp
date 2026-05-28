@@ -78,12 +78,10 @@ void App::renderImmediateCommands()
   immediateCommandProcessor->recordAndSubmitFrameCommandBuffer();
 }
 
-
 void App::renderFrame()
 {
   renderer->beginFrame();
 
-  // Currently this "mainFrameCommandBuffer" just does the main backbuffer clearing:
   static rv::CommandBuffer* mainFrameCommandBuffer = renderer->createCommandBuffer();
   renderer->beginCommandBuffer(mainFrameCommandBuffer, true);
   renderer->endCommandBuffer(mainFrameCommandBuffer);
@@ -105,7 +103,7 @@ void App::renderFrame()
 
 }
 
-void App::setUpdateFunction(tz::FrameListener frameListener)
+void App::addUpdateListener(tz::FrameListener frameListener)
 {
   frameListeners.push_back(frameListener);
 }
@@ -117,16 +115,6 @@ void App::updateFrameListeners(float frameTime)
     frameListenerFunc(this);
   }
 
-
-
-}
-float App::getLastFrameTime()
-{
-  return 16.667f;
-}
-
-void tz::App::setInputListenerFunc(InputListener il) {
-  this->inputListener = il;
 }
 
 
