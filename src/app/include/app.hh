@@ -13,28 +13,12 @@
 namespace tz {
 namespace rv =  render::vulkan;
 
-struct alignas(16) TransformUniformBufferObject
-{
-  Eigen::Matrix4f model;
-
-};
-
-
-
-
-
-
-
-
-
-
   class App;
   using FrameListener = std::function<void(App* app)>;
   using InputListener = std::function<void(const tz::input::SDL2InputSystem& inputSystem)>;
 
   class TZ_API App
   {
-
 
     public:
     App(int width, int height, const std::string& title);
@@ -45,13 +29,11 @@ struct alignas(16) TransformUniformBufferObject
     ImmediateCommandProcessor& getImmediateCommandProcessor() { return *immediateCommandProcessor; }
 
     virtual void run();
-    virtual void setUpdateFunction(FrameListener frameListener);
-    virtual void setInputListenerFunc(InputListener il);
-    virtual float getLastFrameTime();
+    virtual void addUpdateListener(FrameListener frameListener);
+
 
     ImmediateCommandProcessor* immediateCommandProcessor = nullptr;
 
-    uint32_t createTexture(const std::string& imagePath);
 
     /**
      * Adds a scene under a given name and assigns it to a layer.

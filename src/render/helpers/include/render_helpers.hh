@@ -6,7 +6,6 @@
 #define SWARMS_RENDER_HELPERS_HH
 #include <Eigen/Dense>
 #include <vulkan_renderer.hh>
-#include <text_helper.hh>
 
 namespace tz
 {
