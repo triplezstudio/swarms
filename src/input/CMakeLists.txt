@@ -5,6 +5,6 @@ target_sources(input_sdl2_lib PRIVATE
 
 target_include_directories(input_sdl2_lib PUBLIC include)
 
-target_link_libraries(input_sdl2_lib PUBLIC window_sdl2_lib)
+target_link_libraries(input_sdl2_lib PUBLIC window)
 
 target_compile_definitions(input_sdl2_lib PUBLIC EXPORT_TZ_LIB)

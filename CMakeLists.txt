@@ -28,6 +28,7 @@ set (CMAKE_VERBOSE_MAKEFILE OFF)
 
 set (CMAKE_BUILD_RPATH_USE_ORIGIN true)
 
+
 add_library (swarms-interface-library INTERFACE)
 target_compile_options (swarms-interface-library INTERFACE
 		$<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>

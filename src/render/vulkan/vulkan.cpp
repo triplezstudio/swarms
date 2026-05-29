@@ -18,21 +18,13 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #include <vulkan_renderer.hh>
 
-#include "window_system.hh"
+#include "window.hh"
 #include <algorithm>
 #include <fstream>
 #include <limits>
 
 namespace tz::render::vulkan
 {
-tz::WindowDesc Renderer::getRequiredWindowDesc()
-{
-  WindowDesc wd;
-  wd.api = tz::WindowDesc::GraphicsAPI::Vulkan;
-  wd.width = 1280;
-  wd.height = 720;
-  return wd;
-}
 
 
 void tz::render::vulkan::Renderer::beginFrame()
@@ -54,9 +46,30 @@ void tz::render::vulkan::Renderer::beginFrame()
 
 void tz::render::vulkan::Renderer::endFrame()
 {
+  const vk::PresentInfoKHR presentInfoKhr {
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &*renderFinishedSemaphores[currentFrameIndex],
+    .swapchainCount = 1,
+    .pSwapchains = &*swapChain,
+    .pImageIndices = &imageIndex};
 
+  auto result = graphicsQueue.presentKHR(presentInfoKhr);
 }
 
+void Renderer::submitCommandBuffers(std::vector<CommandBuffer*>& commandBuffers)
+{
+  auto currentFrameCommandBuffers = getCommandBuffersForCurrentFrame(commandBuffers);
+  vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+  const vk::SubmitInfo submitInfo {.waitSemaphoreCount = 1,
+                                  .pWaitSemaphores = &*presentCompleteSemaphores[currentFrameIndex],
+                                  .pWaitDstStageMask = &waitDestinationStageMask,
+                                  .commandBufferCount = static_cast<uint32_t>(commandBuffers.size()),
+                                  .pCommandBuffers = currentFrameCommandBuffers.data(),
+                                  .signalSemaphoreCount = 1,
+                                  .pSignalSemaphores = &*renderFinishedSemaphores[currentFrameIndex]};
+
+  graphicsQueue.submit(submitInfo, *drawFences[currentFrameIndex]);
+}
 
 void Renderer::submitCommandBuffer(CommandBuffer* cb)
 {
@@ -72,14 +85,7 @@ void Renderer::submitCommandBuffer(CommandBuffer* cb)
 
   graphicsQueue.submit(submitInfo, *drawFences[currentFrameIndex]);
 
-  const vk::PresentInfoKHR presentInfoKhr {
-    .waitSemaphoreCount = 1,
-    .pWaitSemaphores = &*renderFinishedSemaphores[currentFrameIndex],
-    .swapchainCount = 1,
-    .pSwapchains = &*swapChain,
-    .pImageIndices = &imageIndex};
 
-  auto result = graphicsQueue.presentKHR(presentInfoKhr);
 
 
 }
@@ -87,10 +93,8 @@ void Renderer::submitCommandBuffer(CommandBuffer* cb)
 
 void Renderer::initSurface()
 {
-  GraphicsInstance gi;
-  gi.handle = reinterpret_cast<void*>(static_cast<VkInstance>(*instance));
-  auto rawSurface = window->surfaceCreationFunc(gi, getRequiredWindowDesc());
-  auto surfKHR = reinterpret_cast<VkSurfaceKHR>(rawSurface.handle);
+  auto rawSurface = window->createSurface(*instance);
+  auto surfKHR = reinterpret_cast<VkSurfaceKHR>(rawSurface);
   surface = vk::raii::SurfaceKHR(instance, surfKHR);
 }
 
@@ -135,7 +139,7 @@ vk::Extent2D Renderer::selectSwapExtent(vk::SurfaceCapabilitiesKHR const & capab
     return capabilities.currentExtent;
   }
   int width, height;
-  window->displaySizeFunc(&width, &height);
+  window->getDisplaySize(width, height);
 
   return {
     std::clamp<uint32_t>(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
@@ -739,17 +743,13 @@ void Renderer::createSyncObjects()
   // Create fences per frame for CPU-GPU synchronization
   for (size_t i = 0; i < maxFramesInFlight; i++)
   {
-    drawFences.emplace_back(device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
-
+    drawFences.emplace_back(device,
+                            vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
   }
-
 }
 
-
-
-void Renderer::init(tz::Window* window)
+Renderer::Renderer(tz::Window* window) : window(window)
 {
-  this->window = window;
   createInstance();
   setupDebugMessenger();
   initSurface();
@@ -757,10 +757,10 @@ void Renderer::init(tz::Window* window)
   createLogicalDevice();
   createSwapChain();
   createImageViews();
-  createGraphicsPipeline();
+  //createGraphicsPipeline();
   createCommandPool();
   createDescriptorPool();
-  createDefaultCommandBuffer();
+  //createDefaultCommandBuffer();
   createSyncObjects();
 }
 
@@ -857,6 +857,17 @@ CommandBuffer *Renderer::createCommandBuffer()
 
 }
 
+std::vector<vk::CommandBuffer> Renderer::getCommandBuffersForCurrentFrame(std::vector<CommandBuffer*>& cbs)
+{
+  std::vector<vk::CommandBuffer> vkCommandBuffers;
+  for (auto& cb : cbs)
+  {
+    auto& cfb = dynamic_cast<CommandBuffer *>(cb)->getCommandBufferForImage(currentFrameIndex);
+    vkCommandBuffers.push_back(cfb);
+  }
+  return vkCommandBuffers;
+}
+
 vk::raii::CommandBuffer& Renderer::getCommandBufferForCurrentFrame(CommandBuffer* cb)
 {
   auto& cfb = dynamic_cast<CommandBuffer *>(cb)->getCommandBufferForImage(currentFrameIndex);
@@ -870,13 +881,13 @@ vk::raii::CommandBuffer& Renderer::getCommandBufferForCurrentFrame(CommandBuffer
  * vulkan command buffers as we have "framesInFlight".
  * So for example 2 for double buffering, 3 for triple buffering and so on.
  * First thing is always to grab the actual current vulkan commandbuffer to
- * render into.
+ * recordAndSubmitFrameCommandBuffer into.
  *
- * We are also currently implicitely clearing the main swapchain "framebuffer" now.
+ * We are also currently implicitly clearing the main swapChain "framebuffer" now.
  *
- * @param cb    The "logical" API commandbuffer object. Wrapper for the real vulkan command buffers.
+ * @param cb    The "logical" API commandBuffer object. Wrapper for the real vulkan command buffers.
  */
-void Renderer::beginCommandBuffer(CommandBuffer *cb)
+void Renderer::beginCommandBuffer(CommandBuffer *cb, bool clearBackBuffer)
 {
 
   auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
@@ -897,7 +908,7 @@ void Renderer::beginCommandBuffer(CommandBuffer *cb)
   vk::RenderingAttachmentInfo attachmentInfo;
   attachmentInfo.setImageView(swapChainImageViews[imageIndex])
     .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
-    .setLoadOp(vk::AttachmentLoadOp::eClear)
+    .setLoadOp(clearBackBuffer ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad)
     .setStoreOp(vk::AttachmentStoreOp::eStore)
     .setClearValue(clearColor);
 
@@ -945,6 +956,11 @@ void Renderer::recordCommand(CommandBuffer* cb, Command *cmd)
           auto alignedStride = getAlignedStride(db->buffer->unitSize, minUniformBufferOffsetAlignment);
           alignedOffsets.push_back(c->offsets[counter++] * alignedStride);
         }
+        else if (db->type == DescriptorResourceType::Ssbo)
+        {
+          alignedOffsets = c->offsets;
+        }
+
       }
     }
 
@@ -1236,9 +1252,42 @@ vk::DescriptorType toVulkanDescriptorType(DescriptorResourceType resourceType)
   switch (resourceType)
   {
     case DescriptorResourceType::Ubo: return vk::DescriptorType::eUniformBufferDynamic;
-    case DescriptorResourceType::Ssbo: return vk::DescriptorType::eStorageBuffer;
+    case DescriptorResourceType::Ssbo: return vk::DescriptorType::eStorageBufferDynamic;
     case DescriptorResourceType::Sampler: return vk::DescriptorType::eCombinedImageSampler;
   }
+}
+
+PipelineLayout* createMasterPipelineLayout(Renderer& renderer)
+{
+
+    namespace rv = tz::render::vulkan;
+    // Camera is set0, binding0
+    auto cameraBuffer = renderer.createMultiframeUniformBuffer(2, sizeof(rv::CameraUniformBufferObject));
+    auto cameraUBOBinding = renderer.createDescriptorBinding(0,
+                                                                      rv::DescriptorResourceType::Ubo,
+                                                                      rv::ShaderType::Vertex, 1,
+                                                                      cameraBuffer);
+    auto cameraDescriptorSetLayout =  (renderer.createDescriptorSetLayout({cameraUBOBinding}));
+    auto cameraDescriptorSet = renderer.createMultiframeDescriptorSet(cameraDescriptorSetLayout);
+
+    // PerObject is set1, binding0
+    auto perObjectBuffer = renderer.createMultiframeUniformBuffer(10000, sizeof(rv::PerObjectUniformBufferObject));
+    auto perObjectUBOBinding = renderer.createDescriptorBinding(0, rv::DescriptorResourceType::Ubo,
+                                                                 rv::ShaderType::Vertex, 1,
+                                                                 perObjectBuffer);
+    auto perObjectDescriptorSetLayout = renderer.createDescriptorSetLayout({perObjectUBOBinding});
+    auto perObjectDescriptorSet = renderer.createMultiframeDescriptorSet(perObjectDescriptorSetLayout);
+
+    // Diffuse textures at set2, binding0.
+    // We allow up to 1000 textures
+    auto textureDescBinding = renderer.createDescriptorBinding(0, rv::DescriptorResourceType::Sampler,
+                                                                rv::ShaderType::Fragment, 1000, nullptr, nullptr);
+
+    auto diffuseTextureDescriptorSetLayout = renderer.createDescriptorSetLayout({textureDescBinding}, true);
+    auto diffuseTextureDescriptorSet = renderer.createMultiframeDescriptorSet(diffuseTextureDescriptorSetLayout);
+
+    auto masterPipelineLayout = renderer.createPipelineLayout({cameraDescriptorSetLayout, perObjectDescriptorSetLayout, diffuseTextureDescriptorSetLayout});
+    return masterPipelineLayout;
 }
 
 vk::ShaderStageFlagBits toShaderStageFlags(ShaderType shaderType)
@@ -1279,8 +1328,9 @@ DescriptorBinding *Renderer::createDescriptorBinding(
 
 
 Buffer *Renderer::createMultiframeBuffer(void *initialData,
-                                                                       size_t sizeInBytes,
-                                                                       BufferUsage bufferUsage)
+                                         size_t sizeInBytes,
+                                         size_t unitSize,
+                                         BufferUsage bufferUsage)
 {
   std::vector<vk::raii::Buffer> vulkanBuffers;
   std::vector<vk::raii::DeviceMemory> memories;
@@ -1293,6 +1343,8 @@ Buffer *Renderer::createMultiframeBuffer(void *initialData,
     memories.push_back(std::move(vulkanMemory));
   }
   auto buffer = new Buffer(std::move(vulkanBuffers), std::move(memories));
+  buffer->overallSize = sizeInBytes;
+  buffer->unitSize = unitSize;
   return buffer;
 }
 
@@ -1307,20 +1359,41 @@ uint32_t Renderer::getAlignedStride(size_t size, uint32_t minAlignment)
  * @param buffer
  * @param data
  * @param sizeInBytes
- * @param offset            This is a logical offset (effectively an index; multiplicator) into the buffer which is then transformed into
+ * @param offset
+ *
+ */
+void Renderer::updateBufferWithAbsoluteOffset(Buffer *buffer,
+                                             void *data,
+                                             size_t sizeInBytes, uint32_t offset)
+{
+  size_t alignedStride = getAlignedStride(sizeInBytes, minUniformBufferOffsetAlignment);
+  auto currentFrameBuffer = buffer->getMultiBufferByIndex(currentFrameIndex);
+  auto& currentFrameBufferMem = buffer->getMultiMemoryByIndex(currentFrameIndex);
+  auto targetMemory = currentFrameBufferMem.mapMemory(offset, sizeInBytes);
+  memcpy(targetMemory, data, sizeInBytes);
+  currentFrameBufferMem.unmapMemory();
+
+}
+
+/**
+ *
+ * @param buffer
+ * @param data
+ * @param sizeInBytes
+ * @param logicalOffset     This is a logical offset (effectively an index; multiplicator) into the buffer which is then transformed into
  *                          a correctly aligned offset as: alignedStride * offset.
  *                          The aligned stride is the next boundary keeping the minAlignment properties
  *                          of the GPU and the actual sizeInBytes. e.g. if the minAlignment is 128
  *                          and the size is 192, the alignedStride would be 256.
  */
-void Renderer::updateBuffer(Buffer *buffer,
+void Renderer::updateBufferWithLogicalOffset(Buffer *buffer,
                                                       void *data,
-                                                      size_t sizeInBytes, uint32_t offset)
+                                                      size_t sizeInBytes, uint32_t logicalOffset)
 {
   size_t alignedStride = getAlignedStride(sizeInBytes, minUniformBufferOffsetAlignment);
   auto currentFrameBuffer = buffer->getMultiBufferByIndex(currentFrameIndex);
   auto& currentFrameBufferMem = buffer->getMultiMemoryByIndex(currentFrameIndex);
-  auto targetMemory = currentFrameBufferMem.mapMemory(alignedStride * offset, sizeInBytes);
+  auto targetMemory = currentFrameBufferMem.mapMemory(alignedStride * logicalOffset, sizeInBytes);
   memcpy(targetMemory, data, sizeInBytes);
   currentFrameBufferMem.unmapMemory();
 
@@ -1330,16 +1403,18 @@ void Renderer::updateBuffer(Buffer *buffer,
 
 void Renderer::createDescriptorPool()
 {
-  vk::DescriptorPoolSize poolSizes[3];
+  vk::DescriptorPoolSize poolSizes[4];
   poolSizes[0].setType(vk::DescriptorType::eUniformBufferDynamic)
           .setDescriptorCount(1000);
   poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
-          .setDescriptorCount(2000);
+          .setDescriptorCount(8000);
   poolSizes[2].setType(vk::DescriptorType::eStorageImage)
           .setDescriptorCount(50);
+  poolSizes[3].setType(vk::DescriptorType::eStorageBufferDynamic)
+    .setDescriptorCount(100);
 
   vk::DescriptorPoolCreateInfo poolInfo;
-  poolInfo.poolSizeCount = 3;
+  poolInfo.poolSizeCount = 4;
   poolInfo.pPoolSizes = poolSizes;
   poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet
                    | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind
@@ -1412,21 +1487,23 @@ DescriptorSet *Renderer::createMultiframeDescriptorSet(DescriptorSetLayout* desc
 
 
       }
-
       else if (binding->type == DescriptorResourceType::Ubo || binding->type == DescriptorResourceType::Ssbo)
       {
+        auto descriptorType = binding->type == DescriptorResourceType::Ubo ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eStorageBufferDynamic;
+        auto range = binding->type == DescriptorResourceType::Ubo ? binding->buffer->unitSize : binding->buffer->unitSize * 10000;
         vk::DescriptorBufferInfo descBufferInfo;
         auto frameIndexBuffer = binding->buffer->getMultiBufferByIndex(i);
         descBufferInfo.setBuffer(frameIndexBuffer)
         .setOffset(0)
-        .setRange(binding->buffer->unitSize);
+        .setRange(range);
+
 
         vk::WriteDescriptorSet writeDescriptorSet;
         writeDescriptorSet.setDstSet(descriptorSets[i])
           .setDstBinding(binding->bindingIndex)
           .setDstArrayElement(0)
           .setDescriptorCount(1)
-            .setDescriptorType(vk::DescriptorType::eUniformBufferDynamic)
+          .setDescriptorType(descriptorType)
           .setBufferInfo(descBufferInfo);
         device.updateDescriptorSets(writeDescriptorSet, {});
       }
@@ -1611,6 +1688,8 @@ Sampler *Renderer::createSampler()
     auto samplerWrapper = new tz::render::vulkan::Sampler(std::move(sampler));
     return samplerWrapper;
 }
+
+
 Buffer *Renderer::createMultiframeUniformBuffer(
   uint32_t numberOfPlannedObjects, size_t objectSize)
 {
@@ -1630,6 +1709,8 @@ Buffer *Renderer::createMultiframeUniformBuffer(
   buffer->overallSize = objectSize * numberOfPlannedObjects;
   return buffer;
 }
+
+
 PipelineLayout *Renderer::createPipelineLayout(
   std::vector<DescriptorSetLayout *> descriptorSetLayouts)
 {

@@ -1,12 +1,12 @@
 #pragma once
-#include "common.hh"
-#include "defines.h"
+#include <common.hh>
+#include <window.hh>
+#include <defines.h>
 #include <Eigen/Dense>
 #include <functional>
 #include <optional>
 #include <map>
 #include <vulkan/vulkan_raii.hpp>
-#include <window_system.hh>
 
 namespace tz::render::vulkan {
 
@@ -88,6 +88,7 @@ class CmdBindDescriptors : public Command
   PipelineLayout* pipelineLayout;
   std::vector<uint32_t> offsets;
   uint32_t setIndex;
+  uint32_t instanceCount = 1;
 };
 
 
@@ -409,7 +410,7 @@ class Buffer
   Buffer(vk::raii::Buffer&& vkBuffer, vk::raii::DeviceMemory&& devMemory)
   {
     buffer = std::move(vkBuffer);
-    devMemory = std::move(memory);
+    memory = std::move(devMemory);
   }
 
   Buffer(std::vector<vk::raii::Buffer>&& multiBuffers, std::vector<vk::raii::DeviceMemory>&& multiMemories)
@@ -489,7 +490,7 @@ class Buffer
 
 struct VulkanInitData
 {
-  client_common::NativeHandles nativeHandles;
+  tz::NativeHandles nativeHandles;
   std::vector<const char*> extensions;
   std::optional<std::function<vk::raii::SurfaceKHR(vk::raii::Instance&)>> surfaceCreationFunc;
   std::function<void(int* width, int* height)> displaySizeFunc;
@@ -630,6 +631,7 @@ struct RenderState
 struct VertexPos
 {
   Eigen::Vector3f pos;
+  Eigen::Vector3f normal;
 };
 
 struct VertexPosColor
@@ -644,6 +646,73 @@ struct VertexPosTexCoords
   Eigen::Vector2f texCoords;
 };
 
+enum class VertexShaderType : int
+{
+  Static,
+  Skeletal
+};
+
+enum class MaterialType
+{
+  SingleColor,
+  DiffuseNormal,
+  PBR,
+  Text,
+};
+
+struct PSOCacheKey
+{
+  MaterialType materialType = MaterialType::SingleColor;
+  VertexShaderType vertexShaderType = VertexShaderType::Static;
+  bool wireframe = false;
+  bool depthTest = true;
+  bool blending = true;
+  CullMode cullMode = CullMode::Back;
+
+  uint64_t toHash() const
+  {
+    uint64_t key = 0;
+    key |= (static_cast<int>(materialType) & 0xFF);
+    key |= (static_cast<int>(vertexShaderType) & 0xFF) << 8;
+    key |= (wireframe? 1 : 0) << 16;
+    key |= (depthTest? 1 : 0) << 17;
+    key |= (blending? 1: 0)  << 18;
+    key |= (static_cast<int>(cullMode) & 0xFF) << 19;
+
+    return key;
+
+
+  }
+
+
+};
+
+struct PipelineStateObjectCache
+{
+
+  void put(PSOCacheKey key, PipelineStateObject* pso)
+  {
+    cacheMap[key.toHash()] = pso;
+  }
+
+  PipelineStateObject* get(PSOCacheKey key)
+  {
+
+    auto itty = cacheMap.find(key.toHash());
+    if (itty != cacheMap.end())
+    {
+      return itty->second;
+    }
+
+    return nullptr;
+
+  }
+
+  std::map<uint64_t, PipelineStateObject*> cacheMap;
+
+
+};
+
 
 /**
  * Renderer .
@@ -652,16 +721,17 @@ struct VertexPosTexCoords
 class TZ_API Renderer
 {
   public:
-  void init(tz::Window *window);
-
-  WindowDesc getRequiredWindowDesc() ;
+  Renderer(tz::Window* window);
 
   void beginFrame() ;
   void endFrame() ;
   void submitCommandBuffer(CommandBuffer*cb);
 
   Buffer* createBuffer(void* initialData, size_t sizeInBytes, BufferUsage bufferUsage);
-  Buffer * createMultiframeBuffer(void *initialData, size_t sizeInBytes, BufferUsage bufferUsage);
+  Buffer *createMultiframeBuffer(void *initialData,
+                                 size_t sizeInBytes,
+                                 size_t unitSize,
+                                 BufferUsage bufferUsage);
   Buffer * createMultiframeUniformBuffer(uint32_t numberOfPlannedObjects, size_t objectSize);
   DescriptorBinding * createDescriptorBinding(uint8_t binding,
                                              DescriptorResourceType resourceType,
@@ -680,15 +750,21 @@ class TZ_API Renderer
   Image * createImage(BitmapData bitmapData);
   ImageView * createImageView(Image* image) ;
   Sampler * createSampler() ;
-  void beginCommandBuffer(CommandBuffer *cb);
+  void beginCommandBuffer(CommandBuffer *cb, bool clearBackBuffer = false);
   void endCommandBuffer(CommandBuffer *cb);
   void recordCommand(CommandBuffer* cb, Command *cmd);
   PipelineLayout * createPipelineLayout(std::vector<DescriptorSetLayout *> descriptorSetLayouts);
-  PipelineStateObject * createPipelineStateObject(RenderState &renderState, ShaderPipeline *shaderPipeline, VertexLayout &vertexLayout,  PipelineLayout* providedPipelineLayout);
+  PipelineStateObject * createPipelineStateObject(RenderState &renderState, ShaderPipeline *shaderPipeline,
+                                                 VertexLayout &vertexLayout,  PipelineLayout* providedPipelineLayout);
 
   vk::raii::PipelineLayout createPipelineLayout(std::vector<vk::DescriptorSetLayout> descriptorSetLayouts);
 
-  void updateBuffer(Buffer *buffer, void *data, size_t sizeInBytes, uint32_t offset);
+  void updateBufferWithLogicalOffset(Buffer *buffer, void *data, size_t sizeInBytes, uint32_t logicalOffset);
+
+  void updateBufferWithAbsoluteOffset(Buffer *buffer,
+                                                void *data,
+                                                size_t sizeInBytes, uint32_t offset);
+  void submitCommandBuffers(std::vector<CommandBuffer *> &commandBuffers);
 
   private:
   void initSurface();
@@ -758,7 +834,7 @@ class TZ_API Renderer
   std::vector<vk::Image> swapChainImages;
   std::vector<vk::raii::ImageView> swapChainImageViews;
   std::vector<const char*> extensions;
-  client_common::NativeHandles nativeHandles;
+  tz::NativeHandles nativeHandles;
   VulkanInitData vulkanInitData;
   std::vector<char const*> requiredLayers;
   vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
@@ -794,8 +870,42 @@ class TZ_API Renderer
   uint32_t getAlignedStride(size_t size, uint32_t minAlignment);
   vk::FrontFace toVulkanFrontFace(FrontFace frontFace);
   vk::CullModeFlags toVulkanCullMode(CullMode cullMode);
+  std::vector<vk::CommandBuffer> getCommandBuffersForCurrentFrame(
+    std::vector<CommandBuffer *> &cbs);
+
 };
 
 vk::DescriptorType toVulkanDescriptorType(DescriptorResourceType resourceType);
 vk::ShaderStageFlagBits toShaderStageFlags(ShaderType shaderType);
+
+PipelineLayout* createMasterPipelineLayout(Renderer& renderer);
+
+struct CameraUniformBufferObject
+{
+  Eigen::Matrix4f view;
+  Eigen::Matrix4f proj;
+};
+
+struct alignas(16) PerInstanceBufferObject
+{
+  Eigen::Matrix4f model;
+  Eigen::Vector4f color;
+  uint32_t textureId;
+  uint32_t padding[3];       // We need the padding here as c++ compiler do not round up to 16byte alignment automatically.
+                          // Without this, cpu sends tightly packed 84-byte data, but GPU does the roundup, so we would misalign.
+
+};
+
+struct alignas(16) PerObjectUniformBufferObject
+{
+  Eigen::Matrix4f model;
+  Eigen::Vector4f color;
+  uint32_t textureId;
+  uint32_t padding[3];
+
+};
+
+
+
+
 } // namespace tz::render::vulkan

@@ -1,8 +1,9 @@
 #pragma once
+#include <SDL2/SDL.h>
 #include <defines.h>
-#include <sdl2.hh>
 #include <map>
 #include <iostream>
+#include <vector>
 
 namespace tz::input {
 enum class KeyCode

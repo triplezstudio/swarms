@@ -4,7 +4,7 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-auto tz::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fontSize) -> int
+auto tz::render::TextRenderer::createFont(const std::string& fontFile, uint16_t fontSize) -> Font*
 {
 
     // Read font file
@@ -21,7 +21,7 @@ auto tz::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fo
     fread(ttf_buffer, 1, size, fp);
     fclose(fp);
 
-    tz::render::vulkan::BitmapData  atlasBitmapData = {
+    vulkan::BitmapData atlasBitmapData = {
       .pixels = new uint8_t[512 * 512],
       .width = 512,
       .height = 512,
@@ -62,37 +62,35 @@ auto tz::text::TextRenderer::createFont(const std::string& fontFile, uint16_t fo
       throw std::runtime_error(msg);
     }
 
-    auto atlasImage = renderer.createImage(atlasBitmapData);
-    font->atlas = renderer.createTexture(atlasImage);
-
-    static uint16_t fontId = 0;
-    fonts[fontId] = font;
-    return fontId++;
+    auto image = renderer.createImage(atlasBitmapData);
+    auto fontTexture = renderer.createTexture(image);
+    font->textureId = textureAssetManager.registerTexture(fontFile, fontTexture);
+    return font;
 
 }
-tz::text::TextRenderer::TextRenderer(tz::render::vulkan::Renderer &renderer) :renderer(renderer)
+ tz::render::TextRenderer::TextRenderer(vulkan::Renderer & renderer, TextureAssetManager &textureAssetManager)
+    :textureAssetManager(textureAssetManager), renderer(renderer)
 {
 
 }
-tz::text::TextGeometry tz::text::TextRenderer::getGeometryForText(const std::string &text,
-                                                                  uint32_t fontId)
+
+tz::render::TextGeometry tz::render::TextRenderer::createGeometryForText(const std::string &text,
+  tz::render::Font & font)
 {
   std::vector<Eigen::Vector3f> positions;
   std::vector<Eigen::Vector2f> texCoords;
   std::vector<uint32_t> indices;
-
-  auto font = fonts[fontId];
 
   float penX = 0, penY = 0;
   float minX =  std::numeric_limits<float>::max();
   float maxX = -std::numeric_limits<float>::max();
   float minY =  std::numeric_limits<float>::max();
   float maxY = -std::numeric_limits<float>::max();
-  float baseline = font->baseLine;
+  float baseline = font.baseLine;
   int charCounter = 0;
   for (auto c : text) {
     stbtt_aligned_quad q;
-    stbtt_GetBakedQuad(font->bakedChars.data(), 512, 512, c - 32, &penX, &penY, &q, 0);
+    stbtt_GetBakedQuad(font.bakedChars.data(), 512, 512, c - 32, &penX, &penY, &q, 0);
 
     float pixel_aligned_x0 = std::floor(q.x0 + 0.0f);
     float pixel_aligned_y0 = std::floor(q.y0 + 0.0f);
@@ -149,10 +147,7 @@ tz::text::TextGeometry tz::text::TextRenderer::getGeometryForText(const std::str
     maxY = std::max(maxY, q.y1);
   }
 
-  return tz::text::TextGeometry {positions, texCoords, indices};
+  return tz::render::TextGeometry {positions, texCoords, indices};
 }
 
-tz::render::vulkan::Texture *tz::text::TextRenderer::getAtlasTextureForFont(int fontId)
-{
-  return fonts[fontId]->atlas;
-}
+

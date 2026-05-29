@@ -1,0 +1,9 @@
+add_library(imm_commands SHARED)
+
+target_include_directories(imm_commands PUBLIC include)
+
+target_sources(imm_commands PRIVATE immediate_commands.cpp)
+
+target_link_libraries(imm_commands PUBLIC render_lib render_vulkan_lib text_render_lib helpers)
+
+target_compile_definitions(imm_commands PRIVATE EXPORT_TZ_1LIB)

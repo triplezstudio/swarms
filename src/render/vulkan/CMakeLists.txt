@@ -20,7 +20,7 @@ if (USE_VULKAN)
     endif()
 
     target_link_libraries(render_vulkan_lib PUBLIC
-            Vulkan::Vulkan  Eigen3::Eigen render_lib)
+            Vulkan::Vulkan  Eigen3::Eigen render_lib window)
 
     # --------------------------------------------------------------------------
     # Shader compilation (GLSL -> SPIR-V)
@@ -39,6 +39,7 @@ if (USE_VULKAN)
     endif()
 
     set(SHADER_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src/render/shader_src)
+    set(SHADER_MODULES_DIR ${SHADER_SOURCE_DIR}/shared_modules)
     set(SHADER_BINARY_DIR ${CMAKE_BINARY_DIR}/bin/shader_binaries)
 
     message(STATUS "--- Shader Debug Info ---")
@@ -68,6 +69,7 @@ if (USE_VULKAN)
                 COMMAND ${SLANGC} ${SHADER}
                         -target spirv
                         -entry main
+                        -I ${SHADER_MODULES_DIR}
                         -o ${SHADER_OUTPUT}
                 DEPENDS ${SHADER}
                 COMMENT "Compiling shader: ${SHADER_NAME}"

@@ -1,10 +1,4 @@
-struct VSOutput
-{
-    float4 pos : SV_Position;
-    float2 fragTexcoord;
-    uint textureId;
-};
-
+import shader_interfaces;
 
 [[vk::binding(0,2)]]
 Sampler2D textureSampler[];
@@ -12,5 +6,7 @@ Sampler2D textureSampler[];
 [shader("fragment")]
 float4 main(VSOutput vertIn) : SV_TARGET
 {
-    return textureSampler[vertIn.textureId].Sample(vertIn.fragTexcoord);
+    float4 textureColor = textureSampler[vertIn.textureId].Sample(vertIn.fragTexcoord);
+    float4 finalColor = textureColor * vertIn.color;
+    return finalColor;
 }

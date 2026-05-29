@@ -1,7 +1,10 @@
 #pragma once
+#include "defines.h"
 #include "common.hh"
-#include <string>
+#include <SDL2/SDL.h>
+#include <SDL_vulkan.h>
 #include <functional>
+#include <string>
 
 namespace tz {
 
@@ -94,15 +97,6 @@ struct WindowDesc {
   int height;
   std::string title;
 
-  enum class GraphicsAPI {
-    Vulkan,
-  } api;
-
-  struct {
-    bool enableValidation;
-  } vk;
-
-
 };
 
 enum class FrameInputType
@@ -121,26 +115,22 @@ struct FrameInputEvent
 
 };
 
-struct Window
+struct TZ_API Window
 {
+  Window(int width, int height, const std::string& title);
+  void pollEvents();
+  void getDisplaySize(int& width, int& height);
+  VkSurfaceKHR createSurface(VkInstance vkInstance);
+
+
+  SDL_Window* _window = nullptr;
+  std::vector<SDL_Event> frameInputEvents;
   void* nativeHandle = nullptr;
   int width;
   int height;
-  std::function<GraphicsSurface (GraphicsInstance&, WindowDesc windowDesc)> surfaceCreationFunc;
-  std::function<void(int* width, int* height)> displaySizeFunc;
+  const std::string title;
 };
 
-
-  class WindowSystem {
-  public:
-  virtual void init() = 0;
-  virtual void pollEvents() = 0;
-  virtual Window* createWindow(WindowDesc desc) = 0;
-  virtual void present() = 0;
-  virtual GraphicsSurface createSurface(GraphicsInstance& instance, WindowDesc desc) = 0;
-
-
-  };
 }
 
 
