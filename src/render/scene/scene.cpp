@@ -47,7 +47,6 @@ tz::render::vulkan::CommandBuffer& tz::Scene::recordFrameCommandBuffer()
   }
 
   auto& frameCommandBuffer = immediateCommandProcessor->recordFrameCommandBuffer();
-  framePrimitives.clear();
   return frameCommandBuffer;
 
 }

@@ -1,10 +1,12 @@
-#include "../render/scene/include/scene.hh"
+
 #include <Eigen/Dense>
 #include <app.hh>
+#include <scene.hh>
 #include <iostream>
+#include <input.hh>
 #include <render_helpers.hh>
 #include <text_render.hh>
-#include <texture_asset_manager.hh>
+#include <ui.hh>
 #include <vulkan_renderer.hh>
 
 uint32_t testImageTexture = 0;
@@ -16,6 +18,8 @@ tz::Camera* main3DCamera = nullptr;
 tz::Camera* uiCamera = nullptr;
 tz::render::Font* titleFont = nullptr;
 tz::render::Font* smallUIFont = nullptr;
+tz::input::SDL2InputSystem* inputSystem = nullptr;
+tz::UISystem* mainUISystem = nullptr;
 
 void initialize(tz::App* app)
 {
@@ -37,22 +41,20 @@ void initialize(tz::App* app)
   titleFont = app->getTextRenderer().createFont("assets/consolab.ttf", 58);
   smallUIFont = app->getTextRenderer().createFont("assets/consola.ttf", 14);
 
+  inputSystem = &app->getInputSystem();
+
+  mainUISystem = &app->createUISystem(0, 0, 600, 400);
+  auto& button = mainUISystem->createButton(nullptr);
+  button.move(100, 100);
+  button.resize(128, 48);
+
 }
 
-void gatherInput(const tz::input::SDL2InputSystem& inputSystem)
-{
-  // TODO
-}
 
 void doFrame(tz::App* app)
 {
   namespace rv = tz::render::vulkan;
   auto& immCmdProc = app->getImmediateCommandProcessor();
-
-  if (tz::input::SDL2InputSystem::getInstance().isMouseButtonClicked(tz::input::MouseButton::LEFT))
-  {
-    std::cout << "left mb clicked" << std::endl;
-  }
 
   // This allows us to "see" our scene through a camera in a 3d world
   // and place objects in world coordinates.

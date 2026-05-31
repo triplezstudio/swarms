@@ -1,13 +1,14 @@
-#include <scene.hh>
+#include "ui.hh"
 #include <Eigen/Dense>
 #include <defines.h>
 #include <functional>
+#include <immediate_commands.hh>
 #include <input.hh>
 #include <render_helpers.hh>
+#include <scene.hh>
 #include <string>
 #include <text_render.hh>
 #include <vulkan_renderer.hh>
-#include <immediate_commands.hh>
 #include <window.hh>
 
 namespace tz {
@@ -15,7 +16,7 @@ namespace rv =  render::vulkan;
 
   class App;
   using FrameListener = std::function<void(App* app)>;
-  using InputListener = std::function<void(const tz::input::SDL2InputSystem& inputSystem)>;
+  using InputListener = std::function<void(tz::input::SDL2InputSystem& inputSystem)>;
 
   class TZ_API App
   {
@@ -23,13 +24,17 @@ namespace rv =  render::vulkan;
     public:
     App(int width, int height, const std::string& title);
 
+    Window& getWindow() { return *window; }
     render::vulkan::Renderer& getRenderer() { return *renderer; }
     render::TextRenderer& getTextRenderer() { return *textRenderer; };
     TextureAssetManager& getTextureAssetManager() { return *textureAssetManager; };
     ImmediateCommandProcessor& getImmediateCommandProcessor() { return *immediateCommandProcessor; }
+    input::SDL2InputSystem& getInputSystem() { return inputSystem; }
+    tz::UISystem &createUISystem(int x, int y, int width, int height);
 
     virtual void run();
     virtual void addUpdateListener(FrameListener frameListener);
+    virtual void addInputListener(InputListener inputListener);
 
 
     ImmediateCommandProcessor* immediateCommandProcessor = nullptr;
@@ -77,10 +82,11 @@ namespace rv =  render::vulkan;
       InputListener inputListener;
 
       std::map<Scene*, uint32_t> sceneLayerMap;
-      void renderScenes();
-      void renderImmediateCommands();
       std::vector<render::vulkan::CommandBuffer *> recordCommandBuffesForScenes();
       render::vulkan::CommandBuffer &recordImmediateCommandBuffers();
+      std::vector<render::vulkan::CommandBuffer *> recordUICommandBuffers();
+
+      std::vector<UISystem*> uiSystems;
   };
 
 

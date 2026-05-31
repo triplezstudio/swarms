@@ -3,6 +3,7 @@
 #include <text_render.hh>
 #include <vulkan_renderer.hh>
 #include <window.hh>
+#include <ui.hh>
 
 
 namespace tz
@@ -34,8 +35,9 @@ void tz::App::run()
   {
     window->pollEvents();
     inputSystem.update(window->frameInputEvents);
-    updateFrameListeners(16.66f);
     updateInputListeners();
+    updateFrameListeners(16.66f);
+
     renderFrame();
   }
 
@@ -49,13 +51,30 @@ void App::updateInputListeners()
   }
 }
 
-void App::renderScenes()
+tz::UISystem& App::createUISystem(int x, int y, int width, int height)
 {
-  for (auto& scene: layerSortedScenes)
-  {
-    scene->render();
-  }
+  auto uiSystem = new tz::UISystem(std::move(tz::UIHost{window,
+                                                       renderer, textRenderer,
+                                                       &inputSystem,
+                                                       {x, y}, {width, height}}));
+
+  uiSystems.push_back(uiSystem);
+  return *uiSystem;
 }
+
+
+std::vector<tz::render::vulkan::CommandBuffer*> App::recordUICommandBuffers()
+{
+  std::vector<tz::render::vulkan::CommandBuffer*> frameCommandBuffers;
+  for (auto& uiSystem: uiSystems)
+  {
+    frameCommandBuffers.push_back(&uiSystem->recordFrameCommandBuffer());
+  }
+
+  return frameCommandBuffers;
+
+}
+
 
 std::vector<tz::render::vulkan::CommandBuffer*> App::recordCommandBuffesForScenes()
 {
@@ -73,11 +92,6 @@ render::vulkan::CommandBuffer &App::recordImmediateCommandBuffers()
   return immediateCommandProcessor->recordFrameCommandBuffer();
 }
 
-void App::renderImmediateCommands()
-{
-  immediateCommandProcessor->recordAndSubmitFrameCommandBuffer();
-}
-
 void App::renderFrame()
 {
   renderer->beginFrame();
@@ -91,8 +105,18 @@ void App::renderFrame()
 
   auto sceneCommandBuffers = recordCommandBuffesForScenes();
   auto& immediateCommandBuffer = recordImmediateCommandBuffers();
+  auto uiCommandBuffers = recordUICommandBuffers();
+
   sceneCommandBuffers.push_back(&immediateCommandBuffer);
+  // temp debug:
+  //sceneCommandBuffers.clear();
   for (auto & cb: sceneCommandBuffers)
+  {
+    frameCommandBuffers.push_back(cb);
+  }
+
+
+  for (auto& cb : uiCommandBuffers)
   {
     frameCommandBuffers.push_back(cb);
   }
@@ -101,6 +125,11 @@ void App::renderFrame()
 
   renderer->endFrame();
 
+}
+
+void App::addInputListener(tz::InputListener inputListener)
+{
+  inputListeners.push_back(inputListener);
 }
 
 void App::addUpdateListener(tz::FrameListener frameListener)
