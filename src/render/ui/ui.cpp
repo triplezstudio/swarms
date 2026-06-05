@@ -7,9 +7,13 @@
 tz::UISystem::UISystem(UIHost host) : host(host)
 {
   masterPipelineLayout = new tz::MasterPipelineLayout(*host.renderer);
+  auto textureAssetManager = new tz::TextureAssetManager(*host.renderer, masterPipelineLayout->getDiffuseTextureDescriptorSet());
+  auto textRenderer = new tz::render::TextRenderer(*host.renderer, *textureAssetManager);
   immediateCommandProcessor = new tz::ImmediateCommandProcessor(*host.renderer,
-                                                                *host.textRenderer,
+                                                                *textRenderer,
                                                                 *masterPipelineLayout);
+
+  font = textRenderer->createFont("assets/consola.ttf", 18);
 
 }
 tz::render::vulkan::CommandBuffer &tz::UISystem::recordFrameCommandBuffer()
@@ -20,8 +24,12 @@ tz::render::vulkan::CommandBuffer &tz::UISystem::recordFrameCommandBuffer()
   {
     auto pos = Eigen::Vector3f{widget->getPosition().x(), widget->getPosition().y(), 0};
     auto size = Eigen::Vector3f(widget->getSize().x(), widget->getSize().y(), 1);
-    immediateCommandProcessor->renderQuad({pos, size
-    });
+    immediateCommandProcessor->renderQuad({pos, size});
+    immediateCommandProcessor->renderText("Click Me", *font,
+                                          {{widget->getPosition().x() + 4,
+                                                               widget->getPosition().y() + 4, -0.5}},
+                                          {1, 0, 0, 1});
+
   }
 
   auto& frameCommandBuffer = immediateCommandProcessor->recordFrameCommandBuffer();

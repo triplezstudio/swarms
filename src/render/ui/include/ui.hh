@@ -170,6 +170,7 @@ class TZ_API UISystem
       std::vector<UIWidget*> topLevelWidgets;
       MasterPipelineLayout *masterPipelineLayout = nullptr;
       ImmediateCommandProcessor *immediateCommandProcessor = nullptr;
+      tz::render::Font* font = nullptr;
 };
 
 }

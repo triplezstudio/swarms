@@ -150,9 +150,6 @@ tz::ImmediateCommandProcessor::ImmediateCommandProcessor(tz::render::vulkan::Ren
     std::vector<rv::VertexPosTexCoords> cubeVerticesPosTex;
     fillWithCubeVertices(cubeVerticesPosTex);
 
-
-
-
     quadPosVertexBuffer = renderer.createBuffer(verticesPos.data(),
                                                  verticesPos.size() * sizeof (rv::VertexPos),
                                                  rv::BufferUsage::Vertex);
@@ -164,7 +161,6 @@ tz::ImmediateCommandProcessor::ImmediateCommandProcessor(tz::render::vulkan::Ren
     cubePosTexCoordVertexBuffer = renderer.createBuffer(cubeVerticesPosTex.data(),
                                                          cubeVerticesPosTex.size() * sizeof (rv::VertexPosTexCoords),
                                                          rv::BufferUsage::Vertex);
-
 
     quadPosTexCoordVertexBuffer = renderer.createBuffer(verticesPosTexCoord.data(),
                                                          verticesPosTexCoord.size() * sizeof (rv::VertexPosTexCoords),
