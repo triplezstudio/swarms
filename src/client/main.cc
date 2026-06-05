@@ -8,6 +8,7 @@
 #include <text_render.hh>
 #include <ui.hh>
 #include <vulkan_renderer.hh>
+#include <Windows.h>
 
 uint32_t testImageTexture = 0;
 uint32_t testImage2Texture = 0;
@@ -152,10 +153,99 @@ void runApp()
   app.run();
 }
 
+template<typename Func>
+void mainLoop (Func&& func,const  std::string& title, LARGE_INTEGER freq, int numEntities)
+{
+  for (int run = 0; run < 1; run++)
+  {
+    for (int i = 0; i < numEntities; i++)
+    {
+      func(i);
+    }
+  }
+}
+
+void perfTest()
+{
+  struct Transform {
+    Eigen::Vector3f position;
+  } mypos;
+
+  struct BigStruct1
+  {
+    uint64_t foo;
+    uint64_t bar;
+    bool baz;
+    bool barvb;
+  };
+
+  struct Entity  {
+    Transform transform;
+    BigStruct1 bs1;
+    BigStruct1 bs2;
+    Eigen::Vector3f acc;
+    BigStruct1 bs3;
+    Eigen::Vector3f vel;
+    BigStruct1 bsx;
+    BigStruct1 bsr;
+    BigStruct1 bsv;
+    BigStruct1 bsu;
+  };
+
+  const int numEntities = 10000;
+
+  // SOA
+  auto transforms= std::vector<Transform>(numEntities);
+  auto accelerations = std::vector<Eigen::Vector3f>(numEntities);
+  auto velocities = std::vector<Eigen::Vector3f>(numEntities);
+
+  // SoA
+  auto entities = std::vector<Entity*>(numEntities);
+  for (int i = 0; i < numEntities; i++)
+  {
+    entities[i] = new Entity();
+  }
+
+  LARGE_INTEGER freq;
+  QueryPerformanceFrequency(&freq);
+
+  LARGE_INTEGER start;
+
+  Eigen::Vector3f positions1;
+  auto soaFunc = [&transforms, &accelerations, &velocities, &positions1](int i) {
+    transforms[i].position += accelerations[i] + velocities[i];
+    positions1 = transforms[i].position;
+  };
+
+  Eigen::Vector3f positions2;
+  auto aosFunc = [&entities, &positions2](int i) {
+    entities[i]->transform.position += entities[i]->acc + entities[i]->vel;
+    positions2 = entities[i]->transform.position;
+  };
+
+  QueryPerformanceCounter(&start);
+  mainLoop(std::move(soaFunc), "SOA", freq, numEntities);
+  LARGE_INTEGER end;
+  QueryPerformanceCounter(&end);
+  auto diffInTicks = end.QuadPart - start.QuadPart;
+  float diffInSeconds = (float) diffInTicks /  (float) freq.QuadPart;
+
+
+  std::cout << "diff avg soa: " << (diffInSeconds) << (positions1.x()) << std::endl;
+
+  QueryPerformanceCounter(&start);
+  mainLoop(aosFunc, "ASO", freq, numEntities);
+  QueryPerformanceCounter(&end);
+  diffInTicks = end.QuadPart - start.QuadPart;
+  diffInSeconds = (float) diffInTicks /  (float) freq.QuadPart;
+  std::cout << "diff avg aos: " << (diffInSeconds) <<(positions2.x()) << std::endl;
+
+}
 
 int main(int argc, char* argv[])
 {
-  runApp();
+  perfTest();
+  //runApp();
 
   return 0;
 }
