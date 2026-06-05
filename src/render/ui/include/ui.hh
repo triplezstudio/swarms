@@ -27,7 +27,6 @@ struct UIHost
 {
   Window *window = nullptr;
   render::vulkan::Renderer* renderer = nullptr;
-  render::TextRenderer* textRenderer = nullptr;
   input::SDL2InputSystem* inputSystem = nullptr;
 
   // The viewport rectangle within the window.
@@ -169,6 +168,7 @@ class TZ_API UISystem
       UIHost host;
       std::vector<UIWidget*> topLevelWidgets;
       MasterPipelineLayout *masterPipelineLayout = nullptr;
+      render::TextRenderer* textRenderer = nullptr;
       ImmediateCommandProcessor *immediateCommandProcessor = nullptr;
       tz::render::Font* font = nullptr;
 };

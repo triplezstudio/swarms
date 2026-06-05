@@ -54,7 +54,7 @@ void App::updateInputListeners()
 tz::UISystem& App::createUISystem(int x, int y, int width, int height)
 {
   auto uiSystem = new tz::UISystem(std::move(tz::UIHost{window,
-                                                       renderer, textRenderer,
+                                                       renderer,
                                                        &inputSystem,
                                                        {x, y}, {width, height}}));
 

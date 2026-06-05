@@ -10,6 +10,8 @@
 namespace tz
 {
 
+
+
 enum class PrimitiveGeometryType
 {
   Line,

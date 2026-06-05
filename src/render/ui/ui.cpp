@@ -8,7 +8,7 @@ tz::UISystem::UISystem(UIHost host) : host(host)
 {
   masterPipelineLayout = new tz::MasterPipelineLayout(*host.renderer);
   auto textureAssetManager = new tz::TextureAssetManager(*host.renderer, masterPipelineLayout->getDiffuseTextureDescriptorSet());
-  auto textRenderer = new tz::render::TextRenderer(*host.renderer, *textureAssetManager);
+  textRenderer = new tz::render::TextRenderer(*host.renderer, *textureAssetManager);
   immediateCommandProcessor = new tz::ImmediateCommandProcessor(*host.renderer,
                                                                 *textRenderer,
                                                                 *masterPipelineLayout);
@@ -22,12 +22,23 @@ tz::render::vulkan::CommandBuffer &tz::UISystem::recordFrameCommandBuffer()
 
   for (auto& widget : topLevelWidgets)
   {
-    auto pos = Eigen::Vector3f{widget->getPosition().x(), widget->getPosition().y(), 0};
+    Eigen::Vector2f offset = {widget->getSize().x()/2, widget->getSize().y()/2};
+
+    auto pos = Eigen::Vector3f{widget->getPosition().x() + offset.x(), widget->getPosition().y() + offset.y() , 0};
     auto size = Eigen::Vector3f(widget->getSize().x(), widget->getSize().y(), 1);
     immediateCommandProcessor->renderQuad({pos, size});
+    auto textRect = textRenderer->measureText("Click Me", *font);
+    Eigen::Vector2f textRectOffset = {(textRect.right - textRect.left)/2, (textRect.top - textRect.bottom)/2};
+    Eigen::Vector3f textDebugQuadPos = {widget->getPosition().x() + textRectOffset.x(),
+                                         widget->getPosition().y() + textRectOffset.y(), -0.6};
+    Eigen::Vector3f textDebugQuadSize = {textRect.right - textRect.left, textRect.top - textRect.bottom, 1};
+    RenderHints textDebugQuadRenderHints;
+    textDebugQuadRenderHints.color = {0, 0, 1, 1};
+    immediateCommandProcessor->renderQuad({textDebugQuadPos, textDebugQuadSize},
+                                          textDebugQuadRenderHints);
     immediateCommandProcessor->renderText("Click Me", *font,
-                                          {{widget->getPosition().x() + 4,
-                                                               widget->getPosition().y() + 4, -0.5}},
+                                          {{widget->getPosition().x() + offset.x() - textRectOffset.x(),
+                                                               widget->getPosition().y() + offset.y() - textRectOffset.y(), -0.5}},
                                           {1, 0, 0, 1});
 
   }
