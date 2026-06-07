@@ -751,7 +751,7 @@ class TZ_API Renderer
   ImageView * createImageView(Image* image) ;
   Sampler * createSampler() ;
   void beginCommandBuffer(CommandBuffer *cb, bool clearBackBuffer = false);
-  void endCommandBuffer(CommandBuffer *cb);
+  void endCommandBuffer(CommandBuffer *cb, bool prepareForPresent = false);
   void recordCommand(CommandBuffer* cb, Command *cmd);
   PipelineLayout * createPipelineLayout(std::vector<DescriptorSetLayout *> descriptorSetLayouts);
   PipelineStateObject * createPipelineStateObject(RenderState &renderState, ShaderPipeline *shaderPipeline,

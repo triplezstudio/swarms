@@ -121,6 +121,11 @@ void App::renderFrame()
     frameCommandBuffers.push_back(cb);
   }
 
+  static rv::CommandBuffer* frameEndingCommandBuffer = renderer->createCommandBuffer();
+  renderer->beginCommandBuffer(frameEndingCommandBuffer);
+  renderer->endCommandBuffer(frameEndingCommandBuffer, true);
+  frameCommandBuffers.push_back(frameEndingCommandBuffer);
+
   renderer->submitCommandBuffers(frameCommandBuffers);
 
   renderer->endFrame();
