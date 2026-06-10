@@ -1,33 +1,32 @@
 #include <app.hh>
 #include <iostream>
 #include <text_render.hh>
+#include <ui.hh>
 #include <vulkan_renderer.hh>
 #include <window.hh>
-#include <ui.hh>
 
-
-namespace tz
-{
+namespace tz {
 namespace rv = render::vulkan;
 
-App::App(int width, int height, const std::string& title) :inputSystem(tz::input::SDL2InputSystem::getInstance())
+App::App(int width, int height, const std::string &title)
+  : inputSystem(tz::input::SDLInputSystem::getInstance())
 {
-
-  window = new tz::Window(width, height, title);
-  renderer = new rv::Renderer(window);
+  window               = new tz::Window(width, height, title);
+  renderer             = new rv::Renderer(window);
   masterPipelineLayout = new MasterPipelineLayout(*renderer);
-  textureAssetManager = new tz::TextureAssetManager(*renderer, masterPipelineLayout->getDiffuseTextureDescriptorSet());
+  textureAssetManager
+    = new tz::TextureAssetManager(*renderer, masterPipelineLayout->getDiffuseTextureDescriptorSet());
   textRenderer = new tz::render::TextRenderer(*renderer, *textureAssetManager);
 
-  immediateCommandProcessor = new ImmediateCommandProcessor(*renderer, *textRenderer, *masterPipelineLayout);
-
+  immediateCommandProcessor = new ImmediateCommandProcessor(*renderer,
+                                                            *textRenderer,
+                                                            *masterPipelineLayout);
 }
 
-tz::render::vulkan::Renderer * App::vulkanRenderer()
+tz::render::vulkan::Renderer *App::vulkanRenderer()
 {
   return dynamic_cast<tz::render::vulkan::Renderer *>(renderer);
 }
-
 
 void tz::App::run()
 {
@@ -40,46 +39,40 @@ void tz::App::run()
 
     renderFrame();
   }
-
 }
 
 void App::updateInputListeners()
 {
-  for (auto& inputListener : inputListeners)
+  for (auto &inputListener : inputListeners)
   {
     inputListener(inputSystem);
   }
 }
 
-tz::UISystem& App::createUISystem(int x, int y, int width, int height)
+tz::UISystem &App::createUISystem(int x, int y, int width, int height)
 {
-  auto uiSystem = new tz::UISystem(std::move(tz::UIHost{window,
-                                                       renderer,
-                                                       &inputSystem,
-                                                       {x, y}, {width, height}}));
+  auto uiSystem = new tz::UISystem(
+    std::move(tz::UIHost{window, renderer, &inputSystem, {x, y}, {width, height}}));
 
   uiSystems.push_back(uiSystem);
   return *uiSystem;
 }
 
-
-std::vector<tz::render::vulkan::CommandBuffer*> App::recordUICommandBuffers()
+std::vector<tz::render::vulkan::CommandBuffer *> App::recordUICommandBuffers()
 {
-  std::vector<tz::render::vulkan::CommandBuffer*> frameCommandBuffers;
-  for (auto& uiSystem: uiSystems)
+  std::vector<tz::render::vulkan::CommandBuffer *> frameCommandBuffers;
+  for (auto &uiSystem : uiSystems)
   {
     frameCommandBuffers.push_back(&uiSystem->recordFrameCommandBuffer());
   }
 
   return frameCommandBuffers;
-
 }
 
-
-std::vector<tz::render::vulkan::CommandBuffer*> App::recordCommandBuffesForScenes()
+std::vector<tz::render::vulkan::CommandBuffer *> App::recordCommandBuffesForScenes()
 {
-  std::vector<tz::render::vulkan::CommandBuffer*> frameCommandBuffers;
-  for (auto& scene: layerSortedScenes)
+  std::vector<tz::render::vulkan::CommandBuffer *> frameCommandBuffers;
+  for (auto &scene : layerSortedScenes)
   {
     frameCommandBuffers.push_back(&scene->recordFrameCommandBuffer());
   }
@@ -96,32 +89,31 @@ void App::renderFrame()
 {
   renderer->beginFrame();
 
-  static rv::CommandBuffer* mainFrameCommandBuffer = renderer->createCommandBuffer();
+  static rv::CommandBuffer *mainFrameCommandBuffer = renderer->createCommandBuffer();
   renderer->beginCommandBuffer(mainFrameCommandBuffer, true);
   renderer->endCommandBuffer(mainFrameCommandBuffer);
 
-  std::vector<rv::CommandBuffer*> frameCommandBuffers;
+  std::vector<rv::CommandBuffer *> frameCommandBuffers;
   frameCommandBuffers.push_back(mainFrameCommandBuffer);
 
-  auto sceneCommandBuffers = recordCommandBuffesForScenes();
-  auto& immediateCommandBuffer = recordImmediateCommandBuffers();
-  auto uiCommandBuffers = recordUICommandBuffers();
+  auto sceneCommandBuffers     = recordCommandBuffesForScenes();
+  auto &immediateCommandBuffer = recordImmediateCommandBuffers();
+  auto uiCommandBuffers        = recordUICommandBuffers();
 
   sceneCommandBuffers.push_back(&immediateCommandBuffer);
   // temp debug:
   //sceneCommandBuffers.clear();
-  for (auto & cb: sceneCommandBuffers)
+  for (auto &cb : sceneCommandBuffers)
   {
     frameCommandBuffers.push_back(cb);
   }
 
-
-  for (auto& cb : uiCommandBuffers)
+  for (auto &cb : uiCommandBuffers)
   {
     frameCommandBuffers.push_back(cb);
   }
 
-  static rv::CommandBuffer* frameEndingCommandBuffer = renderer->createCommandBuffer();
+  static rv::CommandBuffer *frameEndingCommandBuffer = renderer->createCommandBuffer();
   renderer->beginCommandBuffer(frameEndingCommandBuffer);
   renderer->endCommandBuffer(frameEndingCommandBuffer, true);
   frameCommandBuffers.push_back(frameEndingCommandBuffer);
@@ -129,7 +121,6 @@ void App::renderFrame()
   renderer->submitCommandBuffers(frameCommandBuffers);
 
   renderer->endFrame();
-
 }
 
 void App::addInputListener(tz::InputListener inputListener)
@@ -144,29 +135,19 @@ void App::addUpdateListener(tz::FrameListener frameListener)
 
 void App::updateFrameListeners(float frameTime)
 {
-
-  for (auto& frameListenerFunc : frameListeners) {
+  for (auto &frameListenerFunc : frameListeners)
+  {
     frameListenerFunc(this);
   }
-
 }
 
-
-void App::addScene(const std::string &name, Scene* scene, uint32_t layer)
+void App::addScene(const std::string &name, Scene *scene, uint32_t layer)
 {
   scenes.insert({name, scene});
   layerSortedScenes.push_back(scene);
-  std::sort(layerSortedScenes.begin(), layerSortedScenes.end(), [this](Scene* a, Scene* b)
-             {
-               return sceneLayerMap[a] < sceneLayerMap[b];
-             });
+  std::sort(layerSortedScenes.begin(), layerSortedScenes.end(), [this](Scene *a, Scene *b) {
+    return sceneLayerMap[a] < sceneLayerMap[b];
+  });
 }
 
-}
-
-
-
-
-
-
-
+} // namespace tz

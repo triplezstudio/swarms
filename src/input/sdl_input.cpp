@@ -4,107 +4,116 @@
 namespace tz::input {
 
 // Key "pressed" means: was the key down in the previous frame and is now up?
-bool SDL2InputSystem::isKeyPressed(KeyCode keyCode)
+bool SDLInputSystem ::isKeyPressed(KeyCode keyCode)
 {
-  for (auto& e : frameInputEvents)
+  for (auto &e : frameInputEvents)
   {
-    if (e.type == SDL_KEYDOWN && getKeyCodeFromSDLEvent(e) == keyCode)
+    if (e.type == SDL_EVENT_KEY_DOWN && getKeyCodeFromSDLEvent(e) == keyCode)
     {
       return true;
     }
   }
 
   return false;
-
 }
 
-bool SDL2InputSystem::isKeyDown(KeyCode keyCode)
+bool SDLInputSystem ::isKeyDown(KeyCode keyCode)
 {
   return currentFrameKeyboardState[toSDLScanCode(keyCode)];
 }
 
-SDL_Scancode SDL2InputSystem::toSDLScanCode(KeyCode keyCode)
+SDL_Scancode SDLInputSystem ::toSDLScanCode(KeyCode keyCode)
 {
   switch (keyCode)
   {
-    case KeyCode::A: return SDL_SCANCODE_A;
-    case KeyCode::B: return SDL_SCANCODE_B;
-    case KeyCode::C: return SDL_SCANCODE_C;
-    case KeyCode::D: return SDL_SCANCODE_D;
-    case KeyCode::E: return SDL_SCANCODE_E;
-    case KeyCode::F: return SDL_SCANCODE_F;
-    case KeyCode::G: return SDL_SCANCODE_G;
-    case KeyCode::H: return SDL_SCANCODE_H;
-    case KeyCode::I: return SDL_SCANCODE_I;
-    case KeyCode::J: return SDL_SCANCODE_J;
-    case KeyCode::K: return SDL_SCANCODE_K;
-
+    case KeyCode::A:
+      return SDL_SCANCODE_A;
+    case KeyCode::B:
+      return SDL_SCANCODE_B;
+    case KeyCode::C:
+      return SDL_SCANCODE_C;
+    case KeyCode::D:
+      return SDL_SCANCODE_D;
+    case KeyCode::E:
+      return SDL_SCANCODE_E;
+    case KeyCode::F:
+      return SDL_SCANCODE_F;
+    case KeyCode::G:
+      return SDL_SCANCODE_G;
+    case KeyCode::H:
+      return SDL_SCANCODE_H;
+    case KeyCode::I:
+      return SDL_SCANCODE_I;
+    case KeyCode::J:
+      return SDL_SCANCODE_J;
+    case KeyCode::K:
+      return SDL_SCANCODE_K;
   }
 }
 
-KeyCode SDL2InputSystem::getKeyCodeFromSDLEvent(SDL_Event ev)
+KeyCode SDLInputSystem ::getKeyCodeFromSDLEvent(SDL_Event ev)
 {
   // We only care about keyboard events
-  if (ev.type != SDL_KEYDOWN && ev.type != SDL_KEYUP)
+  if (ev.type != SDL_EVENT_KEY_DOWN && ev.type != SDL_EVENT_KEY_UP)
   {
     // You might want to handle this case, perhaps with a KeyCode::NONE
     return KeyCode::NONE;
   }
 
-  switch (ev.key.keysym.sym)
+  switch (ev.key.key)
   {
     // Letters
-    case SDLK_a:
+    case SDLK_A:
       return KeyCode::A;
-    case SDLK_b:
+    case SDLK_B:
       return KeyCode::B;
-    case SDLK_c:
+    case SDLK_C:
       return KeyCode::C;
-    case SDLK_d:
+    case SDLK_D:
       return KeyCode::D;
-    case SDLK_e:
+    case SDLK_E:
       return KeyCode::E;
-    case SDLK_f:
+    case SDLK_F:
       return KeyCode::F;
-    case SDLK_g:
+    case SDLK_G:
       return KeyCode::G;
-    case SDLK_h:
+    case SDLK_H:
       return KeyCode::H;
-    case SDLK_i:
+    case SDLK_I:
       return KeyCode::I;
-    case SDLK_j:
+    case SDLK_J:
       return KeyCode::J;
-    case SDLK_k:
+    case SDLK_K:
       return KeyCode::K;
-    case SDLK_l:
+    case SDLK_L:
       return KeyCode::L;
-    case SDLK_m:
+    case SDLK_M:
       return KeyCode::M;
-    case SDLK_n:
+    case SDLK_N:
       return KeyCode::N;
-    case SDLK_o:
+    case SDLK_O:
       return KeyCode::O;
-    case SDLK_p:
+    case SDLK_P:
       return KeyCode::P;
-    case SDLK_q:
+    case SDLK_Q:
       return KeyCode::Q;
-    case SDLK_r:
+    case SDLK_R:
       return KeyCode::R;
-    case SDLK_s:
+    case SDLK_S:
       return KeyCode::S;
-    case SDLK_t:
+    case SDLK_T:
       return KeyCode::T;
-    case SDLK_u:
+    case SDLK_U:
       return KeyCode::U;
-    case SDLK_v:
+    case SDLK_V:
       return KeyCode::V;
-    case SDLK_w:
+    case SDLK_W:
       return KeyCode::W;
-    case SDLK_x:
+    case SDLK_X:
       return KeyCode::X;
-    case SDLK_y:
+    case SDLK_Y:
       return KeyCode::Y;
-    case SDLK_z:
+    case SDLK_Z:
       return KeyCode::Z;
 
     // Numbers
@@ -185,52 +194,49 @@ KeyCode SDL2InputSystem::getKeyCodeFromSDLEvent(SDL_Event ev)
   }
 }
 
-void SDL2InputSystem::getMouseCoords(int &x, int &y)
+void SDLInputSystem ::getMouseCoords(float &x, float &y)
 {
-  SDL_GetMouseState(&x,&y);
+  SDL_GetMouseState(&x, &y);
 }
 
-bool SDL2InputSystem::isMouseButtonDown(tz::input::MouseButton mouseButton, uint32_t state)
+bool SDLInputSystem ::isMouseButtonDown(tz::input::MouseButton mouseButton, uint32_t state)
 {
   switch (mouseButton)
   {
-    case MouseButton::LEFT: return state & SDL_BUTTON(SDL_BUTTON_LEFT);
-    case MouseButton::RIGHT: return state & SDL_BUTTON(SDL_BUTTON_RIGHT);
-    case MouseButton::MIDDLE: return state & SDL_BUTTON(SDL_BUTTON_MIDDLE);
+    case MouseButton::LEFT:
+      return state & SDL_BUTTON_MASK(SDL_BUTTON_LEFT);
+    case MouseButton::RIGHT:
+      return state & SDL_BUTTON_MASK(SDL_BUTTON_RIGHT);
+    case MouseButton::MIDDLE:
+      return state & SDL_BUTTON_MASK(SDL_BUTTON_MIDDLE);
   }
 }
 
-bool SDL2InputSystem::isMouseButtonDown(MouseButton mouseButton)
+bool SDLInputSystem ::isMouseButtonDown(MouseButton mouseButton)
 {
   return isMouseButtonDown(mouseButton, currentFrameMouseState);
 }
-bool SDL2InputSystem::isMouseButtonClicked(MouseButton mouseButton)
+bool SDLInputSystem ::isMouseButtonClicked(MouseButton mouseButton)
 {
-  return isMouseButtonDown(mouseButton, prevFrameMouseState) &&
-         !isMouseButtonDown(mouseButton, currentFrameMouseState);
-
+  return isMouseButtonDown(mouseButton, prevFrameMouseState)
+         && !isMouseButtonDown(mouseButton, currentFrameMouseState);
 }
 
-void SDL2InputSystem::update(std::vector<SDL_Event> incomingEvents)
+void SDLInputSystem ::update(std::vector<SDL_Event> incomingEvents)
 {
- frameInputEvents = incomingEvents;
+  frameInputEvents = incomingEvents;
 }
-SDL2InputSystem::SDL2InputSystem()
+SDLInputSystem ::SDLInputSystem()
 {
-  int numKeys =0;
+  int numKeys = 0;
   SDL_GetKeyboardState(&numKeys);
   prevFrameKeyboardState.resize(numKeys);
   currentFrameKeyboardState.resize(numKeys);
-
 }
 
-
-SDL2InputSystem &SDL2InputSystem::getInstance()
+SDLInputSystem &SDLInputSystem ::getInstance()
 {
-  static SDL2InputSystem instance;
+  static SDLInputSystem instance;
   return instance;
 }
-}
-
-
-
+} // namespace tz::input

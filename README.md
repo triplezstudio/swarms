@@ -18,7 +18,7 @@ This projects uses (among other things):
 - [ccache](https://ccache.dev/) as a wrapper to speed up the building process
 - [google test](https://github.com/google/googletest) as a testing library
 - [rsync](https://linux.die.net/man/1/rsync) for file management
-- [sdl2](https://wiki.libsdl.org/SDL2/Installation) for _window and input management
+- [sdl3](https://wiki.libsdl.org/SDL3/FrontPage) for _window and input management
 - [vulkan] Modern graphics API, allows
 
 ## TL; DR
@@ -41,7 +41,7 @@ apt-get install -y --no-install-recommends \
   libgtest-dev \
   libgmock-dev \
   rsync \
-  libsdl2-dev \
+  libsdl3-dev \
   libvulkan-dev \
   glslc \
   glslang-dev \
@@ -71,9 +71,11 @@ Tested to run on Windows11.
 - [cmake](https://cmake.org/) as a build management system
 - [ccache](https://ccache.dev/) as a wrapper to speed up the building process
 - [google test](https://github.com/google/googletest) as a testing library
-- [sdl2](https://wiki.libsdl.org/SDL2/Installation) for _window and input management
+- [sdl3](https://wiki.libsdl.org/SDL3/FrontPage) for _window and input management
 - [glew] only needed if OpenGL is used on Windows!
 - robocopy
+
+TODO: Maybe the sdl2[vulkan] needs adjustment
 
 ```powershell
 .\vcpkg install gtest:x64-windows

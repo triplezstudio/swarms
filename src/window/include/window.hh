@@ -1,8 +1,8 @@
 #pragma once
-#include "defines.h"
 #include "common.hh"
-#include <SDL2/SDL.h>
-#include <SDL_vulkan.h>
+#include "defines.h"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 #include <functional>
 #include <string>
 
@@ -70,7 +70,6 @@ enum class KeyCode
   F11,
   F12
 
-
 };
 
 enum class MouseButton
@@ -81,22 +80,21 @@ enum class MouseButton
   NONE
 };
 
-
-struct GraphicsSurface {
-  void* handle;
+struct GraphicsSurface
+{
+  void *handle;
 };
 
 struct GraphicsInstance
 {
-  void* handle;
+  void *handle;
 };
 
-
-struct WindowDesc {
+struct WindowDesc
+{
   int width;
   int height;
   std::string title;
-
 };
 
 enum class FrameInputType
@@ -112,26 +110,21 @@ struct FrameInputEvent
   FrameInputType frameInputType;
   KeyCode keyCode;
   MouseButton mouseButton;
-
 };
 
 struct TZ_API Window
 {
-  Window(int width, int height, const std::string& title);
+  Window(int width, int height, const std::string &title);
   void pollEvents();
-  void getDisplaySize(int& width, int& height);
+  void getDisplaySize(int &width, int &height);
   VkSurfaceKHR createSurface(VkInstance vkInstance);
 
-
-  SDL_Window* _window = nullptr;
+  SDL_Window *_window = nullptr;
   std::vector<SDL_Event> frameInputEvents;
-  void* nativeHandle = nullptr;
+  void *nativeHandle = nullptr;
   int width;
   int height;
   const std::string title;
 };
 
-}
-
-
-
+} // namespace tz

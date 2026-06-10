@@ -1,8 +1,8 @@
 #ifndef SWARMS_UI_HH
 #define SWARMS_UI_HH
 
-#include <immediate_commands.hh>
 #include <Eigen/Dense>
+#include <immediate_commands.hh>
 #include <input.hh>
 #include <render_helpers.hh>
 #include <text_render.hh>
@@ -25,17 +25,14 @@ namespace tz {
  */
 struct UIHost
 {
-  Window *window = nullptr;
-  render::vulkan::Renderer* renderer = nullptr;
-  input::SDL2InputSystem* inputSystem = nullptr;
+  Window *window                     = nullptr;
+  render::vulkan::Renderer *renderer = nullptr;
+  input::SDLInputSystem *inputSystem = nullptr;
 
   // The viewport rectangle within the window.
   Eigen::Vector2f viewPortPosition;
   Eigen::Vector2f viewPortSize;
 };
-
-
-
 
 class UILayout;
 /**
@@ -50,45 +47,48 @@ class UILayout;
  */
 class TZ_API UIWidget
 {
-
   public:
-      explicit UIWidget(UIWidget* parent) : parent(parent) { init(); };
-      virtual ~UIWidget() = default;
+  explicit UIWidget(UIWidget *parent)
+    : parent(parent)
+  {
+    init();
+  };
+  virtual ~UIWidget() = default;
 
-      Eigen::Vector2f getPosition();
-      Eigen::Vector2f getSize();
+  Eigen::Vector2f getPosition();
+  Eigen::Vector2f getSize();
 
-
-      /**
+  /**
        * Move this widget to a position in parent space.
        * Note, if this widget belongs to a Layout, this movement may
        * be ignored.
        * @param x
        * @param y
        */
-      void move(int x, int y);
+  void move(int x, int y);
 
-      void resize(int weight, int height);
+  void resize(int weight, int height);
 
-      /**
+  /**
        *
        * @return a list of children, normally a copy, so no manipulation possible
        *         of the children from outside via this function.
        */
-      [[nodiscard]] std::vector<UIWidget*> getChildren() const { return children; }
+  [[nodiscard]] std::vector<UIWidget *> getChildren() const
+  {
+    return children;
+  }
 
+  protected:
+  UIWidget *parent = nullptr;
+  std::vector<UIWidget *> children;
 
-    protected:
-      UIWidget *parent = nullptr;
-      std::vector<UIWidget*> children;
+  Eigen::Vector2f position;
+  Eigen::Vector2f size;
 
-      Eigen::Vector2f position;
-      Eigen::Vector2f size;
+  UILayout *layout = nullptr;
 
-      UILayout* layout = nullptr;
-
-
-      void init();
+  void init();
 };
 
 /**
@@ -99,11 +99,11 @@ class TZ_API UIWidget
 class UILayout : public UIWidget
 {
   public:
-      UILayout() = default;
-      ~UILayout() = default;
+  UILayout()  = default;
+  ~UILayout() = default;
 
-      Eigen::Vector2f getPositionForWidget(UIWidget& widget);
-      Eigen::Vector2f getSizeForWidget(UIWidget& widget);
+  Eigen::Vector2f getPositionForWidget(UIWidget &widget);
+  Eigen::Vector2f getSizeForWidget(UIWidget &widget);
 };
 
 /**
@@ -113,14 +113,15 @@ class UILayout : public UIWidget
 class UIButton : public UIWidget
 {
   public:
-      explicit UIButton(UIWidget* parent) : UIWidget(parent) {}
-      ~UIButton() = default;
+  explicit UIButton(UIWidget *parent)
+    : UIWidget(parent)
+  {}
+  ~UIButton() = default;
 
-      // TODO How to best let each widget type render itself.
-      // It needs to get its final position passed from the outside,
-      // as only its parent (may be a layout..) can know the position
-      // and size of this widget.
-
+  // TODO How to best let each widget type render itself.
+  // It needs to get its final position passed from the outside,
+  // as only its parent (may be a layout..) can know the position
+  // and size of this widget.
 };
 
 /**
@@ -159,20 +160,20 @@ class TZ_API UISystem
    * Every widget is told its current position and size,
    * so it knows where to position itself.
    */
-  render::vulkan::CommandBuffer& recordFrameCommandBuffer();
+  render::vulkan::CommandBuffer &recordFrameCommandBuffer();
 
-  UIWidget& createWidget(UIWidget* parent);
-  UIButton& createButton(UIWidget* parent);
+  UIWidget &createWidget(UIWidget *parent);
+  UIButton &createButton(UIWidget *parent);
 
   private:
-      UIHost host;
-      std::vector<UIWidget*> topLevelWidgets;
-      MasterPipelineLayout *masterPipelineLayout = nullptr;
-      render::TextRenderer* textRenderer = nullptr;
-      ImmediateCommandProcessor *immediateCommandProcessor = nullptr;
-      tz::render::Font* font = nullptr;
+  UIHost host;
+  std::vector<UIWidget *> topLevelWidgets;
+  MasterPipelineLayout *masterPipelineLayout           = nullptr;
+  render::TextRenderer *textRenderer                   = nullptr;
+  ImmediateCommandProcessor *immediateCommandProcessor = nullptr;
+  tz::render::Font *font                               = nullptr;
 };
 
-}
+} // namespace tz
 
 #endif //SWARMS_UI_HH
