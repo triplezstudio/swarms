@@ -47,8 +47,13 @@ void initialize(tz::App *app)
   inputSystem = &app->getInputSystem();
 
   mainUISystem = &app->createUISystem(0, 0, 600, 400);
+  auto& miniWindow = mainUISystem->createWidget(nullptr);
+  miniWindow.move(10, 10);
+  miniWindow.resize(200, 400 );
+
   auto &button = mainUISystem->createButton(nullptr);
-  button.move(100, 100);
+  button.setText("Press me!");
+  button.move(400, 200);
   button.resize(128, 48);
 }
 

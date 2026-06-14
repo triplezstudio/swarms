@@ -34,6 +34,14 @@ struct UIHost
   Eigen::Vector2f viewPortSize;
 };
 
+struct UIRenderContext
+{
+  UIHost uiHost;
+  ImmediateCommandProcessor& immediateCommandProcessor;
+  render::TextRenderer& textRenderer;
+  render::Font& font;
+};
+
 class UILayout;
 /**
  * A Widget is the root class for every ui element.
@@ -57,6 +65,16 @@ class TZ_API UIWidget
 
   Eigen::Vector2f getPosition();
   Eigen::Vector2f getSize();
+
+  virtual void render(UIRenderContext& uiRenderContext);
+
+  /**
+   * This function walks up the parent hierarchy and
+   * adds up the parent-space positions along the way.
+   * So in the end we arrive at the overall global position of the starting widget.
+   * @param target The global position.
+   */
+  void getGlobalPosition(Eigen::Vector2f *target);
 
   /**
        * Move this widget to a position in parent space.
@@ -89,6 +107,7 @@ class TZ_API UIWidget
   UILayout *layout = nullptr;
 
   void init();
+
 };
 
 /**
@@ -118,27 +137,31 @@ class UIButton : public UIWidget
   {}
   ~UIButton() = default;
 
-  // TODO How to best let each widget type render itself.
-  // It needs to get its final position passed from the outside,
-  // as only its parent (may be a layout..) can know the position
-  // and size of this widget.
+  void setText(const std::string& newText)
+  {
+    this->text = newText;
+  }
+
+  virtual void render(UIRenderContext& rc) override;
+
+  protected:
+      std::string text;
+
 };
 
 /**
- * The UISystem manages the overall concerns for a group of related widgets.
+ * The UISystem manages the overall state for a group of related widgets.
  * It is allowed to have more than UISystem in an application.
- * By assigning different and non-overlapping viewports inside the toplevel host window,
- * they can be easily separated.
- * This is not mandatory. Several UISystems can also be placed in an overlapping fashion.
+ * Every UISystem gets assigned a viewport inside the host window, which may also overlap.
  * In this case, there is an implicit z-order dictated by the sequence of the creation of the
  * respective UISystems.
  * Subsequent UISystems sit on top of earlier ones.
- * So you may create meta-layers:
- * UISystem1 sits on system-layer 1.
- * UISystem2 sits on system-layer 2, therefore on top.
+ * So different UISystems may be used to have "meta"-layers:
+ * First created UISystem1 sits on implicit layer 1.
+ * UISystem2 sits on implicit layer 2, therefore on top.
  * Every widget in system-layer2, will always be on top of every widget in system-layer1.
  *
- * Widgets in the same layer have their own separate z-order, but only within the layer.
+ * Widgets in the same layer have their own separate z-order.
  *
  */
 class TZ_API UISystem
@@ -173,6 +196,7 @@ class TZ_API UISystem
   ImmediateCommandProcessor *immediateCommandProcessor = nullptr;
   tz::render::Font *font                               = nullptr;
 };
+
 
 } // namespace tz
 
