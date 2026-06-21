@@ -51,9 +51,9 @@ void initialize(tz::App *app)
   miniWindow.move(10, 10);
   miniWindow.resize(200, 400 );
 
-  auto &button = mainUISystem->createButton(nullptr);
+  auto &button = mainUISystem->createButton(&miniWindow);
   button.setText("Press me!");
-  button.move(400, 200);
+  button.move(10, 10);
   button.resize(128, 48);
 }
 

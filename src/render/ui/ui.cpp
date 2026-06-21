@@ -125,6 +125,11 @@ Eigen::Vector2f tz::UIWidget::getSize()
 }
 void tz::UIWidget::init()
 {
+  if (parent)
+  {
+    parent->children.push_back(this);
+  }
+
   if (auto maybeLayout = dynamic_cast<UILayout*>(parent))
   {
     layout = maybeLayout;
@@ -162,6 +167,11 @@ void tz::UIWidget::render(tz::UIRenderContext& renderContext)
                                        getPosition().y() + textRectOffset.y(), -0.6};
   Eigen::Vector3f textDebugQuadSize = {textRect.right - textRect.left, textRect.top - textRect.bottom, 1};
   RenderHints textDebugQuadRenderHints;
+
+  for (auto& c : children)
+  {
+    c->render(renderContext);
+  }
 
 }
 
