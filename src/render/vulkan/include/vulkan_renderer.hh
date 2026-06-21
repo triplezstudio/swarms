@@ -746,6 +746,7 @@ class TZ_API Renderer
   CommandBuffer * createCommandBuffer();
   DescriptorSet * createMultiframeDescriptorSet(DescriptorSetLayout* descriptorSetLayout) ;
 
+  Window& getWindow() { return *window; }
   Texture * createTexture(Image* image);
   Image * createImage(BitmapData bitmapData);
   ImageView * createImageView(Image* image) ;

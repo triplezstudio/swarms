@@ -35,7 +35,7 @@ void Window::pollEvents()
   }
 }
 
-tz::Window::Window(int width, int height, const std::string &title)
+tz::Window::Window(int width, int height, const std::string &title) : width(width), height(height)
 {
   if (SDL_Init(SDL_INIT_EVENTS) < 0)
   {
@@ -49,6 +49,7 @@ tz::Window::Window(int width, int height, const std::string &title)
   bool run = true;
 
   int windowFlags = SDL_WINDOW_VULKAN;
+
 
   _window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
 }

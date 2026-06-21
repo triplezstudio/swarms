@@ -46,9 +46,9 @@ void initialize(tz::App *app)
 
   inputSystem = &app->getInputSystem();
 
-  mainUISystem = &app->createUISystem(0, 0, 600, 400);
+  mainUISystem = &app->createUISystem(0, 0, 6, 4);
   auto& miniWindow = mainUISystem->createWidget(nullptr);
-  miniWindow.move(10, 10);
+  miniWindow.move(300, 5);
   miniWindow.resize(200, 400 );
 
   auto &button = mainUISystem->createButton(&miniWindow);
@@ -97,11 +97,11 @@ void doFrame(tz::App *app)
 
   // This allows us to place our objects in screen space coordinates
   // and render our objects accordingly.
-  immCmdProc.activateUICamera(Eigen::Vector3f(0, 00, 4));
-  immCmdProc.renderQuads({{Eigen::Vector3f(100, 100, 0.2), Eigen::Vector3f(48, 48, 1)}},
+  immCmdProc.activateUICamera(Eigen::Vector3f(0, 0, 4));
+  immCmdProc.renderQuads({{Eigen::Vector3f(26, 28, -2.1), Eigen::Vector3f(48, 48, 1)}},
                          tz::RenderHints{.materialType     = rv::MaterialType::SingleColor,
                                          .vertexShaderType = rv::VertexShaderType::Static,
-                                         .color            = {0.0, 0.9, 0.0, 1}});
+                                         .color            = {0.0, 0.0, 1.0, 1}});
 
   static float mover = 24;
   static float dir   = 1;
@@ -157,6 +157,8 @@ void doFrame(tz::App *app)
                                                  *titleFont,
                                                  {{8, 400, 0.5}},
                                                  {0, 0.9, 0, 1});
+
+
 }
 
 void runApp()

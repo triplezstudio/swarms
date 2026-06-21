@@ -152,21 +152,16 @@ void tz::UIWidget::render(tz::UIRenderContext& renderContext)
 {
   // Account for the pivot point being in the middle of the quad.
   // We want to have it bottom-left, makes it easier to place for the user.
-  Eigen::Vector2f offset = {getSize().x()/2, getSize().y()/2};
+  Eigen::Vector2f pivotOffset = {getSize().x()/2, getSize().y()/2};
+
+  pivotOffset = {pivotOffset.x(), pivotOffset.y()};
 
   Eigen::Vector2f globalPosition;
   getGlobalPosition(&globalPosition);
-  globalPosition += offset;
-  auto pos = Eigen::Vector3f(globalPosition.x(), globalPosition.y(), 1);
-  //auto pos = Eigen::Vector3f{widget->getPosition().x() + offset.x(), widget->getPosition().y() + offset.y() , 0};
-  auto size = Eigen::Vector3f(getSize().x(), getSize().y(), 1);
-  renderContext.immediateCommandProcessor.renderQuad({pos, size});
-  auto textRect = renderContext.textRenderer.measureText("Click Me", renderContext.font);
-  Eigen::Vector2f textRectOffset = {(textRect.right - textRect.left)/2, (textRect.top - textRect.bottom)/2};
-  Eigen::Vector3f textDebugQuadPos = {getPosition().x() + textRectOffset.x(),
-                                       getPosition().y() + textRectOffset.y(), -0.6};
-  Eigen::Vector3f textDebugQuadSize = {textRect.right - textRect.left, textRect.top - textRect.bottom, 1};
-  RenderHints textDebugQuadRenderHints;
+  globalPosition += pivotOffset;
+  auto pos3  = Eigen::Vector3f(globalPosition.x(), globalPosition.y(), 1);
+  auto size3 = Eigen::Vector3f(getSize().x(), getSize().y(), 1);
+  renderContext.immediateCommandProcessor.renderQuad({pos3, size3});
 
   for (auto& c : children)
   {
