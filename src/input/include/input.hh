@@ -1,8 +1,8 @@
 #pragma once
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <defines.h>
-#include <map>
 #include <iostream>
+#include <map>
 #include <vector>
 
 namespace tz::input {
@@ -68,7 +68,6 @@ enum class KeyCode
   F11,
   F12
 
-
 };
 
 enum class MouseButton
@@ -78,20 +77,19 @@ enum class MouseButton
   MIDDLE
 };
 
-class TZ_API SDL2InputSystem
+class TZ_API SDLInputSystem
 {
-public:
+  public:
+  SDLInputSystem(const SDLInputSystem &)            = delete;
+  SDLInputSystem &operator=(const SDLInputSystem &) = delete;
 
-  SDL2InputSystem(const SDL2InputSystem&) = delete;
-  SDL2InputSystem& operator=(const SDL2InputSystem&) = delete;
-
-  static SDL2InputSystem& getInstance();
+  static SDLInputSystem &getInstance();
 
   // This must be called once a frame to gather the latest inputs
   void update(std::vector<SDL_Event> incomingEvents);
 
   // The current screen positions of the mouse, origin is top left (0,0).
-  void getMouseCoords(int& x, int& y);
+  void getMouseCoords(float &x, float &y);
 
   // Single time, e.g. ui button click;
   bool isMouseButtonClicked(MouseButton mouseButton);
@@ -106,22 +104,20 @@ public:
   bool isKeyDown(KeyCode keyCode);
 
   private:
-      SDL2InputSystem();
-      KeyCode getKeyCodeFromSDLEvent(SDL_Event ev);
-      SDL_Scancode toSDLScanCode(KeyCode keyCode);
-      std::map<KeyCode, bool> keyDownMap;
+  SDLInputSystem();
+  KeyCode getKeyCodeFromSDLEvent(SDL_Event ev);
+  SDL_Scancode toSDLScanCode(KeyCode keyCode);
+  std::map<KeyCode, bool> keyDownMap;
 
-      std::vector<SDL_Event> frameInputEvents;
+  std::vector<SDL_Event> frameInputEvents;
 
-      std::vector<uint8_t> prevFrameKeyboardState;
-      std::vector<uint8_t> currentFrameKeyboardState;
+  std::vector<uint8_t> prevFrameKeyboardState;
+  std::vector<uint8_t> currentFrameKeyboardState;
 
-      uint32_t prevFrameMouseState = 0;
-      uint32_t currentFrameMouseState = 0;
+  uint32_t prevFrameMouseState    = 0;
+  uint32_t currentFrameMouseState = 0;
 
-      bool isMouseButtonDown(MouseButton mouseButton, uint32_t state);
+  bool isMouseButtonDown(MouseButton mouseButton, uint32_t state);
 };
 
-
-}
-
+} // namespace tz::input

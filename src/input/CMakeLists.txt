@@ -1,10 +1,10 @@
-add_library(input_sdl2_lib SHARED)
+add_library(input_sdl_lib SHARED)
 
-target_sources(input_sdl2_lib PRIVATE
-        sdl2_input.cpp)
+target_sources(input_sdl_lib PRIVATE
+        sdl_input.cpp)
 
-target_include_directories(input_sdl2_lib PUBLIC include)
+target_include_directories(input_sdl_lib PUBLIC include)
 
-target_link_libraries(input_sdl2_lib PUBLIC window)
+target_link_libraries(input_sdl_lib PUBLIC window)
 
-target_compile_definitions(input_sdl2_lib PUBLIC EXPORT_TZ_LIB)
+target_compile_definitions(input_sdl_lib PUBLIC EXPORT_TZ_LIB)

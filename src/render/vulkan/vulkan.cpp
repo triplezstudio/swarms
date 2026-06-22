@@ -635,7 +635,8 @@ void Renderer::transitionImageLayout(
     });
   vk::DependencyInfo dependencyInfo;
   dependencyInfo.setDependencyFlags({})
-    .setImageMemoryBarriers({barrier});
+    .setImageMemoryBarrierCount(1)
+    .setPImageMemoryBarriers(&barrier);
 
   currentFrameCommandBuffer.pipelineBarrier2(dependencyInfo);
 }
@@ -668,7 +669,8 @@ void Renderer::transitionImageLayout(
     });
   vk::DependencyInfo dependencyInfo;
   dependencyInfo.setDependencyFlags({})
-    .setImageMemoryBarriers({barrier});
+    .setImageMemoryBarrierCount(1)
+    .setPImageMemoryBarriers(&barrier);
 
   commandBuffer.pipelineBarrier2(dependencyInfo);
 
@@ -711,7 +713,8 @@ void Renderer::recordDefaultCommandBuffer()
     .extent = swapExtent
   })
   .setLayerCount(1)
-  .setColorAttachments({attachmentInfo});
+  .setColorAttachmentCount(1)
+  .setPColorAttachments(&attachmentInfo);
   commandBuffer.beginRendering(renderingInfo);
   commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
   commandBuffer.setViewport(0, vk::Viewport(0, 0,
@@ -894,21 +897,43 @@ void Renderer::beginCommandBuffer(CommandBuffer *cb, bool clearBackBuffer)
   currentFrameCommandBuffer.reset();
   currentFrameCommandBuffer.begin({});
 
-  transitionImageLayout(
-    cb,
-    vk::ImageLayout::eUndefined,
-    vk::ImageLayout::eColorAttachmentOptimal,
-    {}, // no need to wait for the src access part
-    vk::AccessFlagBits2::eColorAttachmentWrite,
-    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-    vk::PipelineStageFlagBits2::eColorAttachmentOutput
-  );
+  // We need to differentiate 2 cases: clearing
+  // and drawing on top.
+  vk::AttachmentLoadOp loadOp;
+  if (clearBackBuffer)
+  {
+    transitionImageLayout(
+      cb,
+      vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eColorAttachmentOptimal,
+      {}, // no need to wait for the src access part
+      vk::AccessFlagBits2::eColorAttachmentWrite,
+      vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+      vk::PipelineStageFlagBits2::eColorAttachmentOutput
+    );
+    loadOp = vk::AttachmentLoadOp::eClear;
+  }
+  else
+  {
+    transitionImageLayout(
+      cb,
+      vk::ImageLayout::eColorAttachmentOptimal,
+      vk::ImageLayout::eColorAttachmentOptimal,
+      vk::AccessFlagBits2::eColorAttachmentWrite,
+      vk::AccessFlagBits2::eColorAttachmentWrite |
+                        vk::AccessFlagBits2::eColorAttachmentRead,
+      vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+      vk::PipelineStageFlagBits2::eColorAttachmentOutput
+    );
+    loadOp = vk::AttachmentLoadOp::eLoad;
+  }
+
 
   vk::ClearValue clearColor = vk::ClearColorValue(0, 0, 0, 1);
   vk::RenderingAttachmentInfo attachmentInfo;
   attachmentInfo.setImageView(swapChainImageViews[imageIndex])
     .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
-    .setLoadOp(clearBackBuffer ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad)
+    .setLoadOp(loadOp)
     .setStoreOp(vk::AttachmentStoreOp::eStore)
     .setClearValue(clearColor);
 
@@ -918,7 +943,8 @@ void Renderer::beginCommandBuffer(CommandBuffer *cb, bool clearBackBuffer)
                                 .extent = swapExtent
                               })
     .setLayerCount(1)
-    .setColorAttachments({attachmentInfo});
+    .setColorAttachmentCount(1)
+    .setPColorAttachments(&attachmentInfo);
   currentFrameCommandBuffer.beginRendering(renderingInfo);
 
 }
@@ -1231,19 +1257,23 @@ PipelineStateObject *Renderer::createPipelineStateObject(
   return vulkanPSO;
 
 }
-void Renderer::endCommandBuffer(CommandBuffer *cb)
+void Renderer::endCommandBuffer(CommandBuffer *cb, bool prepareForPresent)
 {
   auto& currentFrameCommandBuffer = getCommandBufferForCurrentFrame(cb);
   currentFrameCommandBuffer.endRendering();
-  transitionImageLayout(
-    cb,
-    vk::ImageLayout::eColorAttachmentOptimal,
-    vk::ImageLayout::ePresentSrcKHR,
-    vk::AccessFlagBits2::eColorAttachmentWrite,
-    vk::AccessFlagBits2::eNone,
-    vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-    vk::PipelineStageFlagBits2::eBottomOfPipe
-  );
+
+  if (prepareForPresent)
+  {
+    transitionImageLayout(
+      cb,
+      vk::ImageLayout::eColorAttachmentOptimal,
+      vk::ImageLayout::ePresentSrcKHR,
+      vk::AccessFlagBits2::eColorAttachmentWrite,
+      vk::AccessFlagBits2::eNone,
+      vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+      vk::PipelineStageFlagBits2::eBottomOfPipe
+    );
+  }
   currentFrameCommandBuffer.end();
 }
 

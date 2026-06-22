@@ -8,6 +8,14 @@
 namespace tz::render
 {
 
+struct TextRect
+{
+  float left;
+  float right;
+  float bottom;
+  float top;
+};
+
 struct Font {
   uint32_t textureId;
   vulkan::Texture* atlas;
@@ -39,6 +47,7 @@ class TZ_API TextRenderer
   auto createFont(const std::string& fontFile, uint16_t size) -> Font*;
   TextGeometry createGeometryForText(const std::string& text, Font& font);
 
+  TextRect measureText(const std::string &text, Font &font);
 
   private:
     TextureAssetManager& textureAssetManager;

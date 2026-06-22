@@ -87,7 +87,7 @@ void tz::ImmediateCommandProcessor::renderQuads(const std::vector<Transform>& tr
 {
   PrimitiveRenderData prd;
   prd.transforms = {transform};
-  prd.geometryType     = PrimitiveGeometryType::Quad;
+  prd.geometryType = PrimitiveGeometryType::Quad;
   prd.renderHints = renderHints;
   prd.associatedCamera = activeRenderCamera;
   prd.vertexBuffer = renderHints.materialType == rv::MaterialType::SingleColor ? quadPosVertexBuffer : quadPosTexCoordVertexBuffer;
@@ -150,9 +150,6 @@ tz::ImmediateCommandProcessor::ImmediateCommandProcessor(tz::render::vulkan::Ren
     std::vector<rv::VertexPosTexCoords> cubeVerticesPosTex;
     fillWithCubeVertices(cubeVerticesPosTex);
 
-
-
-
     quadPosVertexBuffer = renderer.createBuffer(verticesPos.data(),
                                                  verticesPos.size() * sizeof (rv::VertexPos),
                                                  rv::BufferUsage::Vertex);
@@ -164,7 +161,6 @@ tz::ImmediateCommandProcessor::ImmediateCommandProcessor(tz::render::vulkan::Ren
     cubePosTexCoordVertexBuffer = renderer.createBuffer(cubeVerticesPosTex.data(),
                                                          cubeVerticesPosTex.size() * sizeof (rv::VertexPosTexCoords),
                                                          rv::BufferUsage::Vertex);
-
 
     quadPosTexCoordVertexBuffer = renderer.createBuffer(verticesPosTexCoord.data(),
                                                          verticesPosTexCoord.size() * sizeof (rv::VertexPosTexCoords),
@@ -405,6 +401,7 @@ void tz::ImmediateCommandProcessor::renderPrimitives(const std::vector<Primitive
     for (auto& t : prd.transforms)
     {
       auto transform = Eigen::Affine3f::Identity();
+
       transform.translate(t.position);
       transform.scale(t.scale);
       Eigen::Matrix4f tm = transform.matrix();
@@ -424,8 +421,9 @@ void tz::ImmediateCommandProcessor::renderPrimitives(const std::vector<Primitive
     // Move offset forward
     offset += sizeof(rv::PerObjectUniformBufferObject) * prd.transforms.size();
 
-    renderer.recordCommand(commandBuffer, new rv::CmdSetViewPorts({{0, 0, 640, 480}}));
-    renderer.recordCommand(commandBuffer, new rv::CmdSetScissors({{0, 0, 640, 480}}));
+    auto viewport = rv::ViewPort{0, 0,  renderer.getWindow().width, renderer.getWindow().height};
+    renderer.recordCommand(commandBuffer, new rv::CmdSetViewPorts({viewport}));
+    renderer.recordCommand(commandBuffer, new rv::CmdSetScissors({{viewport.x, viewport.y, viewport.width, viewport.height}}));
 
     renderer.recordCommand(commandBuffer,new rv::CmdBindVertexBuffers({prd.vertexBuffer}));
     renderer.recordCommand(commandBuffer, new rv::CmdBindIndexBuffer(prd.indexBuffer, 0));

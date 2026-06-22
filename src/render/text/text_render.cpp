@@ -74,6 +74,49 @@ auto tz::render::TextRenderer::createFont(const std::string& fontFile, uint16_t 
 
 }
 
+/**
+ * Measures the dimension in pixel space of the given text.
+ *
+ */
+tz::render::TextRect tz::render::TextRenderer::measureText(const std::string &text,
+                                               tz::render::Font & font)
+{
+  float penX = 0, penY = 0;
+  float minX =  std::numeric_limits<float>::max();
+  float maxX = -std::numeric_limits<float>::max();
+  float minY =  std::numeric_limits<float>::max();
+  float maxY = -std::numeric_limits<float>::max();
+  float baseline = font.baseLine;
+  int charCounter = 0;
+  for (auto c : text) {
+    stbtt_aligned_quad q;
+    stbtt_GetBakedQuad(font.bakedChars.data(), 512, 512, c - 32, &penX, &penY, &q, 0);
+
+    float pixel_aligned_x0 = std::floor(q.x0 + 0.0f);
+    float pixel_aligned_y0 = std::floor(q.y0 + 0.0f);
+    float pixel_aligned_x1 = std::floor(q.x1 + 0.0f);
+    float pixel_aligned_y1 = std::floor(q.y1 + 0.0f);
+
+    q.x0 = pixel_aligned_x0;
+    q.y0 = pixel_aligned_y0;
+    q.x1 = pixel_aligned_x1;
+    q.y1 = pixel_aligned_y1;
+
+    // Track min/max for bounding box
+    minX = std::min(minX, q.x0);
+    maxX = std::max(maxX, q.x1);
+
+    if (c == 32) continue; // ignore space for Y, as this is always zero and messes things up.
+    minY = std::min(minY, q.y0); // lowest part (descenders)
+    minY = std::min(minY, q.y1);
+
+    maxY = std::max(maxY, q.y0); // highest part (ascenders)
+    maxY = std::max(maxY, q.y1);
+  }
+
+  return {minX, maxX, minY, maxY};
+}
+
 tz::render::TextGeometry tz::render::TextRenderer::createGeometryForText(const std::string &text,
   tz::render::Font & font)
 {
